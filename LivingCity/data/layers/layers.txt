@@ -1,0 +1,5 @@
+numLayers: 3
+0_elevation.png:Elevation:0.0:3750.0f:1: elevation map (1=Elevation color)
+1_population.png:Population:0.0:3750.0f:2: population map (1=HSL color)
+2_jobs.png:Jobs:0.0:3750.0f:2: job map (2=HSL color)
+
