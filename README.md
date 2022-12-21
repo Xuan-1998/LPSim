@@ -263,6 +263,19 @@ P. Yedavalli, K. Kumar, and P. Waddell, “Microsimulation Analysis for Network 
 
 Thank you!
 
+# LS-PTS
+## b18CUDA_trafficSimulator.cu
+The program appears to include several user-defined header files, such as "b18TrafficPerson.h" and "b18EdgeData.h". It also includes the header file "curand_kernel.h", which is part of the CUDA Random Number Generation (CURAND) library. The CURAND library provides functions for generating high-quality random numbers on the GPU.
+
+The program uses a number of preprocessor directives, such as "#define" and "#ifndef", to define various macros and to conditionally include or exclude code. These directives are used to make the code more portable and easier to maintain.
+
+The constant "MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED" appears to be used to specify the minimum number of cars required in order to measure their speed.
+
+The constant "intersectionClearance" is declared using the constant keyword, which indicates that it is a constant memory variable in CUDA. Constant memory variables are stored in a special memory space on the GPU that is faster to access than global memory, but has a smaller capacity. Constant memory is typically used for data that is read-only and is accessed frequently by the GPU threads.
+
+The function "gpuErrchk" is a macro that checks the error code returned by a CUDA function and prints an error message if the code indicates an error. The macro expands to a call to the "gpuAssert" function, which takes the error code, the name of the source file, and the line number as arguments, and prints an error message including these values if the error code indicates an error.
+
+The function "printMemoryUsage" prints information about the memory usage of the GPU, including the amount of used, free, and total memory. It does this by calling the CUDA function "cudaMemGetInfo", which returns the amount of free and total memory available on the GPU. The function then calculates the used memory by subtracting the free memory from the total memory, and prints the results in megabytes.
 
 
 
