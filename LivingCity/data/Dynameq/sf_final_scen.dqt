@@ -1,0 +1,41 @@
+<DYNAMEQ>
+<VERSION_1.7>
+<SCENARIO_FILE>
+* CREATED by DTA Anyway http://code.google.com/p/dta/    
+STUDY_PERIOD
+*   start      end
+    14:30    21:30
+EVENTS
+*    time                                                     desc
+VEH_CLASSES
+*      class_name
+       Car_NoToll
+         Car_Toll
+     Truck_NoToll
+       Truck_Toll
+VEH_TYPES
+*class_name       type_name   length res_time max_speed speed_ratio
+   Car_NoToll           Car    21.00     1.00   100.00   100.00
+     Car_Toll           Car    21.00     1.00   100.00   100.00
+ Truck_NoToll         Truck    31.50     1.25    70.00    90.00
+   Truck_Toll         Truck    31.50     1.25    70.00    90.00
+      Transit          LRT1    75.00     1.60    35.00    90.00
+      Transit          LRT2   150.00     1.60    35.00    90.00
+      Transit   Trolley_Std    40.00     1.60    70.00    90.00
+      Transit Trolley_Artic    60.00     1.60    70.00    90.00
+      Transit     Motor_Std    40.00     1.60    70.00    90.00
+      Transit   Motor_Artic    60.00     1.60    70.00    90.00
+      Transit      CableCar    27.50     1.60     9.50    90.00
+VEH_CLASS_GROUPS
+*      name   class      color
+        All     All    #bebebe
+ Prohibited Prohibited    #ffff00
+       Toll Car_Toll|Truck_Toll    #0055ff
+    Transit Transit    #55ff00
+GENERALIZED_COSTS
+*        name   units                                                 turn_expr link_expr desc
+Expression_0 Seconds ptime+(left_turn_pc*left_turn)+(right_turn_pc*right_turn) 0
+Expression_1 Seconds ptime+(left_turn_pc*left_turn)+(right_turn_pc*right_turn) fac_type_pen*(3600*length/fspeed)
+Expression_2 Seconds ptime+(left_turn_pc*left_turn)+(right_turn_pc*right_turn) 14.4*length
+Expression_3 Seconds ptime+(left_turn_pc*left_turn)+(right_turn_pc*right_turn) 14.4*length+fac_type_pen*(1800*length/fspeed)
+Expression_4 Seconds ptime+(left_turn_pc*left_turn)+(right_turn_pc*right_turn) fac_type_pen*(1800*length/fspeed)

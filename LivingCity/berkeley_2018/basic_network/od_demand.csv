@@ -1,0 +1,4 @@
+SAMPN,PERNO,origin,destination
+10001,1,10,12
+10002,2,12,10
+10002,1,1,2

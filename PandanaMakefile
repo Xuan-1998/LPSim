@@ -1,0 +1,21 @@
+# Makefile for Pandana
+CC = gcc
+CXX = g++
+CPPFLAGS = -DLINUX -DMAC -std=c++0x -c -fPIC -g -O3 -Wall -pedantic -fopenmp  # C flags
+LDFLAGS = -shared   # linking flags
+RM = rm -f
+TARGET_LIB = libchrouting.so
+
+SRCS =  accessibility.cpp graphalg.cpp contraction_hierarchies/src/libch.cpp
+
+OBJS = $(SRCS:.cpp=.o)
+
+.PHONY: all
+all: ${TARGET_LIB}
+
+$(TARGET_LIB): $(OBJS)
+	$(CXX) ${LDFLAGS} -o $@ $^
+
+.PHONY: clean
+clean:
+	-${RM} ${TARGET_LIB} ${OBJS}
