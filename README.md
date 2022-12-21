@@ -307,5 +307,86 @@ kernel_resetPeople: This kernel appears to be responsible for resetting the stat
 
 There is also a function called b18GetSampleTrafficCUDA that appears to be responsible for launching these kernels on the GPU. It takes several arguments, including vectors that hold data about the intersections, traffic lights, people, and paths in the simulation, as well as several scalars that hold various parameters used in the simulation.
 
+## b18CommandLineVersion.cpp
+The header file includes several types and functions from the b18CommandLineVersion, benchmarker, roadGraphB2018Loader, graph, b18TrafficSP, accessibility, and b18TestSimpleRoadAndOD libraries/modules. It also includes the QString, QCoreApplication, and stdexcept headers from the Qt and C++ standard libraries.
+
+The header file appears to be related to a GUI version of the software, as it has a B18_RUN_WITH_GUI preprocessor directive that includes a b18TestSimpleRoadAndOD header file if it is defined.
+
+a command-line program that simulates traffic on a road network. The program reads several configuration options from an INI file and uses these options to control the behavior of the simulation.
+
+The B18CommandLineVersion class has a runB18Simulation method that is responsible for setting up and running the simulation. The method reads the configuration options from the INI file using a QSettings object and stores them in local variables. It then performs some input validation and sets default values for any options that are not present in the INI file.
+
+Next, the method loads the road network from a file specified in the INI file and sets up a traffic simulation based on the chosen routing algorithm (either shortest path or Johnson's algorithm). It also sets up an origin-destination demand matrix based on a CSV file specified in the INI file.
+
+Finally, the method runs the simulation for a specified number of passes, each time updating the positions of all people in the simulation, collecting statistics about the traffic, and rerouting people as needed. The method also has several other features, such as the ability to run unit tests and show performance benchmarks.
+
+## b18TrafficSimulator.cpp
+The header file includes types and functions from the b18TrafficSimulator, benchmarker, global, LC_GLWidget3D, LC_UrbanMain, b18TrafficDijkstra, b18TrafficJohnson, b18TrafficSP, b18CUDA_trafficSimulator, roadGraphB2018Loader, and accessibility libraries/modules. It also includes the thread, unistd, and windows headers from the C++ standard library and the math.h header.
+
+The header file also defines several preprocessor directives, such as DEBUG_TRAFFIC, DEBUG_SIMULATOR, and DEBUG_T_LIGHT, which appear to be used for debugging purposes. There is also a printPercentageMemoryUsed function that appears to be platform-specific and is used to print the percentage of memory being used by the program.
+
+The B18TrafficSimulator class is a class for simulating traffic in a city. It has a member variable deltaTime which represents the time step of the simulation, and simParameters which is a struct containing various parameters for the simulation such as the start and end times of the simulation and the number of people to be simulated. The class also has a member variable b18TrafficOD which is an instance of the B18TrafficOD class, which is responsible for handling the generation of traffic demand and origin-destination (OD) information for the simulation. The class also has a pointer simRoadGraph to a RoadGraph object, which is a representation of the city's road network, and a pointer clientMain to an instance of the LCUrbanMain class, which is a class for the main application. The class has a destructor which deletes the simRoadGraph object.
+
+The function B18TrafficSimulator::createRandomPeople generates random people with a job, that is, they need to travel from a starting location to an ending location within the specified time interval (startTime and endTime). The number of people generated is given by numberPeople. The locations and jobs of these people are stored in the peopleJobInfoLayers object.
+
+The function B18TrafficSimulator::createB2018People loads people with a job from a file, with the specified time interval (startTime and endTime). The number of people loaded is limited by limitNumPeople. If addRandomPeople is true, additional random people are generated.
+
+The function B18TrafficSimulator::createB2018PeopleSP is similar to createB2018People, but it loads people using the shortest path algorithm (SP). It also takes in a graph object graph_ and a vector of departure times dep_times as additional arguments.
+
+The function B18TrafficSimulator::resetPeopleJobANDintersections resets the job and location information for all the people in the simulation, and also resets the intersections and traffic lights.
+
+The function B18TrafficSimulator::createLaneMap creates a lane map for the simulation, using the road graph and additional data such as the edges data and intersections. It also creates mappings between lane map numbers and edge descriptions, and vice versa.
+
+The function B18TrafficSimulator::createLaneMapSP is similar to createLaneMap, but it creates a lane map using the shortest path algorithm (SP). It also takes in a graph object graph_ as an additional argument.
+
+The function B18TrafficSimulator::generateCarPaths generates the paths for all the cars in the simulation, using either the Johnson or Dijkstra routing algorithm. If useJohnsonRouting is true, the Johnson algorithm is used, otherwise the Dijkstra algorithm is used.
+
+The function B18TrafficSimulator::simulateInGPU simulates the traffic in a GPU. It takes in several parameters:
+
+numOfPasses: an integer representing the number of passes to run the simulation.
+
+startTimeH: a float representing the starting time of the simulation in hours.
+
+endTimeH: a float representing the ending time of the simulation in hours.
+
+useJohnsonRouting: a boolean indicating whether to use Johnson routing algorithm or not.
+
+useSP: a boolean indicating whether to use shortest path routing algorithm or not.
+
+graph_: a pointer to the graph used in the simulation.
+
+simParameters: a struct of type parameters containing the simulation parameters.
+
+rerouteIncrementMins: an integer representing the reroute increment in minutes.
+
+all_od_pairs: a vector of pairs of vertexes representing origin-destination pairs.
+
+dep_times: a vector of floats representing the departure times.
+
+networkPathSP: a string representing the path to the network file for shortest path algorithm.
+
+The function first creates the lane map, either using the createLaneMap function for non-shortest path routing, or the createLaneMapSP function for shortest path routing. It then generates routes for the traffic people using either the Johnson routing algorithm or the Dijkstra routing algorithm (or the shortest path algorithm if useSP is true). It then outputs the edges, vertices, and edges indices to files and calls the simulateTrafficGPU function to simulate the traffic in the GPU.
+
+The simulateOnePersonCPU function simulates the movement of a single person in a traffic simulation. It takes in a number of arguments, including the current time and delta time of the simulation, data about the traffic person being simulated, information about the road network and intersections, and simulation parameters.
+
+The function first checks if the person is currently active (i.e., if their departure time has arrived or if they are already in the process of moving). If they are not active, the function returns.
+
+If the person is active, the function gets the current edge and lane that the person is on, as well as the traffic light state at the intersection they are approaching. It then calculates the gaps to the vehicles in front and behind the person on their current lane, as well as the speeds of those vehicles.
+
+Based on these gaps and speeds, as well as the person's own speed and acceleration, the function updates the person's position and velocity. If the person has reached their destination, it sets their active status to false. If the person is approaching an intersection, the function checks if they should change lanes or turn at the intersection. If the person needs to change lanes or turn, it updates their lane and edge information accordingly. Finally, the function updates the lane map to reflect the person's new position.
+
+The simulateOneSTOPIntersectionCPU function simulates the behavior of a traffic intersection where the traffic lights are replaced with STOP signs. It does this by checking if there are any cars stopped at the edge of the intersection (the edge leading into the intersection). If there are, the function sets the traffic light for that edge to a STOP sign (0x0F). If there are no cars stopped at the edge of the intersection, the function moves on to the next edge. The simulateOneIntersectionCPU function simulates a traffic intersection with traffic lights. It does this by setting the traffic light for the current edge (determined by the intersections[i].state variable) to green (0xFF) and setting the traffic light for all other edges to red (0x00). The simulateOneIntersectionCPU function also advances the intersections[i].state variable to the next edge and sets the intersections[i].nextEvent variable to the current time plus a fixed time interval (deltaEvent). This causes the traffic lights to change after a fixed time interval has passed. The simulateOneIntersectionCPU function is called for all intersections in the simulation.
+
+## b18TrafficSP.cpp
+It is defining a function make_od_pairs which is used to convert a list of traffic persons (trafficPersonVec) into a list of pairs of vertex indices (od_pairs).
+
+The function takes two arguments:
+
+trafficPersonVec: A vector of B18TrafficPerson structures, which represent the individuals in the traffic simulation. Each B18TrafficPerson has an initial intersection and an end intersection, which are represented as vertex indices in the road graph.
+nagents: An integer representing the number of agents (traffic persons) to consider. If this value is std::numeric_limits<int>::max(), then all traffic persons in trafficPersonVec will be considered.
+The function first initializes an empty vector of vertex pairs od_pairs. It then loops through each traffic person in trafficPersonVec, and adds the initial and end intersection indices as a pair to od_pairs. If nagents is not equal to std::numeric_limits<int>::max(), the function resizes od_pairs to have only nagents elements. It then sorts od_pairs and returns it.
+
+
+
 
 
