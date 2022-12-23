@@ -375,16 +375,16 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
       b18GetSampleTrafficCUDA(accSpeedPerLinePerTimeInterval,
                             numVehPerLinePerTimeInterval);
 
-      for (int i = 0; i < trafficPersonVec.size(); i++) {
-        if ((trafficPersonVec[i].time_departure < currentBatchEndTimeSecs && trafficPersonVec[i].active == 0) ||
-            (isgreaterequal(trafficPersonVec[i].time_departure, currentBatchEndTimeSecs) && trafficPersonVec[i].active != 0)) {
-          std::string errorMessage =
-              "Person " + std::to_string(i) + " has active state " +
-              std::to_string(trafficPersonVec[i].active) + " and dep time " +
-              std::to_string(trafficPersonVec[i].time_departure);
-          throw std::runtime_error(errorMessage);
-        }
-      }
+//       for (int i = 0; i < trafficPersonVec.size(); i++) {
+//         if ((trafficPersonVec[i].time_departure < currentBatchEndTimeSecs && trafficPersonVec[i].active == 0) ||
+//             (isgreaterequal(trafficPersonVec[i].time_departure, currentBatchEndTimeSecs) && trafficPersonVec[i].active != 0)) {
+//           std::string errorMessage =
+//               "Person " + std::to_string(i) + " has active state " +
+//               std::to_string(trafficPersonVec[i].active) + " and dep time " +
+//               std::to_string(trafficPersonVec[i].time_departure);
+//           throw std::runtime_error(errorMessage);
+//         }
+//       }
 
       printFullProgressBar();
 
