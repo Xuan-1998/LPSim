@@ -150,7 +150,7 @@ void B18TrafficSimulator::updateEdgeImpedances(
     float new_impedance;
     if (edgesData.at(ind).curr_cum_vel != 0) {
       avg_edge_vel[index] = edgesData.at(ind).curr_cum_vel / edgesData.at(ind).curr_iter_num_cars;// * 2.23694;
-      new_impedance =  avg_edge_vel[index] / edgesData.at(ind).length;
+      new_impedance =  edgesData.at(ind).length / avg_edge_vel[index];
       auto cum_vel = edgesData.at(ind).curr_cum_vel;
       auto num_cars = edgesData.at(ind).curr_iter_num_cars;
       auto avg_edge_vel_index = avg_edge_vel[index];
