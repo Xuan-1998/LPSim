@@ -641,9 +641,20 @@ __global__ void kernel_trafficSimulation(
     // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
     // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
     assert(trafficPersonVec[p].prevEdge < edgesData_d_size);
-    trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-    trafficPersonVec[p].prevEdge[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
-    trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+    if (window_flag == 0) {
+      trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
+      trafficPersonVec[p].prevEdge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
+      trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+      window_flag++;
+    } else {
+      if (trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag - 1] != elapsed_s) {
+        trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
+        trafficPersonVec[p].prevEdge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
+        trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+        window_flag++;        
+      }
+    }
+
 
 
     if (elapsed_s > MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED) {
