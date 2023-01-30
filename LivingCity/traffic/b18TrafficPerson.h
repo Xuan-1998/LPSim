@@ -20,10 +20,10 @@ struct B18TrafficPerson {
   float time_departure;
   float dist_traveled = 0;
   float last_time_simulated = 0;
-  vector<float> avg_speed;
-  vector<unsigned int> prevEdge_array;
-  vector<float> travel_time;
-  vector<float> end_time_on_prev_edge_array;
+  std::vector<float> avg_speed;
+  std::vector<unsigned int> prevEdge_array;
+  std::vector<float> travel_time;
+  std::vector<float> end_time_on_prev_edge_array;
 
   unsigned short active;//0 inactive 1 active 2 finished
   unsigned short numOfLaneInEdge;//number of lane in that edge
