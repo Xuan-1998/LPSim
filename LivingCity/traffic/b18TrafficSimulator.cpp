@@ -2473,7 +2473,7 @@ void writePeopleFile(
   if (peopleFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving People file... (size " << trafficPersonVec.size() << ")" << std::endl;
     QTextStream streamP(&peopleFile);
-    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,avg_speed1,avg_speed2,avg_speed3,avg_speed4,avg_speed5,avg_speed6,avg_speed7,prevEdge1,prevEdge2,prevEdge3,prevEdge4,prevEdge5,prevEdge6,prevEdge7,travel_time1, travel_time2,travel_time3,travel_time4,travel_time5,travel_time6,travel_time7,endtimeonprevEdge1,endtimeonprevEdge2, endtimeonprevEdge3, endtimeonprevEdge4, endtimeonprevEdge5, endtimeonprevEdge6, endtimeonprevEdge7,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
+    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,avg_speed,prevEdge,travel_time,endtimeonprevEdge,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
 
     for (int p = 0; p < trafficPersonVec.size(); p++) {
       streamP << p;
@@ -2482,34 +2482,10 @@ void writePeopleFile(
       streamP << "," << trafficPersonVec[p].time_departure;
       streamP << "," << trafficPersonVec[p].num_steps * deltaTime;
       streamP << "," << trafficPersonVec[p].co;
-      streamP << "," << trafficPersonVec[p].avg_speed[0];
-      streamP << "," << trafficPersonVec[p].avg_speed[1];
-			streamP << "," << trafficPersonVec[p].avg_speed[2];
-			streamP << "," << trafficPersonVec[p].avg_speed[3];
-			streamP << "," << trafficPersonVec[p].avg_speed[4];
-			streamP << "," << trafficPersonVec[p].avg_speed[5];
-			streamP << "," << trafficPersonVec[p].avg_speed[6];
-			streamP << "," << trafficPersonVec[p].prevEdge_array[0];
-			streamP << "," << trafficPersonVec[p].prevEdge_array[1];
-			streamP << "," << trafficPersonVec[p].prevEdge_array[2];
-			streamP << "," << trafficPersonVec[p].prevEdge_array[3];
-			streamP << "," << trafficPersonVec[p].prevEdge_array[4];
-			streamP << "," << trafficPersonVec[p].prevEdge_array[5];
-			streamP << "," << trafficPersonVec[p].prevEdge_array[6];
-			streamP << "," << trafficPersonVec[p].travel_time[0];
-			streamP << "," << trafficPersonVec[p].travel_time[1];
-			streamP << "," << trafficPersonVec[p].travel_time[2];
-			streamP << "," << trafficPersonVec[p].travel_time[3];
-			streamP << "," << trafficPersonVec[p].travel_time[4];
-			streamP << "," << trafficPersonVec[p].travel_time[5];
-			streamP << "," << trafficPersonVec[p].travel_time[6];
-      streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[0];
-			streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[1];
-			streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[2];
-			streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[3];
-			streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[4];
-			streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[5];
-			streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[6];
+      streamP << "," << trafficPersonVec[p].avg_speed;
+	streamP << "," << trafficPersonVec[p].prevEdge_array;
+	streamP << "," << trafficPersonVec[p].travel_time;
+      streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array;
       streamP << "," << trafficPersonVec[p].gas;
       streamP << "," << trafficPersonVec[p].dist_traveled;
       streamP << "," << trafficPersonVec[p].a;
