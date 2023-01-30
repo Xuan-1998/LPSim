@@ -1,9 +1,10 @@
 build/
 obj/
 x64/
-LivingCity/berkeley_2018/new_full_network/
+
 
 # Vim swap files
 *.swp
 *.info
+.csv
 
