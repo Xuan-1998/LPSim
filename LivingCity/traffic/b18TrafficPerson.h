@@ -22,6 +22,7 @@ struct B18TrafficPerson {
   float last_time_simulated = 0;
   double avg_speed[10];
   unsigned int prevEdge_array[10];
+  float end_time_on_prev_edge_array[10];
   double travel_time[10];
 
   unsigned short active;//0 inactive 1 active 2 finished
