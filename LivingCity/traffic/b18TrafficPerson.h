@@ -8,6 +8,7 @@
 *
 ************************************************************************************************/
 using namespace std;
+#include <vector>
 #ifndef LC_B18_TRAFFIC_PERSON_H
 #define LC_B18_TRAFFIC_PERSON_H
 
