@@ -8,6 +8,7 @@
 #include "b18TrafficPerson.h"
 #include "b18EdgeData.h"
 #include <vector>
+#include <thrust/device_vector.h>
 #include <iostream>
 
 #include "../../src/benchmarker.h"
