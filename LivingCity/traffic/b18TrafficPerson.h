@@ -7,7 +7,7 @@
 *		@author igaciad
 *
 ************************************************************************************************/
-
+using namespace std;
 #ifndef LC_B18_TRAFFIC_PERSON_H
 #define LC_B18_TRAFFIC_PERSON_H
 
