@@ -2485,6 +2485,7 @@ void writePeopleFile(
 
 
       streamP << "," << trafficPersonVec[p].avg_speed[0];
+	std::cout << trafficPersonVec[p].avg_speed[0] << std::endl;
 
       streamP << "," << trafficPersonVec[p].prevEdge_array[0];
 
