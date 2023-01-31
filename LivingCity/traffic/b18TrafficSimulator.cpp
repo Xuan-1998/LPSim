@@ -2483,20 +2483,15 @@ void writePeopleFile(
       streamP << "," << trafficPersonVec[p].num_steps * deltaTime;
       streamP << "," << trafficPersonVec[p].co;
 
-	    	    	for (int i = 0; i < trafficPersonVec[p].avg_speed.size(); i++) {
-      streamP << "," << trafficPersonVec[p].avg_speed[i];
-    }
 
+      streamP << "," << trafficPersonVec[p].avg_speed[0];
 
-	for (int i = 0; i < trafficPersonVec[p].prevEdge_array.size(); i++) {
-      streamP << "," << trafficPersonVec[p].prevEdge_array[i];
-    }
-	    	for (int i = 0; i < trafficPersonVec[p].travel_time.size(); i++) {
-      streamP << "," << trafficPersonVec[p].travel_time[i];
-    }
-	    	    	for (int i = 0; i < trafficPersonVec[p].end_time_on_prev_edge_array.size(); i++) {
-      streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[i];
-    }
+      streamP << "," << trafficPersonVec[p].prevEdge_array[0];
+
+      streamP << "," << trafficPersonVec[p].travel_time[0];
+
+      streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[0];
+
 
       streamP << "," << trafficPersonVec[p].gas;
       streamP << "," << trafficPersonVec[p].dist_traveled;
