@@ -1,0 +1,4 @@
+LivingCity/*.csv
+LivingCity/berkeley_2018/*
+.git
+Makefile
