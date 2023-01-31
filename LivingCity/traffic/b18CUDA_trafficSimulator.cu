@@ -645,18 +645,18 @@ __global__ void kernel_trafficSimulation(
     if (trafficPersonVec[p].window_flag < 100) {
       
       if (trafficPersonVec[p].window_flag == 0) {
-          trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].prevEdge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
+//           trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
+//           trafficPersonVec[p].prevEdge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-          trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
 //           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
       } else {
           if (trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]  != elapsed_s) {
-          trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].prevEdge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
+//           trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
+//           trafficPersonVec[p].prevEdge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-          trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
       }
