@@ -29,3 +29,5 @@ Makefile
 
 # Swap files
 *.swp
+
+Makefile
