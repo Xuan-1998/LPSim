@@ -2482,16 +2482,47 @@ void writePeopleFile(
       streamP << "," << trafficPersonVec[p].time_departure;
       streamP << "," << trafficPersonVec[p].num_steps * deltaTime;
       streamP << "," << trafficPersonVec[p].co;
+  int n = sizeof(trafficPersonVec[p].avg_speed)/sizeof(trafficPersonVec[p].avg_speed[0]);
+
+  string str = "";
+  for (int i = 0; i < n; i++) {
+    str += to_string(trafficPersonVec[p].avg_speed[i]) + " ";
+  }
 
 
-      streamP << "," << trafficPersonVec[p].avg_speed[0];
-	std::cout << trafficPersonVec[p].avg_speed[0] << std::endl;
+      streamP << "," << str;
+	      int n1 = sizeof(trafficPersonVec[p].prevEdge_array)/sizeof(trafficPersonVec[p].prevEdge_array[0]);
 
-      streamP << "," << trafficPersonVec[p].prevEdge_array[0];
+  string str1 = "";
+  for (int i = 0; i < n1; i++) {
+    str1 += to_string(trafficPersonVec[p].prevEdge_array[i]) + " ";
+  }
 
-      streamP << "," << trafficPersonVec[p].travel_time[0];
 
-      streamP << "," << trafficPersonVec[p].end_time_on_prev_edge_array[0];
+      streamP << "," << str1;
+
+
+	      int n2 = sizeof(trafficPersonVec[p].travel_time)/sizeof(trafficPersonVec[p].travel_time[0]);
+
+  string str2 = "";
+  for (int i = 0; i < n2; i++) {
+    str2 += to_string(trafficPersonVec[p].travel_time[i]) + " ";
+  }
+
+
+      streamP << "," << str2;
+	    	      int n3 = sizeof(trafficPersonVec[p].end_time_on_prev_edge_array)/sizeof(trafficPersonVec[p].end_time_on_prev_edge_array[0]);
+
+  string str3 = "";
+  for (int i = 0; i < n3; i++) {
+    str3 += to_string(trafficPersonVec[p].end_time_on_prev_edge_array[i]) + " ";
+  }
+
+
+      streamP << "," << str3;
+
+
+
 
 
       streamP << "," << trafficPersonVec[p].gas;
