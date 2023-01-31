@@ -649,7 +649,7 @@ __global__ void kernel_trafficSimulation(
           trafficPersonVec[p].prevEdge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-          printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
+//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
       } else {
           if (trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]  != elapsed_s) {
