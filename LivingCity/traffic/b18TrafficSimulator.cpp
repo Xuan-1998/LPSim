@@ -2476,7 +2476,7 @@ void writePeopleFile(
     QTextStream streamP(&peopleFile);
 //     streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,avg_speed,prevEdge,travel_time,endtimeonprevEdge,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
     streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,travel_time,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
-//     for (int p = 0; p < trafficPersonVec.size(); p++) {
+    for (int p = 0; p < trafficPersonVec.size(); p++) {
 //       int n = sizeof(trafficPersonVec[p].avg_speed)/sizeof(trafficPersonVec[p].avg_speed[0]);
 //       QString str = "";
 //       for (int i = 0; i < n; i++) {
