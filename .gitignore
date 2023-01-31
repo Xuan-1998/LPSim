@@ -1,0 +1,31 @@
+/build/
+/LivingCity/*.dll
+/x64
+/LivingCity/obj
+/LivingCity/GeneratedFiles
+/LivingCity/screenshots
+/LivingCity/noAvail*
+*.pdb
+*.sdf
+*.opensdf
+*.exe
+*.ilk
+/LivingCity/berkeley_2018
+/LivingCity/LivingCity
+
+*.swp  # Vim swap files
+.qmake.stash
+Makefile
+
+# Ignoring generated files and outputs
+*.csv
+*.bin
+
+# Benchmarking outputs
+*.png
+*.txt
+*.xls
+*.json
+
+# Swap files
+*.swp
