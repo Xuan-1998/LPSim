@@ -43,7 +43,7 @@ void B18CommandLineVersion::runB18Simulation() {
   const float endSimulationH = settings.value("END_HR", 12).toFloat();
   const bool showBenchmarks = settings.value("SHOW_BENCHMARKS", false).toBool();
   int rerouteIncrementMins = settings.value("REROUTE_INCREMENT", 30).toInt(); //in minutes
-  std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "od_demand_5to12.csv").toString().toStdString();
+  std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "od_demand_5to12_100sample.csv").toString().toStdString();
   const bool runUnitTests = settings.value("RUN_UNIT_TESTS", false).toBool();
 
   ClientGeometry cg;

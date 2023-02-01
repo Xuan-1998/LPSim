@@ -2488,9 +2488,11 @@ void writePeopleFile(
 //               str1 += QString::fromStdString(to_string(trafficPersonVec[p].prevEdge_array[i])) + QString::fromStdString(" ");
 //           }
       int n2 = sizeof(trafficPersonVec[p].travel_time)/sizeof(trafficPersonVec[p].travel_time[0]);
-
       QString str2 = "";
       for (int i = 0; i < n2; i++) {
+              if (trafficPersonVec[p].travel_time[i] == -0.5) {
+                break;
+              }
               str2 += QString::fromStdString(to_string(trafficPersonVec[p].travel_time[i])) + QString::fromStdString(" ");
           }
 //       int n3 = sizeof(trafficPersonVec[p].end_time_on_prev_edge_array)/sizeof(trafficPersonVec[p].end_time_on_prev_edge_array[0]);
@@ -2509,10 +2511,6 @@ void writePeopleFile(
 //       streamP << "," << str1;
       streamP << "," << str2;
 //       streamP << "," << str3;
-
-
-
-
 
       streamP << "," << trafficPersonVec[p].gas;
       streamP << "," << trafficPersonVec[p].dist_traveled;
