@@ -49,10 +49,10 @@ struct CUDATrafficPerson {
   float time_departure;
   
   unsigned int window_flag = 0;
-  float avg_speed[100];
-  unsigned int  prevEdge_array[100];
-  float  travel_time[100];
-  float  end_time_on_prev_edge_array[100];
+  //float avg_speed[100];
+  //unsigned int  prevEdge_array[100];
+  float  travel_time[450];
+  //float  end_time_on_prev_edge_array[100];
 
   unsigned short active;//0 inactive 1 active 2 finished
   //unsigned short curEdgeLane;// edge number
