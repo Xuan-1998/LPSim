@@ -2581,6 +2581,7 @@ void writeRouteFile(int numOfPass,
 
       }
       //streamR << "]:" << distance << "\n";
+      streamR << "\n";
     }
     routeFile.close();
   }
