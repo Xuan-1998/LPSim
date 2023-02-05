@@ -2497,7 +2497,7 @@ void writePeopleFile(
       int n2 = sizeof(trafficPersonVec[p].travel_time)/sizeof(trafficPersonVec[p].travel_time[0]);
       QString str2 = "";
       for (int i = 0; i < n2; i++) {
-              if (trafficPersonVec[p].travel_time[i] == -0.5) {
+              if (trafficPersonVec[p].travel_time[i] == 0.0) {
                 break;
               }
               str2 += QString::fromStdString(to_string(trafficPersonVec[p].travel_time[i])) + QString::fromStdString(" ");
