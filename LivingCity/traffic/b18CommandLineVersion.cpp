@@ -32,6 +32,7 @@ void B18CommandLineVersion::runB18Simulation() {
   bool loadPrevPaths = settings.value("LOAD_PREV_PATHS", false).toBool();
   bool savePrevPaths = settings.value("SAVE_PREV_PATHS", false).toBool();
 
+
   QString networkPath = settings.value("NETWORK_PATH").toString();
   const std::string networkPathSP = networkPath.toStdString();
 
