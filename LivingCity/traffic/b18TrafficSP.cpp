@@ -315,7 +315,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
     std::cout<<"finish saving routes in calibrated_routes.csv file!!!!!!!!!!!!!!!!!!!!\n";
   }
   
-  bool if_change_route = false;
+  bool if_change_route = true;
   if (if_change_route){
     string csv_name = "routes_k_70.txt";
     string line,word;
