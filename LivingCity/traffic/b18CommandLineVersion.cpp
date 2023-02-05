@@ -63,6 +63,7 @@ void B18CommandLineVersion::runB18Simulation() {
     }
   }
 
+
   for (const auto parameter: allParameters) {
     if (!settings.childKeys().contains(QString::fromUtf8(parameter.c_str()))) {
       std::cout << "Argument " << parameter << " is missing from command_line_options. Setting it to its default value." << std::endl;
