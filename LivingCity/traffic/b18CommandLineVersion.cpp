@@ -32,7 +32,6 @@ void B18CommandLineVersion::runB18Simulation() {
   bool loadPrevPaths = settings.value("LOAD_PREV_PATHS", false).toBool();
   bool savePrevPaths = settings.value("SAVE_PREV_PATHS", false).toBool();
 
-
   QString networkPath = settings.value("NETWORK_PATH").toString();
   const std::string networkPathSP = networkPath.toStdString();
 
@@ -44,7 +43,7 @@ void B18CommandLineVersion::runB18Simulation() {
   const float endSimulationH = settings.value("END_HR", 12).toFloat();
   const bool showBenchmarks = settings.value("SHOW_BENCHMARKS", false).toBool();
   int rerouteIncrementMins = settings.value("REROUTE_INCREMENT", 30).toInt(); //in minutes
-  std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "UAM_ground_od_file_200sample.csv").toString().toStdString();
+  std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "od_demand_5to12.csv").toString().toStdString();
   const bool runUnitTests = settings.value("RUN_UNIT_TESTS", false).toBool();
 
   ClientGeometry cg;
@@ -62,7 +61,6 @@ void B18CommandLineVersion::runB18Simulation() {
       throw std::invalid_argument("Argument " + inputedParameter.toStdString() + " is invalid.");
     }
   }
-
 
   for (const auto parameter: allParameters) {
     if (!settings.childKeys().contains(QString::fromUtf8(parameter.c_str()))) {

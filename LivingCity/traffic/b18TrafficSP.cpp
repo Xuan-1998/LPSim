@@ -285,78 +285,12 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   B18TrafficSP::edgePreprocessingForRouting(edges_routing, edge_weights_routing, street_graph);
 
   Benchmarker routingCH("Routing_CH_batch_" + std::to_string(reroute_batch_number), true);
-  cout<<street_graph->vertices_data_.size()<<","<<endl;
   routingCH.startMeasuring();
   //MTC::accessibility::Accessibility *graph_ch = new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(), edges_routing, edge_weights_routing, false);
    std::unique_ptr<MTC::accessibility::Accessibility> graph_ch(
     new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
     edges_routing, edge_weights_routing, false));
-  std::cout<<"--------------------------------routing start--------------------------------"<<std::endl;
   std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
-  //std::vector<std::vector<abm::graph::edge_id_t> > paths_ch;
-  bool if_save = false;
-  if(if_save){
-    std::ofstream myfile;
-    myfile.open ("temp_routes.csv");
-    for(int i=0;i<paths_ch.size();i++){
-      for(int j=0;j<paths_ch[i].size();j++){
-        //std::cout<<paths_ch[i][j]<<std::endl;
-        long long int idx = paths_ch[i][j];
-        if(j==0) myfile<<to_string(idx);
-        else{
-          myfile<<",";
-          myfile<<to_string(idx);
-          
-        }
-      }
-      myfile<<"\n";
-    }
-    myfile.close();
-    std::cout<<"finish saving routes in calibrated_routes.csv file!!!!!!!!!!!!!!!!!!!!\n";
-  }
-  
-  bool if_change_route = true;
-  if (if_change_route){
-    string csv_name = "routes_k_70.txt";
-    string line,word;
-    fstream file(csv_name,ios::in);
-    int count = 0;
-    if(file.is_open())
-    {
-      
-    std::cout<<"here"<<std::endl;
-    while(getline(file, line))
-        {
-        //if(count==773134) break;
-        vector<abm::graph::edge_id_t> row;
-        stringstream str(line);
-        while(getline(str, word, ',')) {
-            int tem = std::stoi(word);
-            abm::graph::edge_id_t test = tem;
-            row.push_back(test);
-            }
-        paths_ch[count]=row;
-        //paths_ch.push_back(row);
-        count++;
-        //std::cout<<count<<std::endl;
-        } 
-    }
-    else{
-        cout<<"error"<<endl;
-        }
-
-  }
-  
-  //std::cout<<count<<std::endl;
-  std::cout<<paths_ch.size()<<std::endl;
-  for (int j=0;j<1;j++){
-    std::cout<<"trajectory for trip "<<j<<std::endl;
-    for (int i=0;i<paths_ch[j].size();i++) std::cout<<paths_ch[j][i]<<std::endl;
-  }
-  
-  //abm::graph::edge_id_t test = 192085;
-  //std::cout<<test<<std::endl;
-  std::cout<<"--------------------------------routing stop--------------------------------"<<std::endl;
   routingCH.stopAndEndBenchmark();
 
   std::cout << "# of paths = " << paths_ch.size() << std::endl;
