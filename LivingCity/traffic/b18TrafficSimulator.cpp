@@ -150,7 +150,7 @@ void B18TrafficSimulator::updateEdgeImpedances(
     float new_impedance;
     if (edgesData.at(ind).curr_cum_vel != 0) {
       avg_edge_vel[index] = edgesData.at(ind).curr_cum_vel / edgesData.at(ind).curr_iter_num_cars;// * 2.23694;
-      new_impedance =  edgesData.at(ind).length / avg_edge_vel[index];
+      new_impedance = edgesData.at(ind).length / avg_edge_vel[index];
       auto cum_vel = edgesData.at(ind).curr_cum_vel;
       auto num_cars = edgesData.at(ind).curr_iter_num_cars;
       auto avg_edge_vel_index = avg_edge_vel[index];
@@ -375,16 +375,16 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
       b18GetSampleTrafficCUDA(accSpeedPerLinePerTimeInterval,
                             numVehPerLinePerTimeInterval);
 
-//       for (int i = 0; i < trafficPersonVec.size(); i++) {
-//         if ((trafficPersonVec[i].time_departure < currentBatchEndTimeSecs && trafficPersonVec[i].active == 0) ||
-//             (isgreaterequal(trafficPersonVec[i].time_departure, currentBatchEndTimeSecs) && trafficPersonVec[i].active != 0)) {
-//           std::string errorMessage =
-//               "Person " + std::to_string(i) + " has active state " +
-//               std::to_string(trafficPersonVec[i].active) + " and dep time " +
-//               std::to_string(trafficPersonVec[i].time_departure);
-//           throw std::runtime_error(errorMessage);
-//         }
-//       }
+      for (int i = 0; i < trafficPersonVec.size(); i++) {
+        if ((trafficPersonVec[i].time_departure < currentBatchEndTimeSecs && trafficPersonVec[i].active == 0) ||
+            (isgreaterequal(trafficPersonVec[i].time_departure, currentBatchEndTimeSecs) && trafficPersonVec[i].active != 0)) {
+          std::string errorMessage =
+              "Person " + std::to_string(i) + " has active state " +
+              std::to_string(trafficPersonVec[i].active) + " and dep time " +
+              std::to_string(trafficPersonVec[i].time_departure);
+          throw std::runtime_error(errorMessage);
+        }
+      }
 
       printFullProgressBar();
 
@@ -2469,70 +2469,29 @@ void writePeopleFile(
   int start_time, int end_time,
   const std::vector<B18TrafficPerson> &trafficPersonVec,
   float deltaTime){
-
   QFile peopleFile(QString::number(numOfPass) + "_people" + QString::number(start_time) + "to" + QString::number(end_time) + ".csv");
   if (peopleFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving People file... (size " << trafficPersonVec.size() << ")" << std::endl;
     QTextStream streamP(&peopleFile);
-//     streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,avg_speed,prevEdge,travel_time,endtimeonprevEdge,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
-    //streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,travel_time,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
-    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,travel_time,distance\n";
-    for (int p = 0; p < trafficPersonVec.size(); p++) {
-      // int n = sizeof(trafficPersonVec[p].avg_speed)/sizeof(trafficPersonVec[p].avg_speed[0]);
-      // QString str = "";
-      // for (int i = 0; i < n; i++) {
-      //         if (trafficPersonVec[p].prevEdge_array[i] == 0.0) {
-      //           break;
-      //         }
-      //   str += QString::fromStdString(to_string(trafficPersonVec[p].avg_speed[i])) + QString::fromStdString(" ");
-      // }
-      // int n1 = sizeof(trafficPersonVec[p].prevEdge_array)/sizeof(trafficPersonVec[p].prevEdge_array[0]);
-      // QString str1 = "";
-      // for (int i = 0; i < n1; i++) {
-      //         if (trafficPersonVec[p].prevEdge_array[i] == 0.0) {
-      //           break;
-      //         }
-      //         str1 += QString::fromStdString(to_string(trafficPersonVec[p].prevEdge_array[i])) + QString::fromStdString(" ");
-      //     }
-      int n2 = sizeof(trafficPersonVec[p].travel_time)/sizeof(trafficPersonVec[p].travel_time[0]);
-      QString str2 = "";
-      for (int i = 0; i < n2; i++) {
-              if (trafficPersonVec[p].travel_time[i] == -0.5) {
-                break;
-              }
-              str2 += QString::fromStdString(to_string(trafficPersonVec[p].travel_time[i])) + QString::fromStdString(" ");
-          }
-//       int n3 = sizeof(trafficPersonVec[p].end_time_on_prev_edge_array)/sizeof(trafficPersonVec[p].end_time_on_prev_edge_array[0]);
+    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
 
-//       QString str3 = "";
-//       for (int i = 0; i < n3; i++) {
-//           str3 += QString::fromStdString(to_string(trafficPersonVec[p].end_time_on_prev_edge_array[i])) + QString::fromStdString(" ");
-//           }
+    for (int p = 0; p < trafficPersonVec.size(); p++) {
       streamP << p;
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].init_intersection];
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].end_intersection];
       streamP << "," << trafficPersonVec[p].time_departure;
       streamP << "," << trafficPersonVec[p].num_steps * deltaTime;
-      //streamP << "," << trafficPersonVec[p].co;
-      // streamP << "," << str;
-      // streamP << "," << str1;
-      streamP << "," << str2; // the travel time we added
-//       streamP << "," << str3;
-
-
-
-
-
-      //streamP << "," << trafficPersonVec[p].gas;
+      streamP << "," << trafficPersonVec[p].co;
+      streamP << "," << trafficPersonVec[p].gas;
       streamP << "," << trafficPersonVec[p].dist_traveled;
-      // streamP << "," << trafficPersonVec[p].a;
-      // streamP << "," << trafficPersonVec[p].b;
-      // streamP << "," << trafficPersonVec[p].T;
-      // streamP << "," << (trafficPersonVec[p].cum_v / trafficPersonVec[p].num_steps) * 3600 / 1609.34;
-      // streamP << "," << trafficPersonVec[p].active;
-      // streamP << "," << trafficPersonVec[p].last_time_simulated;
-      // streamP << "," << trafficPersonVec[p].path_length_cpu;
-      // streamP << "," << trafficPersonVec[p].path_length_gpu;
+      streamP << "," << trafficPersonVec[p].a;
+      streamP << "," << trafficPersonVec[p].b;
+      streamP << "," << trafficPersonVec[p].T;
+      streamP << "," << (trafficPersonVec[p].cum_v / trafficPersonVec[p].num_steps) * 3600 / 1609.34;
+      streamP << "," << trafficPersonVec[p].active;
+      streamP << "," << trafficPersonVec[p].last_time_simulated;
+      streamP << "," << trafficPersonVec[p].path_length_cpu;
+      streamP << "," << trafficPersonVec[p].path_length_gpu;
       streamP << "\n";
     }
 
@@ -2557,10 +2516,10 @@ void writeRouteFile(int numOfPass,
   if (routeFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving Route file..." << std::endl;
     QTextStream streamR(&routeFile);
-    //streamR << "p:route:distance\n";
+    streamR << "p:route:distance\n";
 
     for (const personPath& aPersonPath: allPathsInVertexes){
-      //streamR << aPersonPath.person_id << ":[";
+      streamR << aPersonPath.person_id << ":[";
       float distance = 0;
       for (int j = 0; j < aPersonPath.pathInVertexes.size()-1; j++){
         auto vertexFrom = aPersonPath.pathInVertexes[j];
@@ -2586,8 +2545,7 @@ void writeRouteFile(int numOfPass,
         distance += edgesData[oneEdgeInGPUFormat].length;
 
       }
-      //streamR << "]:" << distance << "\n";
-      streamR << "\n";
+      streamR << "]:" << distance << "\n";
     }
     routeFile.close();
   }
