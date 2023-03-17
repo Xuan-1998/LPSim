@@ -1,4 +1,4 @@
-# LS-PTS (Large Scale - Parallel Traffic Simulator)
+# LPSim (Large (Scale) Parallel (Computing) metropolitan scale traffic Simulation)
 ## profiling
 
 nvprof --events kernel --print-gpu-trace --csv ./LivingCity > profiling_report.csv
