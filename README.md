@@ -1,7 +1,7 @@
 # LPSim (Large (Scale) Parallel (Computing) metropolitan scale traffic Simulation)
 ## profiling
 
-nvprof --print-gpu-trace  ./LivingCity --log-file profile.txt
+nvprof --print-summary  ./LivingCity >>  profile_g3.txt
 
 ## b18CUDA_trafficSimulator.cu
 The program appears to include several user-defined header files, such as "b18TrafficPerson.h" and "b18EdgeData.h". It also includes the header file "curand_kernel.h", which is part of the CUDA Random Number Generation (CURAND) library. The CURAND library provides functions for generating high-quality random numbers on the GPU.
