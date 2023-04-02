@@ -1,9 +1,12 @@
 # LPSim (Large (Scale) Parallel (Computing) metropolitan scale traffic Simulation)
 ## profiling
 
-nvprof --print-summary  ./LivingCity >>  profile_g3.txt (give you summary)
+nvprof --print-summary  ./LivingCity >>  profile_g3.txt 2>&1 (summary)
 
-nvprof --print-gpu-trace  ./LivingCity >> output_g3.txt 2>&1 (give you breakdown)
+nvprof --print-gpu-trace  ./LivingCity >> output_g3.txt 2>&1 (breakdown)
+
+nvprof --metrics flop_count_sp,flop_count_dp ./LivingCity >> output_g3.txt 2>&1  (flop ratio)
+
 
 
 ## b18CUDA_trafficSimulator.cu
