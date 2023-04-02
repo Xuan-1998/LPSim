@@ -2,6 +2,7 @@
 ## profiling
 
 nvprof --print-summary  ./LivingCity >>  profile_g3.txt (give you summary)
+
 nvprof --print-gpu-trace  ./LivingCity >> output_g3.txt 2>&1 (give you breakdown)
 
 
