@@ -1,6 +1,12 @@
 # LPSim (Large (Scale) Parallel (Computing) metropolitan scale traffic Simulation)
 ## profiling
 
+run docker with:
+
+docker run -it --rm --privileged --gpus all -v "$PWD":/manta -w /manta gcr.io/blissful-jet-303616/manta:latest  bash
+
+then:
+
 nvprof --print-summary  ./LivingCity >>  profile_g3.txt 2>&1 (summary)
 
 nvprof --print-gpu-trace  ./LivingCity >> output_g3.txt 2>&1 (breakdown)
