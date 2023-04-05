@@ -6,6 +6,9 @@
 
 nvidia-smi --loop-ms=1000 --filename=output_gpuusage.txt
 
+while true; do nvidia-smi >> output_gpu.txt; sleep 10; done
+
+
 
 ## profiling
 
