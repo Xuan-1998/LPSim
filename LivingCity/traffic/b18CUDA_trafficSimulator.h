@@ -28,11 +28,19 @@ extern void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPe
                                     std::vector<uint> &indexPathVec, 
                                     std::vector<LC::B18EdgeData>& edgesData);
 extern void b18GetDataCUDA(std::vector<LC::B18TrafficPerson> &trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData);
+extern void b18GetDataCUDA_Copy(std::vector<LC::B18TrafficPerson> &trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData);
 extern void b18GetSampleTrafficCUDA(std::vector<float>& accSpeedPerLinePerTimeInterval, 
                                 std::vector<float>& numVehPerLinePerTimeInterval);
+extern void b18GetSampleTrafficCUDA_Copy(std::vector<float>& accSpeedPerLinePerTimeInterval, 
+                                std::vector<float>& numVehPerLinePerTimeInterval);
 extern void b18FinishCUDA(void); // free memory
+extern void b18FinishCUDA_Copy(void); // free memory
 extern void b18ResetPeopleLanesCUDA(uint numPeople); // reset people to inactive
+extern void b18ResetPeopleLanesCUDA_Copy(uint numPeople); // reset people to inactive
 extern void b18SimulateTrafficCUDA(float currentTime, uint numPeople,
+                                   uint numIntersections, float deltaTime, const parameters simParameters,
+                                   int numBlocks, int threadsPerBlock);
+extern void b18SimulateTrafficCUDA_Copy(float currentTime, uint numPeople,
                                    uint numIntersections, float deltaTime, const parameters simParameters,
                                    int numBlocks, int threadsPerBlock);
 
