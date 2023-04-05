@@ -1,6 +1,7 @@
 //CUDA CODE
 #include <stdio.h>
-#include "cuda_runtime.h"
+#include <iostream>
+#include <cuda_runtime.h>
 #include "curand_kernel.h"
 #include "device_launch_parameters.h"
 #include "assert.h"
@@ -8,7 +9,6 @@
 #include "b18TrafficPerson.h"
 #include "b18EdgeData.h"
 #include <vector>
-#include <thrust/device_vector.h>
 #include <iostream>
 
 #include "../../src/benchmarker.h"
@@ -81,6 +81,33 @@ uchar *trafficLights_d;
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
 
+LC::B18TrafficPerson *trafficPersonVec_d_Copy;
+uint *indexPathVec_d_Copy;
+uint indexPathVec_d_size_Copy;
+LC::B18EdgeData *edgesData_d_Copy;
+uint edgesData_d_size_Copy;
+uint laneMap_d_size_Copy;
+uint trafficLights_d_size_Copy;
+uint accSpeedPerLinePerTimeInterval_d_size_Copy;
+uint numVehPerLinePerTimeInterval_d_size_Copy;
+
+__constant__ bool calculatePollution_Copy = true;
+__constant__ float cellSize_Copy = 1.0f;
+
+uchar *laneMap_d_Copy;
+bool readFirstMapC_Copy=true;
+uint mapToReadShift_Copy;
+uint mapToWriteShift_Copy;
+uint halfLaneMap_Copy;
+float startTime_Copy;
+
+
+LC::B18IntersectionData *intersections_d_Copy;
+uchar *trafficLights_d_Copy;
+
+float* accSpeedPerLinePerTimeInterval_d_Copy;
+float* numVehPerLinePerTimeInterval_d_Copy;
+
 void b18InitCUDA(
   bool fistInitialization,
   std::vector<LC::B18TrafficPerson>& trafficPersonVec, 
@@ -98,6 +125,8 @@ void b18InitCUDA(
 
   const uint numStepsPerSample = 30.0f / deltaTime; //each min
   const uint numStepsTogether = 12; //change also in density (10 per hour)
+
+  cudaSetDevice(0);
   { // people
     size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
     if (fistInitialization) gpuErrchk(cudaMalloc((void **) &trafficPersonVec_d, size));   // Allocate array on device
@@ -148,6 +177,61 @@ void b18InitCUDA(
     accSpeedPerLinePerTimeInterval_d_size = sizeAcc;
     numVehPerLinePerTimeInterval_d_size = sizeAcc;
   }
+
+  cudaSetDevice(1);
+  { // people
+    size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+    if (fistInitialization) gpuErrchk(cudaMalloc((void **) &trafficPersonVec_d_Copy, size));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(trafficPersonVec_d_Copy, trafficPersonVec.data(), size, cudaMemcpyHostToDevice));
+  }
+  { // indexPathVec
+    size_t sizeIn = indexPathVec.size() * sizeof(uint);
+    indexPathVec_d_size = indexPathVec.size();
+    if (fistInitialization) gpuErrchk(cudaMalloc((void **) &indexPathVec_d_Copy, sizeIn));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(indexPathVec_d_Copy, indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice));
+  }
+  {//edgeData
+    size_t sizeD = edgesData_d_size * sizeof(LC::B18EdgeData);
+    edgesData_d_size = edgesData.size();
+    if (fistInitialization) gpuErrchk(cudaMalloc((void **) &edgesData_d_Copy, sizeD));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(edgesData_d_Copy, edgesData.data(), sizeD, cudaMemcpyHostToDevice));
+  }
+  {//laneMap
+    size_t sizeL = laneMap.size() * sizeof(uchar);
+    laneMap_d_size = laneMap.size();
+    if (fistInitialization) gpuErrchk(cudaMalloc((void **) &laneMap_d_Copy, sizeL));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(laneMap_d_Copy, laneMap.data(), sizeL, cudaMemcpyHostToDevice));
+    halfLaneMap = laneMap.size() / 2;
+  }
+  {// intersections
+    size_t sizeI = intersections.size() * sizeof(LC::B18IntersectionData);
+    if (fistInitialization) gpuErrchk(cudaMalloc((void **) &intersections_d_Copy, sizeI));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(intersections_d_Copy, intersections.data(), sizeI, cudaMemcpyHostToDevice));
+    size_t sizeT = trafficLights.size() * sizeof(uchar);//total number of lanes
+    trafficLights_d_size = trafficLights.size();
+    if (fistInitialization) gpuErrchk(cudaMalloc((void **) &trafficLights_d_Copy, sizeT));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(trafficLights_d_Copy, trafficLights.data(), sizeT, cudaMemcpyHostToDevice));
+  }
+  {
+    startTime = startTimeH * 3600.0f;
+    uint numSamples = ceil(((endTimeH*3600.0f - startTimeH*3600.0f) / (deltaTime * numStepsPerSample * numStepsTogether))) + 1; //!!!
+    accSpeedPerLinePerTimeInterval.clear();
+    numVehPerLinePerTimeInterval.clear();
+    accSpeedPerLinePerTimeInterval.resize(numSamples * trafficLights.size());
+    numVehPerLinePerTimeInterval.resize(numSamples * trafficLights.size());
+    size_t sizeAcc = accSpeedPerLinePerTimeInterval.size() * sizeof(float);
+    if (fistInitialization)
+      gpuErrchk(cudaMalloc((void **) &accSpeedPerLinePerTimeInterval_d_Copy, sizeAcc));   // Allocate array on device
+    if (fistInitialization)
+      gpuErrchk(cudaMalloc((void **) &numVehPerLinePerTimeInterval_d_Copy, sizeAcc));   // Allocate array on device
+    gpuErrchk(cudaMemset(&accSpeedPerLinePerTimeInterval_d_Copy[0], 0, sizeAcc));
+    gpuErrchk(cudaMemset(&numVehPerLinePerTimeInterval_d_Copy[0], 0, sizeAcc));
+    accSpeedPerLinePerTimeInterval_d_size = sizeAcc;
+    numVehPerLinePerTimeInterval_d_size = sizeAcc;
+  }
+
+
+
   printMemoryUsage();
 }
 
@@ -156,7 +240,7 @@ void b18updateStructuresCUDA(
   std::vector<uint> &indexPathVec, 
   std::vector<LC::B18EdgeData>& edgesData) {
   std::cout<< ">> b18updateStructuresCUDA" << std::endl;
-
+  cudaSetDevice(0);
   //indexPathVec
   cudaFree(indexPathVec_d);
   size_t sizeIn = indexPathVec.size() * sizeof(uint);
@@ -173,10 +257,28 @@ void b18updateStructuresCUDA(
   gpuErrchk(cudaMalloc((void **) &trafficPersonVec_d, size));
   gpuErrchk(cudaMemcpy(trafficPersonVec_d, trafficPersonVec.data(), size, cudaMemcpyHostToDevice));
 
+  cudaSetDevice(1);
+  //indexPathVec
+  cudaFree(indexPathVec_d_Copy);
+  // size_t sizeIn = indexPathVec.size() * sizeof(uint);
+  indexPathVec_d_size = indexPathVec.size();
+  gpuErrchk(cudaMalloc((void **) &indexPathVec_d_Copy, sizeIn));
+  gpuErrchk(cudaMemcpy(indexPathVec_d_Copy, indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice));
+  cudaFree(edgesData_d_Copy);
+  // size_t sizeD = edgesData.size() * sizeof(LC::B18EdgeData);
+  gpuErrchk(cudaMalloc((void **) &edgesData_d_Copy, sizeD));
+  gpuErrchk(cudaMemcpy(edgesData_d_Copy, edgesData.data(), sizeD, cudaMemcpyHostToDevice));
+
+  cudaFree(trafficPersonVec_d_Copy);
+  // size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  gpuErrchk(cudaMalloc((void **) &trafficPersonVec_d_Copy, size));
+  gpuErrchk(cudaMemcpy(trafficPersonVec_d_Copy, trafficPersonVec.data(), size, cudaMemcpyHostToDevice));
+
   printMemoryUsage();
 }
 
 void b18FinishCUDA(void){
+  cudaSetDevice(0);
   cudaFree(trafficPersonVec_d);
   cudaFree(indexPathVec_d);
   cudaFree(edgesData_d);
@@ -187,12 +289,34 @@ void b18FinishCUDA(void){
   cudaFree(numVehPerLinePerTimeInterval_d);
 }
 
+void b18FinishCUDA_Copy(void){
+  cudaSetDevice(1);
+  cudaFree(trafficPersonVec_d_Copy);
+  cudaFree(indexPathVec_d_Copy);
+  cudaFree(edgesData_d_Copy);
+  cudaFree(laneMap_d_Copy);
+  cudaFree(intersections_d_Copy);
+  cudaFree(trafficLights_d_Copy);
+  cudaFree(accSpeedPerLinePerTimeInterval_d_Copy);
+  cudaFree(numVehPerLinePerTimeInterval_d_Copy);
+}
+
 void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
   // copy back people
+  cudaSetDevice(0);
   size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
   size_t size_edges = edgesData_d_size * sizeof(LC::B18EdgeData);
   cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,size,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
   cudaMemcpy(edgesData.data(),edgesData_d,size_edges,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
+}
+
+void b18GetDataCUDA_Copy(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
+  // copy back people
+  cudaSetDevice(1);
+  size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  size_t size_edges = edgesData_d_size * sizeof(LC::B18EdgeData);
+  cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d_Copy,size,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
+  cudaMemcpy(edgesData.data(),edgesData_d_Copy,size_edges,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
 }
 
 
@@ -521,30 +645,6 @@ __global__ void kernel_trafficSimulation(
 
   assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficPersonVec[p].indexPathCurr] == END_OF_PATH) {
-        float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
-
-    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
-    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
-    assert(trafficPersonVec[p].prevEdge < edgesData_d_size);
-    if (trafficPersonVec[p].window_flag < 300) {
-      
-      if (trafficPersonVec[p].window_flag == 0) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
-          trafficPersonVec[p].window_flag++;
-      } else {
-          if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-          trafficPersonVec[p].window_flag++;    
-        }
-      }
-    }
     trafficPersonVec[p].active = 2; //finished
     return;
   }
@@ -561,30 +661,6 @@ __global__ void kernel_trafficSimulation(
     trafficPersonVec[p].last_time_simulated = currentTime;
 
     if (firstEdge == END_OF_PATH) {
-          float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
-
-    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
-    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
-    assert(trafficPersonVec[p].prevEdge < edgesData_d_size);
-    if (trafficPersonVec[p].window_flag < 300) {
-      
-      if (trafficPersonVec[p].window_flag == 0) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
-          trafficPersonVec[p].window_flag++;
-      } else {
-          if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-          trafficPersonVec[p].window_flag++;    
-        }
-      }
-    }
       trafficPersonVec[p].active = 2;
       return;
     }
@@ -674,48 +750,21 @@ __global__ void kernel_trafficSimulation(
   //2.1 try to move
   float numMToMove;
   bool nextVehicleIsATrafficLight = false;
-
-
-
+  
 
   //when we're on a new edge for the first time
   if (currentEdge == trafficPersonVec[p].nextEdge) {
-
-
     trafficPersonVec[p].end_time_on_prev_edge = currentTime - deltaTime;
     float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
 
     // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
     // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
     assert(trafficPersonVec[p].prevEdge < edgesData_d_size);
-
-  if (trafficPersonVec[p].window_flag < 300) {
-      
-      if (trafficPersonVec[p].window_flag == 0) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
-          trafficPersonVec[p].window_flag++;
-      } else {
-          if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-          trafficPersonVec[p].window_flag++;    
-        }
-      }
-    }
-
-
     if (elapsed_s > MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED) {
       trafficPersonVec[p].manual_v = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
       edgesData[trafficPersonVec[p].prevEdge].curr_iter_num_cars += 1;
       edgesData[trafficPersonVec[p].prevEdge].curr_cum_vel += trafficPersonVec[p].manual_v;
     }
-
 
     trafficPersonVec[p].start_time_on_prev_edge = currentTime;
     trafficPersonVec[p].prevEdge = currentEdge;
@@ -882,30 +931,6 @@ __global__ void kernel_trafficSimulation(
       trafficPersonVec[p].LC_initOKLanes = 0xFF;
       trafficPersonVec[p].LC_endOKLanes = 0xFF;
     } else {
-          float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
-
-    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
-    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
-    assert(trafficPersonVec[p].prevEdge < edgesData_d_size);
-    if (trafficPersonVec[p].window_flag < 300) {
-      
-      if (trafficPersonVec[p].window_flag == 0) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
-          trafficPersonVec[p].window_flag++;
-      } else {
-          if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
-          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-          trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
-          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-          trafficPersonVec[p].window_flag++;    
-        }
-      }
-    }
       trafficPersonVec[p].active == 2;
     }
     trafficPersonVec[p].indexPathCurr++;
@@ -1153,69 +1178,6 @@ __global__ void kernel_trafficSimulation(
   }
 }
 
-/*
-__global__ void kernel_intersectionSTOPSimulation(
-     uint numIntersections, 
-     float currentTime, 
-     LC::B18IntersectionData *intersections, 
-     uchar *trafficLights,
-     LC::B18EdgeData* edgesData,//for the length
-     uchar* laneMap,//to check if there are cars
-     uint mapToReadShift) {
-     int i = blockIdx.x * blockDim.x + threadIdx.x;
-     if (i<numIntersections) {//CUDA check (inside margins)
-
-     const float deltaEvent = 0.0f; 
-
-     //if(i==0)printf("i %d\n",i);
-     if (currentTime > intersections[i].nextEvent && intersections[i].totalInOutEdges > 0) {
-       uint edgeOT = intersections[i].edge[intersections[i].state];
-       uchar numLinesO = edgeOT >> 24;
-       uint edgeONum = edgeOT & kMaskLaneMap; // 0xFFFFF
-
-       // red old traffic lights
-       for (int nL = 0; nL < numLinesO; nL++) {
-         trafficLights[edgeONum + nL] = 0x00; //red old traffic light
-       }
-
-       for (int iN = 0; iN <= intersections[i].totalInOutEdges + 1; iN++) { //to give a round
-         intersections[i].state = (intersections[i].state + 1) %
-           intersections[i].totalInOutEdges;//next light
-
-         if ((intersections[i].edge[intersections[i].state] & kMaskInEdge) == kMaskInEdge) {  // 0x800000
-           uint edgeIT = intersections[i].edge[intersections[i].state];
-           uint edgeINum = edgeIT & kMaskLaneMap; //get edgeI 0xFFFFF
-           uchar numLinesI = edgeIT >> 24;
-           /// check if someone in this edge
-           int rangeToCheck = 5.0f; //5m
-           ushort firstPosToCheck = edgesData[edgeINum].length - intersectionClearance; //last po
-           bool atLeastOneStopped = false;
-
-           for (int posCheck = firstPosToCheck; rangeToCheck >= 0 && posCheck >= 0; posCheck--, rangeToCheck--) { //as many cells as the rangeToCheck says
-             for (int nL = 0; nL < numLinesI; nL++) {
-               //int cellNum = mapToReadShift + maxWidth * (edgeINum + nL) + posCheck;
-               const uint posToSample = mapToReadShift + kMaxMapWidthM * (edgeINum + (((int) (posCheck / kMaxMapWidthM)) * numLinesI) + nL) + posCheck % kMaxMapWidthM;
-
-
-               if (laneMap[posToSample] == 0) { //car stopped
-                 trafficLights[edgeINum + nL] = 0x0F; // STOP SIGN 0x0F--> Let pass
-                 atLeastOneStopped = true;
-               }
-             }
-           }
-
-           if (atLeastOneStopped == true) {
-             intersections[i].nextEvent = currentTime + deltaEvent; //just move forward time if changed (otherwise check in next iteration)
-             break;
-           }
-         }
-       }
-     }
-     ///
-   }
-   
-}//
-*/
 
 __global__ void kernel_intersectionOneSimulation(
       uint numIntersections,
@@ -1303,6 +1265,7 @@ __global__ void kernel_resetPeople(
 
 void b18GetSampleTrafficCUDA(std::vector<float>& accSpeedPerLinePerTimeInterval, std::vector<float>& numVehPerLinePerTimeInterval) {
   // copy back people
+  cudaSetDevice(0);
   size_t size = accSpeedPerLinePerTimeInterval.size() * sizeof(float);
   cudaMemcpy(accSpeedPerLinePerTimeInterval.data(), accSpeedPerLinePerTimeInterval_d, size, cudaMemcpyDeviceToHost);
 
@@ -1310,10 +1273,28 @@ void b18GetSampleTrafficCUDA(std::vector<float>& accSpeedPerLinePerTimeInterval,
   cudaMemcpy(numVehPerLinePerTimeInterval.data(), numVehPerLinePerTimeInterval_d, sizeI, cudaMemcpyDeviceToHost);
 }
 
+void b18GetSampleTrafficCUDA_Copy(std::vector<float>& accSpeedPerLinePerTimeInterval, std::vector<float>& numVehPerLinePerTimeInterval) {
+  // copy back people
+  cudaSetDevice(1);
+  size_t size = accSpeedPerLinePerTimeInterval.size() * sizeof(float);
+  cudaMemcpy(accSpeedPerLinePerTimeInterval.data(), accSpeedPerLinePerTimeInterval_d_Copy, size, cudaMemcpyDeviceToHost);
+
+  size_t sizeI = numVehPerLinePerTimeInterval.size() * sizeof(uchar);
+  cudaMemcpy(numVehPerLinePerTimeInterval.data(), numVehPerLinePerTimeInterval_d_Copy, sizeI, cudaMemcpyDeviceToHost);
+}
+
 void b18ResetPeopleLanesCUDA(uint numPeople) {
+  cudaSetDevice(0);
   kernel_resetPeople << < ceil(numPeople / 1024.0f), 1024 >> > (numPeople, trafficPersonVec_d);
   cudaMemset(&laneMap_d[0], -1, halfLaneMap*sizeof(unsigned char));
   cudaMemset(&laneMap_d[halfLaneMap], -1, halfLaneMap*sizeof(unsigned char));
+}
+
+void b18ResetPeopleLanesCUDA_Copy(uint numPeople) {
+  cudaSetDevice(1);
+  kernel_resetPeople << < ceil(numPeople / 1024.0f), 1024 >> > (numPeople, trafficPersonVec_d_Copy);
+  cudaMemset(&laneMap_d_Copy[0], -1, halfLaneMap*sizeof(unsigned char));
+  cudaMemset(&laneMap_d_Copy[halfLaneMap], -1, halfLaneMap*sizeof(unsigned char));
 }
 
 void b18SimulateTrafficCUDA(float currentTime,
@@ -1326,6 +1307,7 @@ void b18SimulateTrafficCUDA(float currentTime,
   intersectionBench.startMeasuring();
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   // 1. CHANGE MAP: set map to use and clean the other
+  cudaSetDevice(0);
   if (readFirstMapC==true) {
     mapToReadShift=0;
     mapToWriteShift=halfLaneMap;
@@ -1350,6 +1332,46 @@ void b18SimulateTrafficCUDA(float currentTime,
     mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
     edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
     intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters);
+  cudaDeviceSynchronize();
+  gpuErrchk(cudaPeekAtLastError());
+  peopleBench.stopMeasuring();
+}
+
+void b18SimulateTrafficCUDA_Copy(float currentTime,
+  uint numPeople,
+  uint numIntersections,
+  float deltaTime,
+  const parameters simParameters,
+  int numBlocks,
+  int threadsPerBlock) {
+  intersectionBench.startMeasuring();
+  const uint numStepsTogether = 12; //change also in density (10 per hour)
+  // 1. CHANGE MAP: set map to use and clean the other
+  cudaSetDevice(1);
+  if (readFirstMapC==true) {
+    mapToReadShift=0;
+    mapToWriteShift=halfLaneMap;
+    gpuErrchk(cudaMemset(&laneMap_d_Copy[halfLaneMap], -1, halfLaneMap*sizeof(unsigned char)));//clean second half
+  } else {
+    mapToReadShift=halfLaneMap;
+    mapToWriteShift=0;
+    gpuErrchk(cudaMemset(&laneMap_d_Copy[0], -1, halfLaneMap*sizeof(unsigned char)));//clean first half
+  }
+  readFirstMapC=!readFirstMapC;//next iteration invert use
+
+  // Simulate intersections.
+  kernel_intersectionOneSimulation << < ceil(numIntersections / 512.0f), 512 >> > (numIntersections, currentTime, intersections_d_Copy, trafficLights_d_Copy);
+  gpuErrchk(cudaPeekAtLastError());
+
+  intersectionBench.stopMeasuring();
+  
+  peopleBench.startMeasuring();
+  // Simulate people.
+  kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
+    (numPeople, currentTime, mapToReadShift,
+    mapToWriteShift, trafficPersonVec_d_Copy, indexPathVec_d_Copy, indexPathVec_d_size,
+    edgesData_d_Copy, edgesData_d_size, laneMap_d_Copy, laneMap_d_size,
+    intersections_d_Copy, trafficLights_d_Copy, trafficLights_d_size, deltaTime, simParameters);
   cudaDeviceSynchronize();
   gpuErrchk(cudaPeekAtLastError());
   peopleBench.stopMeasuring();
