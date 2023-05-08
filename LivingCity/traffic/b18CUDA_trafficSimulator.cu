@@ -1,5 +1,6 @@
 
 
+
 //CUDA CODE
 #include <stdio.h>
 #include "cuda_runtime.h"
@@ -114,87 +115,114 @@ void b18InitCUDA(
       gpuErrchk(cudaMallocManaged(&trafficPersonVec_d, size));
       memcpy(trafficPersonVec_d, trafficPersonVec.data(), size);
     }
-    cudaSetDevice(0);
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 0, streams[0]));
-    cudaSetDevice(1);
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 1, streams[1]));
+    // cudaSetDevice(0);
+    // gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 0, streams[0]));
+    // cudaSetDevice(1);
+    // gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 1, streams[1]));
+
+    // Calculate the size of each half
+    size_t size_half = trafficPersonVec.size() / 2 * sizeof(LC::B18TrafficPerson);
+
+    // Allocate memory for each half on the respective GPU
+    LC::B18TrafficPerson *trafficPersonVec_d_0, *trafficPersonVec_d_1;
+    gpuErrchk(cudaSetDevice(0));
+    gpuErrchk(cudaMalloc((void**)&trafficPersonVec_d_0, size_half));
+    gpuErrchk(cudaSetDevice(1));
+    gpuErrchk(cudaMalloc((void**)&trafficPersonVec_d_1, size_half));
+
+    // Copy the first half to GPU 0 and the second half to GPU 1
+    gpuErrchk(cudaSetDevice(0));
+    gpuErrchk(cudaMemcpyAsync(trafficPersonVec_d_0, trafficPersonVec.data(), size_half, cudaMemcpyHostToDevice, streams[0]));
+    gpuErrchk(cudaSetDevice(1));
+    gpuErrchk(cudaMemcpyAsync(trafficPersonVec_d_1, trafficPersonVec.data() + trafficPersonVec.size() / 2, size_half, cudaMemcpyHostToDevice, streams[0]));
+
+    // Prefetch both halves on their respective GPUs
+    gpuErrchk(cudaSetDevice(0));
+    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_0, size_half, 0, streams[0]));
+    gpuErrchk(cudaSetDevice(1));
+    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_1, size_half, 1, streams[0]));
+
+    // Update the existing code to use the new device pointers
+    trafficPersonVec_d = trafficPersonVec_d_0;
+
 
   }
   { // indexPathVec
     size_t sizeIn = indexPathVec.size() * sizeof(uint);
     indexPathVec_d_size = indexPathVec.size();
     if (fistInitialization) {
-      gpuErrchk(cudaMallocManaged(&indexPathVec_d, sizeIn));
-      memcpy(indexPathVec_d, indexPathVec.data(), sizeIn);
+      // gpuErrchk(cudaMallocManaged(&indexPathVec_d, sizeIn));
+      // memcpy(indexPathVec_d, indexPathVec.data(), sizeIn);
+    gpuErrchk(cudaMalloc((void **) &indexPathVec_d, sizeIn));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(indexPathVec_d, indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice));
     }
-    // gpuErrchk(cudaMalloc((void **) &indexPathVec_d, sizeIn));   // Allocate array on device
-    // gpuErrchk(cudaMemcpy(indexPathVec_d, indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice));
 
-    cudaSetDevice(0);
-    gpuErrchk(cudaMemPrefetchAsync(indexPathVec_d, sizeIn, 0, streams[0]));
-    cudaSetDevice(1);
-    gpuErrchk(cudaMemPrefetchAsync(indexPathVec_d, sizeIn, 1, streams[1]));
+
+    // cudaSetDevice(0);
+    // gpuErrchk(cudaMemPrefetchAsync(indexPathVec_d, sizeIn, 0, streams[0]));
+    // cudaSetDevice(1);
+    // gpuErrchk(cudaMemPrefetchAsync(indexPathVec_d, sizeIn, 1, streams[1]));
   }
   {//edgeData
     size_t sizeD = edgesData_d_size * sizeof(LC::B18EdgeData);
     edgesData_d_size = edgesData.size();
     if (fistInitialization){
-        gpuErrchk(cudaMallocManaged(&edgesData_d, sizeD));
-        memcpy(edgesData_d, edgesData.data(), sizeD);
-    // gpuErrchk(cudaMalloc((void **) &edgesData_d, sizeD));   // Allocate array on device
-    // gpuErrchk(cudaMemcpy(edgesData_d, edgesData.data(), sizeD, cudaMemcpyHostToDevice));
+        // gpuErrchk(cudaMallocManaged(&edgesData_d, sizeD));
+        // memcpy(edgesData_d, edgesData.data(), sizeD);
+    gpuErrchk(cudaMalloc((void **) &edgesData_d, sizeD));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(edgesData_d, edgesData.data(), sizeD, cudaMemcpyHostToDevice));
     } 
 
-    cudaSetDevice(0);
-    gpuErrchk(cudaMemPrefetchAsync(edgesData_d, sizeD, 0, streams[0]));
-    cudaSetDevice(1);
-    gpuErrchk(cudaMemPrefetchAsync(edgesData_d, sizeD, 1, streams[1]));
+    // cudaSetDevice(0);
+    // gpuErrchk(cudaMemPrefetchAsync(edgesData_d, sizeD, 0, streams[0]));
+    // cudaSetDevice(1);
+    // gpuErrchk(cudaMemPrefetchAsync(edgesData_d, sizeD, 1, streams[1]));
   }
   {//laneMap
     size_t sizeL = laneMap.size() * sizeof(uchar);
     laneMap_d_size = laneMap.size();
     if (fistInitialization) 
     {
-      // gpuErrchk(cudaMalloc((void **) &laneMap_d, sizeL));   // Allocate array on device
-      // gpuErrchk(cudaMemcpy(laneMap_d, laneMap.data(), sizeL, cudaMemcpyHostToDevice));
-        gpuErrchk(cudaMallocManaged(&laneMap_d, sizeL));
-        memcpy(laneMap_d, laneMap.data(), sizeL);
+      gpuErrchk(cudaMalloc((void **) &laneMap_d, sizeL));   // Allocate array on device
+      gpuErrchk(cudaMemcpy(laneMap_d, laneMap.data(), sizeL, cudaMemcpyHostToDevice));
+        // gpuErrchk(cudaMallocManaged(&laneMap_d, sizeL));
+        // memcpy(laneMap_d, laneMap.data(), sizeL);
     }
 
     
-    cudaSetDevice(0);
-    gpuErrchk(cudaMemPrefetchAsync(laneMap_d, sizeL, 0, streams[0]));
-    cudaSetDevice(1);
-    gpuErrchk(cudaMemPrefetchAsync(laneMap_d, sizeL, 1, streams[1]));
+    // cudaSetDevice(0);
+    // gpuErrchk(cudaMemPrefetchAsync(laneMap_d, sizeL, 0, streams[0]));
+    // cudaSetDevice(1);
+    // gpuErrchk(cudaMemPrefetchAsync(laneMap_d, sizeL, 1, streams[1]));
 
     halfLaneMap = laneMap.size() / 2;
   }
 
   {// intersections
     size_t sizeI = intersections.size() * sizeof(LC::B18IntersectionData);
-    // if (fistInitialization) gpuErrchk(cudaMalloc((void **) &intersections_d, sizeI));   // Allocate array on device
-    // gpuErrchk(cudaMemcpy(intersections_d, intersections.data(), sizeI, cudaMemcpyHostToDevice));
+    if (fistInitialization) gpuErrchk(cudaMalloc((void **) &intersections_d, sizeI));   // Allocate array on device
+    gpuErrchk(cudaMemcpy(intersections_d, intersections.data(), sizeI, cudaMemcpyHostToDevice));
 
-    if (fistInitialization) {
-      gpuErrchk(cudaMallocManaged(&intersections_d, sizeI));
-      memcpy(intersections_d, intersections.data(), sizeI);
-    }
-      cudaSetDevice(0);
-      gpuErrchk(cudaMemPrefetchAsync(intersections_d, sizeI, 0, streams[0]));
-      cudaSetDevice(1);
-      gpuErrchk(cudaMemPrefetchAsync(intersections_d, sizeI, 1, streams[1]));
+    // if (fistInitialization) {
+    //   gpuErrchk(cudaMallocManaged(&intersections_d, sizeI));
+    //   memcpy(intersections_d, intersections.data(), sizeI);
+    // }
+    //   cudaSetDevice(0);
+    //   gpuErrchk(cudaMemPrefetchAsync(intersections_d, sizeI, 0, streams[0]));
+    //   cudaSetDevice(1);
+    //   gpuErrchk(cudaMemPrefetchAsync(intersections_d, sizeI, 1, streams[1]));
     size_t sizeT = trafficLights.size() * sizeof(uchar);//total number of lanes
     trafficLights_d_size = trafficLights.size();
     if (fistInitialization) {
-      // gpuErrchk(cudaMalloc((void **) &trafficLights_d, sizeT));   // Allocate array on device
-      // gpuErrchk(cudaMemcpy(trafficLights_d, trafficLights.data(), sizeT, cudaMemcpyHostToDevice));
-      gpuErrchk(cudaMallocManaged(&trafficLights_d, sizeT));
-      memcpy(trafficLights_d, trafficLights.data(), sizeT);
+      gpuErrchk(cudaMalloc((void **) &trafficLights_d, sizeT));   // Allocate array on device
+      gpuErrchk(cudaMemcpy(trafficLights_d, trafficLights.data(), sizeT, cudaMemcpyHostToDevice));
+      // gpuErrchk(cudaMallocManaged(&trafficLights_d, sizeT));
+      // memcpy(trafficLights_d, trafficLights.data(), sizeT);
     }
-      cudaSetDevice(0);
-      gpuErrchk(cudaMemPrefetchAsync(trafficLights_d, sizeT, 0, streams[0]));
-      cudaSetDevice(1);
-      gpuErrchk(cudaMemPrefetchAsync(trafficLights_d, sizeT, 1, streams[1]));
+      // cudaSetDevice(0);
+      // gpuErrchk(cudaMemPrefetchAsync(trafficLights_d, sizeT, 0, streams[0]));
+      // cudaSetDevice(1);
+      // gpuErrchk(cudaMemPrefetchAsync(trafficLights_d, sizeT, 1, streams[1]));
 
   }
   {
@@ -207,15 +235,15 @@ void b18InitCUDA(
     size_t sizeAcc = accSpeedPerLinePerTimeInterval.size() * sizeof(float);
     if (fistInitialization)
     {
-      gpuErrchk(cudaMallocManaged(&accSpeedPerLinePerTimeInterval_d, sizeAcc));
+      // gpuErrchk(cudaMallocManaged(&accSpeedPerLinePerTimeInterval_d, sizeAcc));
       // memcpy(accSpeedPerLinePerTimeInterval_d, trafficLights.data(), sizeT);
-      // gpuErrchk(cudaMalloc((void **) &accSpeedPerLinePerTimeInterval_d, sizeAcc));   // Allocate array on device
+      gpuErrchk(cudaMalloc((void **) &accSpeedPerLinePerTimeInterval_d, sizeAcc));   // Allocate array on device
     }
 
 
     if (fistInitialization) {
-      gpuErrchk(cudaMallocManaged(&numVehPerLinePerTimeInterval_d, sizeAcc));
-      // puErrchk(cudaMalloc((void **) &numVehPerLinePerTimeInterval_d, sizeAcc));   // Allocate array on device
+      // gpuErrchk(cudaMallocManaged(&numVehPerLinePerTimeInterval_d, sizeAcc));
+      gpuErrchk(cudaMalloc((void **) &numVehPerLinePerTimeInterval_d, sizeAcc));   // Allocate array on device
     }
     
     gpuErrchk(cudaMemset(&accSpeedPerLinePerTimeInterval_d[0], 0, sizeAcc));
@@ -1321,18 +1349,19 @@ void b18SimulateTrafficCUDA(float currentTime,
   
   peopleBench.startMeasuring();
   // Simulate people.
-  #pragma omp parallel for
-        for(int i = 0; i < 2; i++) {
-          cudaSetDevice(i);
-          kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
-            (numPeople, currentTime, mapToReadShift,
-            mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
-            edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
-            intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters);
-          cudaDeviceSynchronize();
-          gpuErrchk(cudaPeekAtLastError());
-          peopleBench.stopMeasuring();
-        }
+  // #pragma omp parallel for
+        // for(int i = 0; i < 2; i++) {
+  cudaSetDevice(0);
+  kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
+    (numPeople, currentTime, mapToReadShift,
+    mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
+    edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
+    intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters);
+  cudaDeviceSynchronize();
+  gpuErrchk(cudaPeekAtLastError());
+  peopleBench.stopMeasuring();
+        // }
 
 }
+
 
