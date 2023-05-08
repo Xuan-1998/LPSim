@@ -721,6 +721,7 @@ ${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o: LivingCity/traffic/b18CUDA_traffi
 		/usr/include/c++/7/bits/ostream.tcc \
 		/usr/include/c++/7/istream \
 		/usr/include/c++/7/bits/istream.tcc \
+		/usr/include/c++/7/cstring \
 		src/benchmarker.h \
 		/usr/include/c++/7/chrono \
 		/usr/include/c++/7/ratio \

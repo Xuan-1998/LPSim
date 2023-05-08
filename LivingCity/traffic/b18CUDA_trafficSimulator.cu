@@ -125,10 +125,6 @@ void b18InitCUDA(
 
     // Allocate memory for each half on the respective GPU
     LC::B18TrafficPerson *trafficPersonVec_d_0, *trafficPersonVec_d_1;
-    gpuErrchk(cudaSetDevice(0));
-    gpuErrchk(cudaMalloc((void**)&trafficPersonVec_d_0, size_half));
-    gpuErrchk(cudaSetDevice(1));
-    gpuErrchk(cudaMalloc((void**)&trafficPersonVec_d_1, size_half));
 
     // Copy the first half to GPU 0 and the second half to GPU 1
     gpuErrchk(cudaSetDevice(0));
