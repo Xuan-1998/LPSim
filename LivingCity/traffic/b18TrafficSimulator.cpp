@@ -27,6 +27,27 @@
 
 #ifdef __linux__
 #include <unistd.h>
+
+int find_arg_idx(int argc, char** argv, const char* option) {
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], option) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int find_int_arg(int argc, char** argv, const char* option, int default_value) {
+    int iplace = find_arg_idx(argc, argv, option);
+
+    if (iplace >= 0 && iplace < argc - 1) {
+        return std::stoi(argv[iplace + 1]);
+    }
+
+    return default_value;
+}
+
+
 void printPercentageMemoryUsed() {
   // TODO
 }
@@ -270,6 +291,23 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     std::cout << "EdgesData size = " << edgesData.size() << std::endl;
     std::cout << "LaneMap size = " << laneMap.size() << std::endl;
     std::cout << "Intersections size = " << intersections.size() << std::endl;
+    // Command Line Option Processing
+
+
+    // const int ngpus = find_int_arg(argc, argv, "-ngpus", 4);
+    const int ngpus = 2;
+    printf("ngpus %i\n", ngpus);
+    int* gpus = new int[ngpus];
+    for(int i = 0; i < ngpus; i++){
+        gpus[i] = i;
+    }
+
+    // create streams to make event recording easier to handle
+    // cudaStream_t streams[ngpus];
+    // for(int i = 0; i < ngpus; i++){
+    //     // create stream for gpu i
+    //     cudaStreamCreate( &streams[i]);
+    // }
 
     b18InitCUDA(firstInitialization, trafficPersonVec, indexPathVec, edgesData,
         laneMap, trafficLights, intersections, startTimeH, endTimeH,
@@ -361,6 +399,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
                 << " secs." << std::endl;
 
       float progress = 0;
+      
       while (currentTime < currentBatchEndTimeSecs) {
         printProgressBar(progress);
         float nextMilestone = currentBatchStartTimeSecs + (progress + 0.1) * (currentBatchEndTimeSecs - currentBatchStartTimeSecs);

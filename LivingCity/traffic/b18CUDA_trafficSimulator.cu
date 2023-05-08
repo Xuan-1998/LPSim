@@ -9,6 +9,7 @@
 #include "b18EdgeData.h"
 #include <vector>
 #include <iostream>
+#include <cstring>
 
 #include "../../src/benchmarker.h"
 #include "sp/config.h"
@@ -92,15 +93,26 @@ void b18InitCUDA(
   std::vector<float>& accSpeedPerLinePerTimeInterval,
   std::vector<float>& numVehPerLinePerTimeInterval,
   float deltaTime) {
+
+  cudaStream_t streams[0];
+  cudaStreamCreate( &streams[0]);
+
   //printf(">>b18InitCUDA firstInitialization %s\n", (fistInitialization?"INIT":"ALREADY INIT"));
   //printMemoryUsage();
+  
 
   const uint numStepsPerSample = 30.0f / deltaTime; //each min
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   { // people
     size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
     if (fistInitialization) gpuErrchk(cudaMalloc((void **) &trafficPersonVec_d, size));   // Allocate array on device
-    gpuErrchk(cudaMemcpy(trafficPersonVec_d, trafficPersonVec.data(), size, cudaMemcpyHostToDevice));
+
+    // gpuErrchk(cudaMemcpy(trafficPersonVec_d, trafficPersonVec.data(), size, cudaMemcpyHostToDevice));
+    cudaSetDevice(0);
+    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d, size));
+    memcpy(trafficPersonVec_d, trafficPersonVec.data(), size);
+    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 0, streams[0]));
+
   }
   { // indexPathVec
     size_t sizeIn = indexPathVec.size() * sizeof(uint);
@@ -1245,6 +1257,7 @@ void b18SimulateTrafficCUDA(float currentTime,
   
   peopleBench.startMeasuring();
   // Simulate people.
+  cudaSetDevice(0);
   kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
     (numPeople, currentTime, mapToReadShift,
     mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
