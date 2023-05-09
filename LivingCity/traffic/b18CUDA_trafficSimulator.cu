@@ -31,7 +31,7 @@
 // CONSTANTS
 
 #define MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED 5
-
+#define ngpus 2
 __constant__ float intersectionClearance = 7.8f; //TODO(pavan): WHAT IS THIS?
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -56,8 +56,11 @@ inline void printMemoryUsage() {
   printf("GPU memory usage: used = %.0f, free = %.0f MB, total = %.0f MB\n", used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0, total_db / 1024.0 / 1024.0);
 }
 ////////////////////////////////
-// VARIABLES
+// VARIABLES on device(s)
+// intermediate variable for each gpu?
 LC::B18TrafficPerson *trafficPersonVec_d;
+// GPU i traffic person vector, i in (0, ..., ngpus)
+LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
 uint *indexPathVec_d;
 uint indexPathVec_d_size;
 LC::B18EdgeData *edgesData_d;
@@ -66,6 +69,7 @@ uint laneMap_d_size;
 uint trafficLights_d_size;
 uint accSpeedPerLinePerTimeInterval_d_size;
 uint numVehPerLinePerTimeInterval_d_size;
+size_t size_gpu_part; 
 
 __constant__ bool calculatePollution = true;
 __constant__ float cellSize = 1.0f;
@@ -96,10 +100,9 @@ void b18InitCUDA(
   std::vector<float>& accSpeedPerLinePerTimeInterval,
   std::vector<float>& numVehPerLinePerTimeInterval,
   float deltaTime) {
-
-  cudaStream_t streams[0];
+  cudaStream_t streams[2];
   cudaStreamCreate( &streams[0]);
-
+  cudaStreamCreate( &streams[1]);
   //printf(">>b18InitCUDA firstInitialization %s\n", (firstInitialization?"INIT":"ALREADY INIT"));
   //printMemoryUsage();
   
@@ -121,22 +124,22 @@ void b18InitCUDA(
     // gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 1, streams[1]));
 
     // Calculate the size of each half
-    size_t size_half = trafficPersonVec.size() / 2 * sizeof(LC::B18TrafficPerson);
+    size_gpu_part = trafficPersonVec.size() / 2 * sizeof(LC::B18TrafficPerson);
 
     // Allocate memory for each half on the respective GPU
-    LC::B18TrafficPerson *trafficPersonVec_d_0, *trafficPersonVec_d_1;
+    //LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
 
     // Copy the first half to GPU 0 and the second half to GPU 1
     gpuErrchk(cudaSetDevice(0));
-    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_0, size_half));
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_0, size_half, 0, streams[0]));
+    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[0], size_gpu_part));
+    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[0], size_gpu_part, 0, streams[0]));
     // other half on GPU1
     gpuErrchk(cudaSetDevice(1));
-    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_1, size_half));
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_1, size_half, 1, streams[1]));
+    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[1], size_gpu_part));
+    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[1], size_gpu_part, 1, streams[1]));
 
     // Update the existing code to use the new device pointers
-    trafficPersonVec_d = trafficPersonVec_d_0;
+    //trafficPersonVec_d = trafficPersonVec_d_0;
 
 
   }
@@ -274,6 +277,10 @@ void b18updateStructuresCUDA(
 
 void b18FinishCUDA(void){
   cudaFree(trafficPersonVec_d);
+  for(int i=0; i < ngpus; i++){
+    cudaSetDevice(i);
+    cudaFree(trafficPersonVec_d_gpus[i]);
+  }
   cudaFree(indexPathVec_d);
   cudaFree(edgesData_d);
   cudaFree(laneMap_d);
@@ -1344,14 +1351,18 @@ void b18SimulateTrafficCUDA(float currentTime,
   // Simulate people.
   // #pragma omp parallel for
         // for(int i = 0; i < 2; i++) {
-  cudaSetDevice(0);
-  kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
+  
+  for(int i = 0; i < ngpus; i++){
+    cudaSetDevice(i);
+    //memcpy(&trafficPersonVec_d, trafficPersonVec_d_gpus[i], size_gpu_part);
+    kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
     (numPeople, currentTime, mapToReadShift,
-    mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
+    mapToWriteShift, *trafficPersonVec_d_gpus[i], indexPathVec_d, indexPathVec_d_size,
     edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
     intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters);
-  cudaDeviceSynchronize();
-  gpuErrchk(cudaPeekAtLastError());
+    cudaDeviceSynchronize();
+    gpuErrchk(cudaPeekAtLastError());
+  }
   peopleBench.stopMeasuring();
         // }
 
