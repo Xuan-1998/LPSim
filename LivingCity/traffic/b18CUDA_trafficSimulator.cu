@@ -124,7 +124,7 @@ void b18InitCUDA(
     // gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 1, streams[1]));
 
     // Calculate the size of each half
-    size_gpu_part = trafficPersonVec.size() / 2 * sizeof(LC::B18TrafficPerson);
+    size_gpu_part = trafficPersonVec.size() / ngpus * sizeof(LC::B18TrafficPerson);
 
     // Allocate memory for each half on the respective GPU
     //LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
@@ -132,10 +132,12 @@ void b18InitCUDA(
     // Copy the first half to GPU 0 and the second half to GPU 1
     gpuErrchk(cudaSetDevice(0));
     gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[0], size_gpu_part));
+    memcpy(trafficPersonVec_d_gpus[0], trafficPersonVec.data(), size_gpu_part); 
     gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[0], size_gpu_part, 0, streams[0]));
     // other half on GPU1
     gpuErrchk(cudaSetDevice(1));
     gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[1], size_gpu_part));
+    memcpy(trafficPersonVec_d_gpus[0], trafficPersonVec.data()+int(trafficPersonVec.size() / ngpus), size_gpu_part); 
     gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[1], size_gpu_part, 1, streams[1]));
 
     // Update the existing code to use the new device pointers
@@ -620,8 +622,8 @@ __global__ void kernel_trafficSimulation(
   int p = blockIdx.x * blockDim.x + threadIdx.x;
   if (p >= numPeople) return; //CUDA check (inside margins)
   if (trafficPersonVec[p].active == 2) return; // trip finished
-  if (trafficPersonVec[p].time_departure > currentTime) return; //1.1 just continue waiting
-
+  if (trafficPersonVec[p].time_departure > currentTime) return; //1.1 just continue waiting 
+  // check that the current path index does not exceed the size of the path index vector
   assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficPersonVec[p].indexPathCurr] == END_OF_PATH) {
     trafficPersonVec[p].active = 2; //finished
