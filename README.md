@@ -1,51 +1,5 @@
 # LPSim (Large (Scale) Parallel (Computing) regional traffic Simulation)
 
-## b18CUDA_trafficSimulator.cu
-The program appears to include several user-defined header files, such as "b18TrafficPerson.h" and "b18EdgeData.h". It also includes the header file "curand_kernel.h", which is part of the CUDA Random Number Generation (CURAND) library. The CURAND library provides functions for generating high-quality random numbers on the GPU.
-
-The program uses a number of preprocessor directives, such as "#define" and "#ifndef", to define various macros and to conditionally include or exclude code. These directives are used to make the code more portable and easier to maintain.
-
-The constant "MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED" appears to be used to specify the minimum number of cars required in order to measure their speed.
-
-The constant "intersectionClearance" is declared using the constant keyword, which indicates that it is a constant memory variable in CUDA. Constant memory variables are stored in a special memory space on the GPU that is faster to access than global memory, but has a smaller capacity. Constant memory is typically used for data that is read-only and is accessed frequently by the GPU threads.
-
-The function "gpuErrchk" is a macro that checks the error code returned by a CUDA function and prints an error message if the code indicates an error. The macro expands to a call to the "gpuAssert" function, which takes the error code, the name of the source file, and the line number as arguments, and prints an error message including these values if the error code indicates an error.
-
-The function "printMemoryUsage" prints information about the memory usage of the GPU, including the amount of used, free, and total memory. It does this by calling the CUDA function "cudaMemGetInfo", which returns the amount of free and total memory available on the GPU. The function then calculates the used memory by subtracting the free memory from the total memory, and prints the results in megabytes.
-
-trafficPersonVec_d is a vector of traffic persons, indexPathVec_d is a vector of indices for paths, edgesData_d is a vector of edge data, laneMap_d is a lane map, trafficLights_d is a vector of traffic lights, accSpeedPerLinePerTimeInterval_d is a vector of accumulated speeds per line per time interval, and numVehPerLinePerTimeInterval_d is a vector of the number of vehicles per line per time interval.
-
-calculatePollution is a constant boolean that appears to be related to whether pollution should be calculated in the simulation. cellSize is a constant float representing the size of a cell in the simulation.
-
-readFirstMapC, mapToReadShift, mapToWriteShift, and halfLaneMap are variables that seem to be related to reading and writing maps. startTime is a float representing the start time of the simulation.
-
-intersections_d is a vector of intersection data.
-
-The function "b18InitCUDA" is to initialize the CUDA environment for a traffic simulation. It takes a number of input vectors as arguments, including trafficPersonVec, indexPathVec, edgesData, laneMap, trafficLights, and intersections. It also takes a start time, an end time, and a time step size as input.
-
-The function begins by allocating device memory for each of the input vectors and copying the data from the host to the device. It also calculates some other constants and variables that will be used in the simulation, such as numStepsPerSample and numStepsTogether.
-
-Finally, the function allocates device memory for two additional vectors: accSpeedPerLinePerTimeInterval_d and numVehPerLinePerTimeInterval_d, and copies the corresponding data from the host to the device. These vectors will be used to store accumulated speeds and number of vehicles, respectively, per line per time interval during the simulation.
-
-The calculateGapsLC function appears to be responsible for calculating gaps between vehicles on a lane. It takes a number of input arguments, including a map of lanes, a traffic light state, a lane to check, the number of lines on an edge, the position to check in meters, the length of the lane, and some output variables for the 'speed' and gap of the nearest vehicles in front and behind the vehicle of interest.
-
-The calculateLaneCarShouldBe function appears to be responsible for calculating which lane a vehicle should be on based on its current lane, the next edge it will be traveling on, and some other information about the intersection. It takes a number of input arguments, including the current edge lane, the next edge, information about the intersection, the number of lanes on the edge, and some output variables for the initial and ending acceptable lanes. The function appears to be based on a clockwise search through the edges of the intersection, looking for the current edge and an exit edge. It calculates the number of exits to take and the number of exits taken, and uses these values to determine the initial and ending acceptable lanes for the vehicle.
-
-The meters_per_second_to_miles_per_hour function converts a velocity in meters per second to miles per hour. The calculateCOStep function appears to calculate the carbon monoxide emission rate based on the velocity of a person, using a formula from a research paper. The calculateGasConsumption function appears to calculate the gas consumption of a vehicle based on its acceleration and velocity, using a formula from a research paper.
-
-It looks like these functions are intended to be used in a kernel that executes on the CUDA device, as indicated by the __device__ keyword before each function declaration. This indicates that the functions will be executed on the device rather than the host, and that they have been optimized for execution on the device.
-
-kernel_intersectionOneSimulation: This kernel appears to be responsible for updating the state of traffic lights at intersections. It does this by iterating over all intersections in the simulation and checking if it is time to update the traffic light at that intersection. If it is, the kernel sets the traffic lights at the outgoing edge of the intersection to red, and the traffic lights at the incoming edge to green.
-
-kernel_sampleTraffic: This kernel appears to be responsible for collecting statistics about the traffic in the simulation. It does this by iterating over all the people in the simulation and, if they are active (i.e., currently driving), updating a running total of the speed and number of vehicles on the edge of the road they are currently on.
-
-kernel_resetPeople: This kernel appears to be responsible for resetting the state of all people in the simulation. It does this by iterating over all the people in the simulation and setting their active flag to 0.
-
-There is also a function called b18GetSampleTrafficCUDA that appears to be responsible for launching these kernels on the GPU. It takes several arguments, including vectors that hold data about the intersections, traffic lights, people, and paths in the simulation, as well as several scalars that hold various parameters used in the simulation.
-
-
-# manta
-
 Microsimulation Analysis for Network Traffic Assignment. MANTA employs a highly parallelized GPU implementation that is fast enough to run simulations on large-scale demand and networks within a few minutes - metropolitan and regional scale with hundreds of thousands of nodes and edges and millions of trips. We test our platform to simulate the entire Bay Area metropolitan region over the course of the morning using half-second time steps. The runtime for the nine-county Bay Area simulation is just over four minutes, not including routing and initialization. This computational performance significantly improves state of the art in large-scale traffic microsimulation and offers new capacity for analyzing the detailed travel patterns and travel choices of individuals for infrastructure planning and emergency management.
 
 ![](https://github.com/UDST/manta/blob/main/bay_bridge_trips.png)
