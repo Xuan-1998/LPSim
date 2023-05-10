@@ -8,7 +8,8 @@ LPSim is a discrete time-driven simulation platform that enables microsimulation
 The concept of implementing a multi-GPU simulation can be elucidated as follows: initially, the network will undergo partitioning into distinct GPU units, following which, the simulation of individuals will be executed independently within separate GPUs for multiple time-steps, prior to any communication between these subunits.
 
 
-![mGPU-road network](https://github.com/Xuan-1998/LPSim/assets/58761221/9b9f69cc-ce6d-4c37-ab41-cfee408d3350)
+![mGPU-roadnetwork](https://github.com/Xuan-1998/LPSim/assets/58761221/37743a60-b394-4498-8eff-bdc8a6ab6614)
+
 
 ## Initial checks
 
