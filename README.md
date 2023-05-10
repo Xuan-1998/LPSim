@@ -5,6 +5,10 @@ LPSim is a discrete time-driven simulation platform that enables microsimulation
 
 <img width="569" alt="image" src="https://github.com/Xuan-1998/LPSim/assets/58761221/b5fdaa1c-92f1-4d98-b71a-5d136ff28a1d">
 
+The concept of implementing a multi-GPU simulation can be elucidated as follows: initially, the network will undergo partitioning into distinct GPU units, following which, the simulation of individuals will be executed independently within separate GPUs for multiple time-steps, prior to any communication between these subunits.
+
+
+![mGPU-road network](https://github.com/Xuan-1998/LPSim/assets/58761221/9b9f69cc-ce6d-4c37-ab41-cfee408d3350)
 
 ## Initial checks
 
@@ -58,7 +62,7 @@ avoid re-entering them in each session.
 
 Clone the repo in your home directory with:
 ```bash
-git clone git@github.com:udst/manta.git ~/manta && cd ~/manta
+git clone git@github.com:Xuan-1998/LPSim.git ~/LPSim && cd ~/LPSim
 ```
 
 Clone the [Pandana repository](https://github.com/UDST/pandana) to your home directory stay on the `main` branch, since MANTA now uses a fast contraction hierarchies framework for shortest path routing. Previously implemented shortest path frameworks include Johnson's all pairs shortest path and a parallelized Dijkstra's priority queue.
@@ -68,7 +72,7 @@ Create `Makefile` and compile with:
 sudo qmake LivingCity/LivingCity.pro
 ```
 
-Importantly, because MANTA uses a shared library from Pandana, a Pandana makefile must be created (to create a shared object file) and the MANTA makefile must be modified.
+Importantly, because LPSim uses a shared library from Pandana, a Pandana makefile must be created (to create a shared object file) and the LPSim makefile must be modified.
 
 Pandana `Makefile`:
 
@@ -99,7 +103,7 @@ clean:
 ```
 2. Run `make`.
 
-MANTA `Makefile`:
+LPSim `Makefile`:
 
 1. Add `-I/home/{YOUR_USERNAME}/pandana/src` to `INCPATH`.
 2. Add `-L/home/{YOUR_USERNAME}/pandana/src -lchrouting` to `LIBS`.
@@ -142,13 +146,13 @@ Before running everything, you need the appropriate data:
 1. Network
 2. Demand
 
-The networks currently reside in `manta/LivingCity/berkeley_2018`, and the default directory is the full SF Bay Area network in `new_full_network/`. This contains the `nodes.csv` and `edges.csv` files to create the network.
+The networks currently reside in `LPSim/LivingCity/berkeley_2018`, and the default directory is the full SF Bay Area network in `new_full_network/`. This contains the `nodes.csv` and `edges.csv` files to create the network.
 
 The demand is not in `new_full_network/`, but needs to reside there in order to run it. Please contact [Pavan Yedavalli](pavyedav@gmail.com) to procure real or sample demands.
 
 ## Running
 
-If you wish to edit the microsimulation configuration, modify `manta/LivingCity/command_line_options.ini`, which contains the following:
+If you wish to edit the microsimulation configuration, modify `LPSim/LivingCity/command_line_options.ini`, which contains the following:
 
 ```[General]
 GUI=false
@@ -188,7 +192,7 @@ cd LivingCity
 
 ## Development
 
-Should you wish to make any changes, please create a new branch. In addition, once the original Makefile is created, you can simply run `sudo make -j` from the `manta/` directory to compile any new changes.
+Should you wish to make any changes, please create a new branch. In addition, once the original Makefile is created, you can simply run `sudo make -j` from the `LPSim/` directory to compile any new changes.
 
 If necessary, you can checkout a different existing branch from main (`edge_speeds_over_time`, for instance):
 ```bash
@@ -198,14 +202,14 @@ git checkout edge_speeds_over_time
 ### Debugging
 For debugging we recommend `cuda-memcheck ./LivingCity` for out-of-bounds memory bugs in the CUDA section and `cuda-gdb` for more advanced features such as breakpoints.
 
-In order to use `cuda-gdb`, `manta/Makefile` must be modified by adding the flag `-G` to enable debugging and changing `-O3` to `-O` to avoid optimizations that restrict the use of the debugger.
+In order to use `cuda-gdb`, `LPSim/Makefile` must be modified by adding the flag `-G` to enable debugging and changing `-O3` to `-O` to avoid optimizations that restrict the use of the debugger.
 
-For example, to enable debugging at `LivingCity/traffic/b18CUDA_trafficSimulator.cu`,  its compilation at the line `manta/Makefile:1756`:
+For example, to enable debugging at `LivingCity/traffic/b18CUDA_trafficSimulator.cu`,  its compilation at the line `LPSim/Makefile:1756`:
 <pre>
 /usr/local/cuda-9.0/bin/nvcc -m64 <b>-O3</b> -arch=sm_50 -c --compiler-options -f
 no-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp -I/u
 sr/include/opencv2/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/home/
-<b>{YOUR_USERNAME}</b>/manta/LivingCity/glew/include/ -I/usr/local/cuda-9.0/include  -L/opt/l
+<b>{YOUR_USERNAME}</b>/LPSim/LivingCity/glew/include/ -I/usr/local/cuda-9.0/include  -L/opt/l
 ocal/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lcudart -lcuda -g -lgomp
 LivingCity/traffic/b18CUDA_trafficSimulator.cu -o
 ${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o
@@ -216,7 +220,7 @@ must be modified to:
 /usr/local/cuda-9.0/bin/nvcc -m64 <b>-O</b> -arch=sm_50 -c --compiler-options -f
 no-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp -I/u
 sr/include/opencv2/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/home/
-<b>{YOUR_USERNAME}</b>/manta/LivingCity/glew/include/ -I/usr/local/cuda-9.0/include  -L/opt/l
+<b>{YOUR_USERNAME}</b>/LPSim/LivingCity/glew/include/ -I/usr/local/cuda-9.0/include  -L/opt/l
 ocal/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lcudart -lcuda -g <b>-G</b>
 -lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o
 ${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o
@@ -227,7 +231,7 @@ After this modification, `sudo make clean` and `sudo make -j` must be run.
 Please keep in mind that this alteration slows the program down. For more information about `cuda-gdb`, please refer to the official [Website](https://docs.nvidia.com/cuda/cuda-gdb/index.html) and [Documentation](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwiBgbqg9fzrAhUMIrkGHby9Db8QFjADegQIAxAB&url=https%3A%2F%2Fdeveloper.download.nvidia.com%2Fcompute%2FDevZone%2Fdocs%2Fhtml%2FC%2Fdoc%2Fcuda-gdb.pdf&usg=AOvVaw3J9Il2vHkkxtcX83EHC3-z).
 
 ### Testing
-In order to run all tests you should first move to `manta/LivingCity`
+In order to run all tests you should first move to `LPSim/LivingCity`
 ```bash
 cd LivingCity
 ```
@@ -246,13 +250,9 @@ If you wish to specify the name of the benchmark outputs and/or the number of it
 ```bash
 python3 LivingCity/benchmarking/runBenchmarks.py --name={name_of_benchmark} --runs={number_of_iterations_to_run}
 ```
-The script will run LivingCity the specified number of times while polling the system resources. For each component, its resource and time consumption will be saved into a `csv` file, a plot and a `xls` file in `manta/LivingCity/benchmarking/`. The profiling of each version is encouraged to be stored in [here](https://docs.google.com/spreadsheets/d/14KCUY8vLp9HoLuelYC5DmZwKI7aLsiaNFp7e6Z8bVBU/edit?usp=sharing).
+The script will run LivingCity the specified number of times while polling the system resources. For each component, its resource and time consumption will be saved into a `csv` file, a plot and a `xls` file in `LPSim/LivingCity/benchmarking/`. The profiling of each version is encouraged to be stored in [here](https://docs.google.com/spreadsheets/d/14KCUY8vLp9HoLuelYC5DmZwKI7aLsiaNFp7e6Z8bVBU/edit?usp=sharing).
 
-Versions correspond to [the repository's tags](https://github.com/UDST/manta/tags). In order to create a new tag, just run
-```bash
-git tag v0.x.0
-git push --tags
-```
+
 
 
 ## Record GPU usage
@@ -283,7 +283,7 @@ while true; do nvidia-smi >> output_gpu.txt; sleep 10; done
 
 run docker with:
 
-docker run -it --rm --privileged --gpus all -v "$PWD":/manta -w /manta gcr.io/blissful-jet-303616/manta:latest  bash
+docker run -it --rm --privileged --gpus all -v "$PWD":/LPSim -w /LPSim gcr.io/blissful-jet-303616/LPSim:latest  bash
 
 then:
 
