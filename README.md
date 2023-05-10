@@ -4,6 +4,7 @@ nvidia-smi -l 1 >> logfile.txt
 
 ## Docker
 docker pull your-dockerhub-username/lpsim:latest
+
 docker run -it your-dockerhub-username/lpsim:latest /bin/bash
 
 ## multiple GPUs
