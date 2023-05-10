@@ -60,7 +60,7 @@ inline void printMemoryUsage() {
 // intermediate variable for each gpu?
 LC::B18TrafficPerson *trafficPersonVec_d;
 // GPU i traffic person vector, i in (0, ..., ngpus)
-LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
+LC::B18TrafficPerson **trafficPersonVec_d_gpus = new LC::B18TrafficPerson*[ngpus];
 uint *indexPathVec_d;
 uint indexPathVec_d_size;
 LC::B18EdgeData *edgesData_d;
@@ -124,7 +124,8 @@ void b18InitCUDA(
     // gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d, size, 1, streams[1]));
 
     // Calculate the size of each half
-    size_gpu_part = trafficPersonVec.size() / ngpus * sizeof(LC::B18TrafficPerson);
+    int num_people_gpu = int(trafficPersonVec.size() / ngpus);
+    size_gpu_part = num_people_gpu * sizeof(LC::B18TrafficPerson);
 
     // Allocate memory for each half on the respective GPU
     //LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
@@ -132,12 +133,19 @@ void b18InitCUDA(
     // Copy the first half to GPU 0 and the second half to GPU 1
     gpuErrchk(cudaSetDevice(0));
     gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[0], size_gpu_part));
-    memcpy(trafficPersonVec_d_gpus[0], trafficPersonVec.data(), size_gpu_part); 
+    // trafficPersonVec.data() returns a pointer to the memory of the data of the struct object
+    // struct supports plain assignment
+    for(int i = 0; i < num_people_gpu; i++){
+      trafficPersonVec_d_gpus[0][i] = trafficPersonVec[i]; 
+    }
     gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[0], size_gpu_part, 0, streams[0]));
     // other half on GPU1
     gpuErrchk(cudaSetDevice(1));
     gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[1], size_gpu_part));
-    memcpy(trafficPersonVec_d_gpus[0], trafficPersonVec.data()+int(trafficPersonVec.size() / ngpus), size_gpu_part); 
+    //*trafficPersonVec_d_gpus[1] = trafficPersonVec.data()+int(trafficPersonVec.size() / ngpus); 
+    for(int i = 0; i < num_people_gpu; i++){
+      trafficPersonVec_d_gpus[1][i] = trafficPersonVec[i]; 
+    }
     gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[1], size_gpu_part, 1, streams[1]));
 
     // Update the existing code to use the new device pointers
@@ -1354,12 +1362,13 @@ void b18SimulateTrafficCUDA(float currentTime,
   // #pragma omp parallel for
         // for(int i = 0; i < 2; i++) {
   
+  uint numPeople_gpu = uint(numPeople/ngpus);
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     //memcpy(&trafficPersonVec_d, trafficPersonVec_d_gpus[i], size_gpu_part);
     kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
-    (numPeople, currentTime, mapToReadShift,
-    mapToWriteShift, *trafficPersonVec_d_gpus[i], indexPathVec_d, indexPathVec_d_size,
+    (numPeople_gpu, currentTime, mapToReadShift,
+    mapToWriteShift, trafficPersonVec_d_gpus[i], indexPathVec_d, indexPathVec_d_size,
     edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
     intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters);
     cudaDeviceSynchronize();
