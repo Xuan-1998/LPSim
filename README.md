@@ -165,15 +165,10 @@ sudo systemctl restart docker
 sudo apt-get install -y nvidia-container-toolkit
 ```
 
-2. You can either pull and run our built image
+2. You can build it yourself and run it
 ```bash
-docker pull gcr.io/blissful-jet-303616/manta:latest
-docker run -it --rm --gpus all -v "$PWD":/manta -w /manta gcr.io/blissful-jet-303616/manta:latest  bash
-```
-Or build it yourself
-```bash
-docker build -t manta:latest .
-docker run -it --rm --gpus all -v "$PWD":/manta -w /manta manta:latest bash
+docker build -t lpsim:latest .
+docker run -it --rm --gpus all -v "$PWD":/lpsim -w /lpsim  lpsim:latest bash
 ```
 
 3. Once inside the container, compile and run
@@ -348,11 +343,7 @@ nvprof --metrics flop_count_sp,flop_count_dp ./LivingCity >> output_g3.txt 2>&1 
 
 ## Acknowledgments
 
-This repository and code have been developed and maintained by Pavan Yedavalli, Ignacio Garcia Dorado, Krishna Kumar, and Paul Waddell. This work heavily derives from Ignacio Garcia Dorado's [Automatic Urban Modeling project](http://www.ignaciogarciadorado.com/p/2014_EG/2014_EG.html).
-
-If this code is used in any shape or form for your project, please cite this paper accordingly:
-
-P. Yedavalli, K. Kumar, and P. Waddell, “Microsimulation Analysis for Network Traffic Assignment (MANTA) at Metropolitan-Scale for Agile Transportation Planning,” arXiv:2007.03614 [physics], Jul. 2020, Available: http://arxiv.org/abs/2007.03614.
+This repository and code have been developed and maintained by Xuan Jiang, Xin Peng, Johan Agerup, Emin Burak Onat, and Raja Sengupta. This work heavily derives from Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
 
 Thank you!
 
