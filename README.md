@@ -2,7 +2,9 @@
 
 Microsimulation Analysis for Network Traffic Assignment. MANTA employs a highly parallelized GPU implementation that is fast enough to run simulations on large-scale demand and networks within a few minutes - metropolitan and regional scale with hundreds of thousands of nodes and edges and millions of trips. We test our platform to simulate the entire Bay Area metropolitan region over the course of the morning using half-second time steps. The runtime for the nine-county Bay Area simulation is just over four minutes, not including routing and initialization. This computational performance significantly improves state of the art in large-scale traffic microsimulation and offers new capacity for analyzing the detailed travel patterns and travel choices of individuals for infrastructure planning and emergency management.
 
-![](https://github.com/UDST/manta/blob/main/bay_bridge_trips.png)
+
+<img width="569" alt="image" src="https://github.com/Xuan-1998/LPSim/assets/58761221/b5fdaa1c-92f1-4d98-b71a-5d136ff28a1d">
+
 
 ## Initial checks
 
