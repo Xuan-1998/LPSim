@@ -303,6 +303,7 @@ nvprof --metrics flop_count_sp,flop_count_dp ./LivingCity >> output_g3.txt 2>&1 
 This repository and code have been developed and maintained by Xuan Jiang, Xin Peng, Johan Agerup, Emin Burak Onat, Yuhan Tang, and Raja Sengupta. This work is based from Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
 
 If this code is used in any shape or form for your project, please cite this paper accordingly:
+
 Jiang, X., Agerup, J. F., & Tang, Y. (2023, May 11). Benchmarking and preparing LPSim for scalability on multiple GPUs. Retrieved from osf.io/ezjrc, Available: [https://osf.io/ezjrc/](https://osf.io/ezjrc/).
 
 Thank you!
