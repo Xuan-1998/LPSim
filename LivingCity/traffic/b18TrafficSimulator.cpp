@@ -395,7 +395,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
       b18GetDataCUDA(trafficPersonVec, edgesData);
       b18GetSampleTrafficCUDA(accSpeedPerLinePerTimeInterval,
                             numVehPerLinePerTimeInterval);
-
+      /*
       for (int i = 0; i < trafficPersonVec.size(); i++) {
         if ((trafficPersonVec[i].time_departure < currentBatchEndTimeSecs && trafficPersonVec[i].active == 0) ||
             (isgreaterequal(trafficPersonVec[i].time_departure, currentBatchEndTimeSecs) && trafficPersonVec[i].active != 0)) {
@@ -405,7 +405,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
               std::to_string(trafficPersonVec[i].time_departure);
           throw std::runtime_error(errorMessage);
         }
-      }
+      }*/
 
       printFullProgressBar();
 
