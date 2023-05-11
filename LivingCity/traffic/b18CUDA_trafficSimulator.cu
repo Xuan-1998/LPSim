@@ -31,7 +31,7 @@
 // CONSTANTS
 
 #define MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED 5
-#define ngpus 2
+#define ngpus 4
 __constant__ float intersectionClearance = 7.8f; //TODO(pavan): WHAT IS THIS?
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -101,13 +101,12 @@ void b18InitCUDA(
   std::vector<float>& accSpeedPerLinePerTimeInterval,
   std::vector<float>& numVehPerLinePerTimeInterval,
   float deltaTime) {
-  cudaStream_t streams[2];
-  cudaStreamCreate( &streams[0]);
-  cudaStreamCreate( &streams[1]);
+  cudaStream_t streams[ngpus];
+  for(int i = 0; i < ngpus; i++){
+      cudaStreamCreate( &streams[i]);
+  }
   //printf(">>b18InitCUDA firstInitialization %s\n", (firstInitialization?"INIT":"ALREADY INIT"));
   //printMemoryUsage();
-  
-
   const uint numStepsPerSample = 30.0f / deltaTime; //each min
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   { // people
@@ -126,31 +125,26 @@ void b18InitCUDA(
 
     // Calculate the size of each half
     num_people_gpu = int(trafficPersonVec.size() / ngpus);
-    size_gpu_part[0] = num_people_gpu * sizeof(LC::B18TrafficPerson);
-    size_gpu_part[1] = (trafficPersonVec.size() - num_people_gpu) * sizeof(LC::B18TrafficPerson);
+    for(int i = 0; i < ngpus-1; i++){
+        size_gpu_part[i] = num_people_gpu * sizeof(LC::B18TrafficPerson);
+    }
+    size_gpu_part[-1] = (trafficPersonVec.size() - num_people_gpu) * sizeof(LC::B18TrafficPerson);
 
     // Allocate memory for each half on the respective GPU
     //LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
 
     // Copy the first half to GPU 0 and the second half to GPU 1
-    gpuErrchk(cudaSetDevice(0));
-    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[0], size_gpu_part[0]));
-    // trafficPersonVec.data() returns a pointer to the memory of the data of the struct object
-    // struct supports plain assignment
-    for(int i = 0; i < num_people_gpu; i++){
-      trafficPersonVec_d_gpus[0][i] = trafficPersonVec[i]; 
+    for(int i = 0; i < ngpus-1; i++){
+      gpuErrchk(cudaSetDevice(i));
+      gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[i], size_gpu_part[i]));
+      // trafficPersonVec.data() returns a pointer to the memory of the data of the struct object
+      // struct supports plain assignment
+      for(int j = 0; j < num_people_gpu; j++){
+        trafficPersonVec_d_gpus[i][j] = trafficPersonVec[j]; 
+      }
+      gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
     }
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[0], size_gpu_part[0], 0, streams[0]));
-    // other half on GPU1
-    gpuErrchk(cudaSetDevice(1));
-    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[1], size_gpu_part[1]));
-    //*trafficPersonVec_d_gpus[1] = trafficPersonVec.data()+int(trafficPersonVec.size() / ngpus); 
-    for(int i = 0; i < num_people_gpu; i++){
-      trafficPersonVec_d_gpus[1][i] = trafficPersonVec[i]; 
-    }
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[1], size_gpu_part[1], 1, streams[1]));
   }
-  
   { 
     for(int i = 0; i < ngpus; i++){
       gpuErrchk(cudaSetDevice(i));
@@ -244,10 +238,7 @@ void b18InitCUDA(
   }
 }
 
-void b18updateStructuresCUDA(
-  std::vector<LC::B18TrafficPerson>& trafficPersonVec, 
-  std::vector<uint> &indexPathVec, 
-  std::vector<LC::B18EdgeData>& edgesData) {
+void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec,std::vector<uint> &indexPathVec,std::vector<LC::B18EdgeData>& edgesData){
   std::cout<< ">> b18updateStructuresCUDA" << std::endl;
   //indexPathVec
   cudaStream_t streams[ngpus];
@@ -257,7 +248,7 @@ void b18updateStructuresCUDA(
   size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
   for(int i=0; i < ngpus; i++){
     cudaSetDevice(i);
-    cudaStreamCreate( &streams[i]);
+    cudaStreamCreate( &streams[i] );
     // copy index path vector 
     gpuErrchk(cudaMalloc((void **) &indexPathVec_d[i], sizeIn));
     gpuErrchk(cudaMemcpyAsync(indexPathVec_d[i], indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice, streams[i]));
