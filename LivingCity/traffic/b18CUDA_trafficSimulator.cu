@@ -627,17 +627,11 @@ __global__ void kernel_trafficSimulation(
   if (trafficPersonVec[p].active == 2) return; // trip finished
   if (trafficPersonVec[p].time_departure > currentTime) return; //1.1 just continue waiting 
   // check that the current path index does not exceed the size of the path index vector
-  printf("Current path index for traffic person [%i] : %i\n", p, trafficPersonVec[p].indexPathCurr);
-  printf("At line 671\n");
-  printf("index path vector size : %i \n", indexPathVec_d_size);
-  printf("index path vector value at curr %i \n", indexPathVec[trafficPersonVec[p].indexPathCurr]);
   assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficPersonVec[p].indexPathCurr] == END_OF_PATH) {
-    printf("At line 674");
     trafficPersonVec[p].active = 2; //finished
     return;
   }
-  printf("At line 676");
   //2.1. check if person should still wait or should start
   if (trafficPersonVec[p].active == 0) {
     //1.2 find first edge
