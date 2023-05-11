@@ -300,7 +300,7 @@ nvprof --metrics flop_count_sp,flop_count_dp ./LivingCity >> output_g3.txt 2>&1 
 
 ## Acknowledgments
 
-This repository and code have been developed and maintained by Xuan Jiang, Xin Peng, Johan Agerup, Emin Burak Onat, and Raja Sengupta. This work heavily derives from Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
+This repository and code have been developed and maintained by Xuan Jiang, Xin Peng, Johan Agerup, Emin Burak Onat, and Raja Sengupta. This work is based from Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
 
 Thank you!
 
