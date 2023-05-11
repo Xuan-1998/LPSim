@@ -31,7 +31,7 @@
 // CONSTANTS
 
 #define MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED 5
-#define ngpus 4
+#define ngpus 3
 __constant__ float intersectionClearance = 7.8f; //TODO(pavan): WHAT IS THIS?
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
