@@ -306,6 +306,10 @@ If this code is used in any shape or form for your project, please cite this pap
 
 Jiang, X., Agerup, J. F., & Tang, Y. (2023, May 11). Benchmarking and preparing LPSim for scalability on multiple GPUs. Retrieved from osf.io/ezjrc, Available: [https://osf.io/ezjrc/](https://osf.io/ezjrc/).
 
+and 
+
+Jiang, X., Tang, Y., Tang, Z., Cao, J., Bulusu, V., Poliziani, C., & Sengupta, R. (2023). Simulating the Integration of Urban Air Mobility into Existing Transportation Systems: A Survey. arXiv preprint arXiv:2301.12901.
+
 Thank you!
 
 
