@@ -308,7 +308,7 @@ Jiang, X., Agerup, J. F., & Tang, Y. (2023, May 11). Benchmarking and preparing 
 
 and 
 
-Jiang, X., Tang, Y., Tang, Z., Cao, J., Bulusu, V., Poliziani, C., & Sengupta, R. (2023). Simulating the Integration of Urban Air Mobility into Existing Transportation Systems: A Survey. arXiv preprint arXiv:2301.12901.
+Jiang, X., Tang, Y., Tang, Z., Cao, J., Bulusu, V., Poliziani, C., & Sengupta, R. (2023). Simulating the Integration of Urban Air Mobility into Existing Transportation Systems: A Survey. Available:  [arXiv preprint arXiv:2301.12901.] (https://arxiv.org/abs/2301.12901).
 
 Thank you!
 
