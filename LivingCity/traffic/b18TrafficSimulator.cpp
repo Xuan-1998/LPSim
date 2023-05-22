@@ -160,6 +160,7 @@ void B18TrafficSimulator::updateEdgeImpedances(
     }
     auto vertex_from = std::get<0>(std::get<0>(x));
     auto vertex_to = std::get<1>(std::get<0>(x));
+    if (!(new_impedance > 0)) std::cout<<new_impedance<<","<<edgesData.at(ind).length<<","<<x.second->second.max_speed_limit_mps<<std::endl;
     assert(new_impedance > 0);
     graph_->update_edge(vertex_from, vertex_to, new_impedance);
 
@@ -2621,13 +2622,13 @@ void B18TrafficSimulator::savePeopleAndRoutesSP(
   std::cout << "Saving output files..." << std::endl; 
   std::thread threadWritePeopleFile(writePeopleFile, numOfPass, graph_, start_time, end_time, trafficPersonVec, deltaTime);
   std::thread threadWriteRouteFile(writeRouteFile, numOfPass, allPathsInVertexes, start_time, end_time, trafficPersonVec, graph_, allPathsInEdgesCUDAFormat, edgeIdToLaneMapNum, edgesData);
-  std::thread threadWriteIndexPathInitFile(writeIndexPathInitFile, numOfPass, start_time, end_time, trafficPersonVec);
-  std::thread threadWriteAllPathsInEdgesCUDAFormatFile(writeAllPathsInEdgesCUDAFormatFile, numOfPass, start_time, end_time, allPathsInEdgesCUDAFormat);
+  //std::thread threadWriteIndexPathInitFile(writeIndexPathInitFile, numOfPass, start_time, end_time, trafficPersonVec);
+  //std::thread threadWriteAllPathsInEdgesCUDAFormatFile(writeAllPathsInEdgesCUDAFormatFile, numOfPass, start_time, end_time, allPathsInEdgesCUDAFormat);
 
   threadWritePeopleFile.join();
   threadWriteRouteFile.join();
-  threadWriteAllPathsInEdgesCUDAFormatFile.join();
-  threadWriteIndexPathInitFile.join();
+  //threadWriteAllPathsInEdgesCUDAFormatFile.join();
+  //threadWriteIndexPathInitFile.join();
   std::cout << "Finished saving output files." << std::endl;
 }
 
@@ -2638,47 +2639,48 @@ void B18TrafficSimulator::savePeopleAndRoutes(int numOfPass) {
     /////////////////////////////////
     // SAVE TO FILE
     QFile peopleFile(QString::number(numOfPass) + "_people.csv");
-    QFile routeFile(QString::number(numOfPass) + "_route.csv");
+    //QFile routeFile(QString::number(numOfPass) + "_route.csv");
     QFile routeCount(QString::number(numOfPass) + "_edge_route_count.csv");
 
-    if (peopleFile.open(QIODevice::ReadWrite) &&
-        routeFile.open(QIODevice::ReadWrite) && routeCount.open(QIODevice::ReadWrite)) {
+    // if (peopleFile.open(QIODevice::ReadWrite) &&
+    //     routeFile.open(QIODevice::ReadWrite) && routeCount.open(QIODevice::ReadWrite)) {
+    if (peopleFile.open(QIODevice::ReadWrite) && routeCount.open(QIODevice::ReadWrite)) {
 
       /////////////
       // People Route
       printf("Save route %d\n", trafficPersonVec.size());
       QHash<uint, uint> laneMapNumCount;
-      QTextStream streamR(&routeFile);
+      //QTextStream streamR(&routeFile);
       std::vector<float> personDistance(trafficPersonVec.size(), 0.0f);
-      streamR << "p,route\n";
+      //streamR << "p,route\n";
 
-      for (int p = 0; p < trafficPersonVec.size(); p++) {
-        streamR << p;
-        // Save route
-        uint index = 0;
+      // for (int p = 0; p < trafficPersonVec.size(); p++) {
+      //   streamR << p;
+      //   // Save route
+      //   uint index = 0;
 
-        while (indexPathVec[trafficPersonVec[p].indexPathInit + index] != -1) {
-          uint laneMapNum = indexPathVec[trafficPersonVec[p].indexPathInit + index];
+      //   while (indexPathVec[trafficPersonVec[p].indexPathInit + index] != -1) {
+      //     uint laneMapNum = indexPathVec[trafficPersonVec[p].indexPathInit + index];
 
-          if (laneMapNumToEdgeDesc.count(laneMapNum) > 0) { // laneMapNum in map
-            streamR << "," <<
-                    simRoadGraph->myRoadGraph_BI[laneMapNumToEdgeDesc[laneMapNum]].faci; // get id of the edge from the roadgraph
-            laneMapNumCount.insert(laneMapNum, laneMapNumCount.value(laneMapNum,
-                                   0) + 1);//is it initialized?
-            personDistance[p] +=
-              simRoadGraph->myRoadGraph_BI[laneMapNumToEdgeDesc[laneMapNum]].edgeLength;
-            index++;
-          } else {
-            //printf("Save route: This should not happen\n");
-            break;
-          }
+      //     if (laneMapNumToEdgeDesc.count(laneMapNum) > 0) { // laneMapNum in map
+      //       streamR << "," <<
+      //               simRoadGraph->myRoadGraph_BI[laneMapNumToEdgeDesc[laneMapNum]].faci; // get id of the edge from the roadgraph
+      //       laneMapNumCount.insert(laneMapNum, laneMapNumCount.value(laneMapNum,
+      //                              0) + 1);//is it initialized?
+      //       personDistance[p] +=
+      //         simRoadGraph->myRoadGraph_BI[laneMapNumToEdgeDesc[laneMapNum]].edgeLength;
+      //       index++;
+      //     } else {
+      //       //printf("Save route: This should not happen\n");
+      //       break;
+      //     }
 
-        }
+      //   }
 
-        streamR << "\n";
-      } // people
+      //   streamR << "\n";
+      // } // people
 
-      routeFile.close();
+      // routeFile.close();
 
       ///////////////
       // People

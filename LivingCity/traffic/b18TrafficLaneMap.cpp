@@ -73,7 +73,8 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
   
   // Check distribution of street length
   float binLength = 1.0f;//1km
-  int numBins = 31 / binLength;//maxlength is 26km
+  // int numBins = 31 / binLength;//maxlength is 26km
+  int numBins = 27 / binLength;//maxlength is 26km
   std::vector<int> bins(numBins, 0);
   for (auto const& x : graph_->edges_) {
 	  const float metersLength = std::get<1>(x)->second.length;
@@ -142,11 +143,11 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
     //printf("edgesData size = %d\n", edgesData.size());
 
   // 2. RESIZE LANE MAP
-
-  printf("Total Memory %d\n", kMaxMapWidthM * tNumMapWidth * 2);
-  laneMap.resize(kMaxMapWidthM * tNumMapWidth * 2); // 2: to have two maps.
+  __int128 temp_memory = kMaxMapWidthM * tNumMapWidth * 2;
+  std::cout<<kMaxMapWidthM<<","<<tNumMapWidth<<std::endl;
+  printf("Total Memory %d\n", temp_memory);
+  laneMap.resize(temp_memory); // 2: to have two maps.
   memset(laneMap.data(), -1, laneMap.size()*sizeof(unsigned char)); //
-
   //////////////////////////////////////////////////////////
   // GENERATE INTERSECTION INFO
   RoadGraph::roadGraphVertexIter_BI vi, viEnd;
@@ -172,8 +173,8 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
       continue;
     }
 
-  if (intersections[std::get<0>(vertex)].totalInOutEdges >= 20) {
-      printf("Vertex with more than 20 in/out edges\n");
+  if (intersections[std::get<0>(vertex)].totalInOutEdges >= 2400) {
+      printf("Vertex with more than 2400 in/out edges, which is %d \n",intersections[std::get<0>(vertex)].totalInOutEdges);
       continue;
     }
     index++;
@@ -386,8 +387,8 @@ void B18TrafficLaneMap::createLaneMap(
       continue;
     }
 
-    if (intersections[*vi].totalInOutEdges >= 20) {
-      printf("Vertex with more than 20 in/out edges\n");
+    if (intersections[*vi].totalInOutEdges >= 24) {
+      printf("Vertex with more than 24 in/out edges, which is %d \n",intersections[*vi].totalInOutEdges);
       continue;
     }
 
