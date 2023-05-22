@@ -188,8 +188,8 @@ void CUDATrafficLaneMap::createLaneMap(
       continue;
     }
 
-    if (intersections[*vi].totalInOutEdges >= 20) {
-      printf("Vertex with more than 20 in/out edges\n");
+    if (intersections[*vi].totalInOutEdges >= 2400) {
+      printf("Vertex with more than 2400 in/out edges, which is %d \n",intersections[*vi].totalInOutEdges);
       continue;
     }
 

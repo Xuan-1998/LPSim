@@ -42,7 +42,7 @@ struct B18IntersectionData {
   ushort state;
   ushort stateLine;
   ushort totalInOutEdges;
-  uint edge[24];// up to six arms intersection
+  uint edge[2400];// up to six arms intersection
   float nextEvent;
 };
 }
