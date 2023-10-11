@@ -31,7 +31,7 @@
 // CONSTANTS
 
 #define MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED 5
-#define ngpus 3
+#define ngpus 2
 __constant__ float intersectionClearance = 7.8f; //TODO(pavan): WHAT IS THIS?
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -125,22 +125,22 @@ void b18InitCUDA(
 
     // Calculate the size of each half
     num_people_gpu = int(trafficPersonVec.size() / ngpus);
-    for(int i = 0; i < ngpus-1; i++){
+    for(int i = 0; i < ngpus; i++){
         size_gpu_part[i] = num_people_gpu * sizeof(LC::B18TrafficPerson);
     }
-    size_gpu_part[-1] = (trafficPersonVec.size() - num_people_gpu) * sizeof(LC::B18TrafficPerson);
+    size_gpu_part[ngpus-1] = (trafficPersonVec.size() - num_people_gpu *(ngpus-1)) * sizeof(LC::B18TrafficPerson);
 
     // Allocate memory for each half on the respective GPU
     //LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
 
     // Copy the first half to GPU 0 and the second half to GPU 1
-    for(int i = 0; i < ngpus-1; i++){
+    for(int i = 0; i < ngpus; i++){
       gpuErrchk(cudaSetDevice(i));
       gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[i], size_gpu_part[i]));
       // trafficPersonVec.data() returns a pointer to the memory of the data of the struct object
       // struct supports plain assignment
-      for(int j = 0; j < num_people_gpu; j++){
-        trafficPersonVec_d_gpus[i][j] = trafficPersonVec[j]; 
+      for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++){
+        trafficPersonVec_d_gpus[i][j] = trafficPersonVec[i * num_people_gpu + j]; 
       }
       gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
     }
@@ -250,14 +250,20 @@ void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec
     cudaSetDevice(i);
     cudaStreamCreate( &streams[i] );
     // copy index path vector 
+    cudaFree(indexPathVec_d[i]);
     gpuErrchk(cudaMalloc((void **) &indexPathVec_d[i], sizeIn));
     gpuErrchk(cudaMemcpyAsync(indexPathVec_d[i], indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice, streams[i]));
     // copy edge data
+    cudaFree(edgesData_d[i]);
     gpuErrchk(cudaMalloc((void **) &edgesData_d[i], sizeD));
     gpuErrchk(cudaMemcpyAsync(edgesData_d[i], edgesData.data(), sizeD, cudaMemcpyHostToDevice, streams[i]));
     // copy traffic person vector
-    gpuErrchk(cudaMalloc((void **) &trafficPersonVec_d_gpus[i], size));
-    gpuErrchk(cudaMemcpyAsync(trafficPersonVec_d_gpus[i], trafficPersonVec.data(), size, cudaMemcpyHostToDevice, streams[i]));
+    cudaFree(trafficPersonVec_d_gpus[i]);
+    gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[i], size_gpu_part[i]));
+    for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++){
+        trafficPersonVec_d_gpus[i][j] = trafficPersonVec[i * num_people_gpu + j]; 
+    }  
+    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
   }
   printMemoryUsage();
 }
@@ -282,7 +288,11 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::ve
   size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
   size_t size_edges = edgesData_d_size * sizeof(LC::B18EdgeData);
   cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,size,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
-  cudaMemcpy(edgesData.data(),edgesData_d,size_edges,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
+  for(int i = 0; i < ngpus; i++){
+    for (int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++) {
+      trafficPersonVec_d[i * num_people_gpu + j] = trafficPersonVec_d_gpus[i][j];
+    }
+  }
   
   /*for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
@@ -1353,11 +1363,10 @@ void b18SimulateTrafficCUDA(float currentTime,
   // #pragma omp parallel for
         // for(int i = 0; i < 2; i++) {
   
-  int numPeople_gpu = (int)floor(numPeople/ngpus);
   //printf("Number of people per GPU : %i ", numPeople_gpu);
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
-    //memcpy(&trafficPersonVec_d, trafficPersonVec_d_gpus[i], size_gpu_part);
+    int numPeople_gpu = size_gpu_part[i]/sizeof(LC::B18TrafficPerson);
     kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
     (numPeople_gpu, currentTime, mapToReadShift,
     mapToWriteShift, trafficPersonVec_d_gpus[i], indexPathVec_d[i], indexPathVec_d_size,
@@ -1365,6 +1374,10 @@ void b18SimulateTrafficCUDA(float currentTime,
     intersections_d[i], trafficLights_d[i], trafficLights_d_size, deltaTime, simParameters);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("CUDA error: %s\n", cudaGetErrorString(err));
+    }
   }
   peopleBench.stopMeasuring();
         // }
