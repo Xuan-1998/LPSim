@@ -140,7 +140,7 @@ void b18InitCUDA(
       // trafficPersonVec.data() returns a pointer to the memory of the data of the struct object
       // struct supports plain assignment
       for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++){
-        trafficPersonVec_d_gpus[i][j] = trafficPersonVec[i * num_people_gpu + j]; 
+        trafficPersonVec_d_gpus[i][j] = trafficPersonVec_d[i * num_people_gpu + j]; 
       }
       gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
     }
@@ -261,7 +261,7 @@ void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec
     cudaFree(trafficPersonVec_d_gpus[i]);
     gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[i], size_gpu_part[i]));
     for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++){
-        trafficPersonVec_d_gpus[i][j] = trafficPersonVec[i * num_people_gpu + j]; 
+        trafficPersonVec_d_gpus[i][j] = trafficPersonVec_d[i * num_people_gpu + j]; 
     }  
     gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
   }
@@ -285,14 +285,14 @@ void b18FinishCUDA(void){
 
 void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
   // copy back people
-  size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  size_t size = trafficPersonVec_d.size() * sizeof(LC::B18TrafficPerson);
   size_t size_edges = edgesData_d_size * sizeof(LC::B18EdgeData);
-  cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,size,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
   for(int i = 0; i < ngpus; i++){
-    for (int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++) {
+      for (int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++) {
       trafficPersonVec_d[i * num_people_gpu + j] = trafficPersonVec_d_gpus[i][j];
     }
   }
+  cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,size,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
   
   /*for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
