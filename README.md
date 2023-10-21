@@ -128,8 +128,8 @@ sudo apt-get install -y nvidia-container-toolkit
 
 2. You can build it yourself and run it
 ```bash
-docker build -t lpsim:latest .
-docker run -it --rm --gpus all -v "$PWD":/lpsim -w /lpsim  lpsim:latest bash
+
+docker run -it --rm --gpus all -v "$PWD":/lpsim -w /lpsim  xuanjiang1998/lpsim:v1 bash
 ```
 
 3. Once inside the container, compile and run
