@@ -5,7 +5,8 @@
 #pragma once
 #ifndef LC_B18_TRAFFIC_SIMULATOR_H
 #define LC_B18_TRAFFIC_SIMULATOR_H
-
+// #define ngpus 2
+constexpr int ngpus = 2;
 #include "../misctools/misctools.h"
 
 #include "b18TrafficOD.h"
@@ -83,14 +84,22 @@ class B18TrafficSimulator {
 
   // Lanes
   std::vector<uint> edgeIdToLaneMapNum;
+  std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
   std::vector<uchar> laneMap;
+  std::vector<uchar> laneMap_n[ngpus];
   std::vector<B18EdgeData> edgesData;
+  std::vector<B18EdgeData> edgesData_n[ngpus];
   std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> edgeDescToLaneMapNum;
+  std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> edgeDescToLaneMapNum_n[ngpus];
   std::map<uint, RoadGraph::roadGraphEdgeDesc_BI> laneMapNumToEdgeDesc;
   std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP;
+  std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[ngpus];
   std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP;
+  std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[ngpus];
+  std::map<std::pair<int, int>, int>LaneIdToLaneIdInGpu;
   void createLaneMap();
   void createLaneMapSP(const std::shared_ptr<abm::Graph>& graph_);
+  void createLaneMapSP_n(int ngpus, std::vector<int>& vertexIdToPar,std::vector<int> partitions[],bool* edgeIfGhost,const std::shared_ptr<abm::Graph>& graph_);
 
   // car path
   void generateCarPaths(bool useJohnsonRouting);
@@ -98,6 +107,7 @@ class B18TrafficSimulator {
   // People
   std::vector<B18TrafficPerson> trafficPersonVec;
   std::vector<uint> indexPathVec;
+  std::vector<uint> indexPathVec_n[ngpus];
   std::vector<uint> indexPathVecOrder;
 
 #ifdef B18_RUN_WITH_GUI
@@ -117,7 +127,9 @@ class B18TrafficSimulator {
 
   // Traffic lights
   std::vector<uchar> trafficLights;
+  std::vector<uchar> trafficLights_n[ngpus];
   std::vector<B18IntersectionData> intersections;
+  std::vector<B18IntersectionData> intersections_n[ngpus];
 
   // measurements
   std::vector<float> accSpeedPerLinePerTimeInterval;

@@ -164,6 +164,8 @@ class Graph {
   // Edges - vertices to edge pointer
   std::map<std::tuple<graph::vertex_t, graph::vertex_t>, std::shared_ptr<Edge>>
       edges_;
+  // Max id of edge
+  graph::edge_id_t max_edge_id_{std::numeric_limits<graph::edge_id_t>::min()};
   // Edges - edge pointer to vertices
   std::map<std::shared_ptr<Edge>, std::tuple<graph::vertex_t, graph::vertex_t>>
       edge_pointer_to_vertices_;

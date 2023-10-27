@@ -99,6 +99,10 @@ void B18TrafficSimulator::createLaneMapSP(const std::shared_ptr<abm::Graph>& gra
 	b18TrafficLaneMap.createLaneMapSP(graph_, laneMap, edgesData, intersections, trafficLights, laneMapNumToEdgeDescSP, edgeDescToLaneMapNumSP, edgeIdToLaneMapNum);
 }
 
+void B18TrafficSimulator::createLaneMapSP_n(int ngpus, std::vector<int>& vertexIdToPar,std::vector<int> partitions[],  bool* edgeIfGhost, const std::shared_ptr<abm::Graph>& graph_) { //
+	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar,partitions, edgeIfGhost, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,LaneIdToLaneIdInGpu);
+}
+
 void B18TrafficSimulator::generateCarPaths(bool useJohnsonRouting) { //
   if (useJohnsonRouting) {
     printf("***generateCarPaths Start generateRoute Johnson\n");
@@ -140,7 +144,7 @@ void B18TrafficSimulator::printProgressBar(const float progress) const {
     std::cout.flush();
   }
 }
-
+//TODO: updateEdgeImpedances_n
 void B18TrafficSimulator::updateEdgeImpedances(
   const std::shared_ptr<abm::Graph>& graph_,
   const int increment_index) {
@@ -193,8 +197,23 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
   Benchmarker laneMapCreation("Lane_Map_creation", true);
    
   laneMapCreation.startMeasuring();
+  std::vector<int> vertexIdToPar(graph_->vertex_edges_.size());
+  bool* edgeIfGhost =new bool[graph_->max_edge_id_]();
   if (useSP) {
-	  createLaneMapSP(graph_);
+	  // createLaneMapSP(graph_);
+    // std::vector<int> partitions[ngpus]= {{0,1,3},{2,4,5,6,7,8,9}};
+    // vertexIdToPar eg:[0,0,1,1,0,0,1,0]
+    
+    // Fill the first half with 0s
+    std::fill(vertexIdToPar.begin(), vertexIdToPar.begin() + graph_->vertex_edges_.size() / 2, 0);
+
+    // Fill the second half with 1s
+    std::fill(vertexIdToPar.begin() + graph_->vertex_edges_.size() / 2, vertexIdToPar.end(), 1);
+    std::vector<int> partitions[ngpus];
+    for (int i = 0; i < vertexIdToPar.size(); ++i) {
+        partitions[vertexIdToPar[i]].push_back(i);
+    }
+    createLaneMapSP_n(ngpus,vertexIdToPar,partitions, edgeIfGhost, graph_);
   } else {
 	  createLaneMap();
   }
@@ -277,12 +296,12 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
 
 
     // const int ngpus = find_int_arg(argc, argv, "-ngpus", 4);
-    const int ngpus = 2;
-    printf("ngpus %i\n", ngpus);
-    int* gpus = new int[ngpus];
-    for(int i = 0; i < ngpus; i++){
-        gpus[i] = i;
-    }
+    // const int ngpus = 2;
+    // printf("ngpus %i\n", ngpus);
+    // int* gpus = new int[ngpus];
+    // for(int i = 0; i < ngpus; i++){
+    //     gpus[i] = i;
+    // }
 
     // create streams to make event recording easier to handle
     // cudaStream_t streams[ngpus];
@@ -291,8 +310,11 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     //     cudaStreamCreate( &streams[i]);
     // }
 
-    b18InitCUDA(firstInitialization, trafficPersonVec, indexPathVec, edgesData,
-        laneMap, trafficLights, intersections, startTimeH, endTimeH,
+    // b18InitCUDA(firstInitialization, trafficPersonVec, indexPathVec, edgesData,
+    //     laneMap, trafficLights, intersections, startTimeH, endTimeH,
+    //     accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
+    b18InitCUDA_n(firstInitialization, vertexIdToPar,edgeIfGhost, graph_->max_edge_id_,trafficPersonVec, indexPathVec_n, edgesData_n,
+        laneMap_n, trafficLights_n, intersections_n, startTimeH, endTimeH,
         accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
 
     initCudaBench.stopAndEndBenchmark();
@@ -368,6 +390,11 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
       b18updateStructuresCUDA(trafficPersonVec, allPathsInEdgesCUDAFormat, edgesData);
       benchmarkb18updateStructuresCUDA.stopAndEndBenchmark();
 
+      Benchmarker benchmarkb18updateStructuresCUDA_n("b18updateStructuresCUDA_n");
+      benchmarkb18updateStructuresCUDA_n.startMeasuring();
+      b18updateStructuresCUDA_n(vertexIdToPar,trafficPersonVec, allPathsInEdgesCUDAFormat, edgesData_n);
+      benchmarkb18updateStructuresCUDA_n.stopAndEndBenchmark();
+
       Benchmarker microsimulationInGPU("Microsimulation_in_GPU_batch_" + to_string(increment_index), true);
       microsimulationInGPU.startMeasuring();
 
@@ -381,13 +408,16 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
                 << " secs." << std::endl;
 
       float progress = 0;
-      
+      uint32_t* intersections_size_n = new uint32_t[ngpus]();
+      for(int i=0;i<ngpus;i++){
+        intersections_size_n[i]=intersections_n[i].size();
+      }
       while (currentTime < currentBatchEndTimeSecs) {
         printProgressBar(progress);
         float nextMilestone = currentBatchStartTimeSecs + (progress + 0.1) * (currentBatchEndTimeSecs - currentBatchStartTimeSecs);
         while(currentTime < nextMilestone) {
           b18SimulateTrafficCUDA(currentTime, trafficPersonVec.size(),
-                              intersections.size(), deltaTime, simParameters, numBlocks, threadsPerBlock);
+                              intersections_size_n, deltaTime, simParameters, numBlocks, threadsPerBlock);
           currentTime += deltaTime;
         }
         progress += 0.1;
