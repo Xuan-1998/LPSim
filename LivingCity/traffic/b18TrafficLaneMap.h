@@ -39,6 +39,17 @@ class B18TrafficLaneMap {
       std::map<std::shared_ptr<abm::Graph::Edge>, uint> &edgeDescToLaneMapNumSP,
       std::vector<uint> &edgeIdToLaneMapNum);
 
+void createLaneMapSP_n(int ngpus, std::vector<int>vertexIdToPar,std::vector<int> partitions[], bool*edgeIfGhost,
+    const std::shared_ptr<abm::Graph>& graph_, 
+    std::vector<uchar> &laneMap,std::vector<uchar> laneMap_n[],
+    std::vector<B18EdgeData> &edgesData, std::vector<B18EdgeData> edgesData_n[], 
+    std::vector<B18IntersectionData> &intersections, std::vector<B18IntersectionData> intersections_n[],
+    std::vector<uchar> &trafficLights, std::vector<uchar> trafficLights_n[], 
+    std::map<uint, std::shared_ptr<abm::Graph::Edge>> &laneMapNumToEdgeDescSP,std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],
+    std::map<std::shared_ptr<abm::Graph::Edge>, uint> &edgeDescToLaneMapNumSP,std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
+    std::vector<uint> &edgeIdToLaneMapNum, std::vector<uint> edgeIdToLaneMapNum_n[],
+    std::map<std::pair<int, int>, int>LaneIdToLaneIdInGpu);
+
   void resetIntersections(std::vector<B18IntersectionData> &intersections,
                           std::vector<uchar> &trafficLights);
 

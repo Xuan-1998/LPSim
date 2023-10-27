@@ -179,7 +179,7 @@ bool abm::Graph::read_graph_osm(const std::string& filename) {
       ++index;
     }
     std::cout << "total edges = " << index << "\n";
-    
+    this-> max_edge_id_=index;
     this->assign_nvertices(nvertices);
     std::cout << "# of edges: " << this->edges_.size() << "\n";
 
