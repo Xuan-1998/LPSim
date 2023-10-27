@@ -8,7 +8,8 @@ LPSim is a discrete time-driven simulation platform that enables microsimulation
 The concept of implementing a multi-GPU simulation can be elucidated as follows: initially, the network will undergo partitioning into distinct GPU units, following which, the simulation of individuals will be executed independently within separate GPUs for multiple time-steps, prior to any communication between these subunits.
 
 
-![mGPU-roadnetwork](https://github.com/Xuan-1998/LPSim/assets/58761221/37743a60-b394-4498-8eff-bdc8a6ab6614)
+
+![simulation drawio](https://github.com/Xuan-1998/LPSim/assets/58761221/a8ddbab9-8e17-405e-b392-28044c1d917a)
 
 
 ## Initial checks
@@ -265,6 +266,8 @@ docker pull your-dockerhub-username/lpsim:latest
 docker run -it your-dockerhub-username/lpsim:latest /bin/bash
 
 ## multiple GPUs
+![One_GPU_VS_Multiple drawio](https://github.com/Xuan-1998/LPSim/assets/58761221/6b9c36c0-488d-47a5-ab9e-d3bf0609bde4)
+
 /usr/local/cuda-11.2/bin/nvcc -m64 -O3 -arch=sm_50 -c --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr -I/usr/include/opencv4/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/usr/include -I/usr/include/pandana/src -I/usr/local/cuda-11.2/include  -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl -L/usr/include/pandana/src -lchrouting -lcudart -lcuda -lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o LivingCity/obj/b18CUDA_trafficSimulator_cuda.o
 
 ## Running on gcloud
