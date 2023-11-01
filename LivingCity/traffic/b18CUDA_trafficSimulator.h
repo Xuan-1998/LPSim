@@ -18,6 +18,7 @@ extern void b18InitCUDA_n(bool fistInitialization, // crate buffers
                         std::vector<int>& vertexIdToPar,
                         bool* edgeIfGhost,
                         int edges_num,
+                        std::map<std::pair<int, int>, int>& laneIdToLaneIdInGpu,
                         std::vector<LC::B18TrafficPerson> &trafficPersonVec,
                         std::vector<uint> indexPathVec_n[],
                         std::vector<LC::B18EdgeData> edgesData_n[], std::vector<uchar> laneMap_n[],

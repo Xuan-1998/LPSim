@@ -70,7 +70,11 @@ struct B18TrafficPerson {
 
   int isInIntersection;
 };
-
+struct B18TrafficPersonModify{
+  bool ifToCopy;
+  bool ifToRemove;
+  int gpuIndexToCopy;
+};
 }
 
 #endif  // LC_B18_TRAFFIC_PERSON_H

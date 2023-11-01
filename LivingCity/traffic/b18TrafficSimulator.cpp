@@ -100,7 +100,7 @@ void B18TrafficSimulator::createLaneMapSP(const std::shared_ptr<abm::Graph>& gra
 }
 
 void B18TrafficSimulator::createLaneMapSP_n(int ngpus, std::vector<int>& vertexIdToPar,std::vector<int> partitions[],  bool* edgeIfGhost, const std::shared_ptr<abm::Graph>& graph_) { //
-	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar,partitions, edgeIfGhost, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,LaneIdToLaneIdInGpu);
+	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar,partitions, edgeIfGhost, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,laneIdToLaneIdInGpu);
 }
 
 void B18TrafficSimulator::generateCarPaths(bool useJohnsonRouting) { //
@@ -313,7 +313,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     // b18InitCUDA(firstInitialization, trafficPersonVec, indexPathVec, edgesData,
     //     laneMap, trafficLights, intersections, startTimeH, endTimeH,
     //     accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
-    b18InitCUDA_n(firstInitialization, vertexIdToPar,edgeIfGhost, graph_->max_edge_id_,trafficPersonVec, indexPathVec_n, edgesData_n,
+    b18InitCUDA_n(firstInitialization, vertexIdToPar,edgeIfGhost, graph_->max_edge_id_,laneIdToLaneIdInGpu, trafficPersonVec, indexPathVec_n, edgesData_n,
         laneMap_n, trafficLights_n, intersections_n, startTimeH, endTimeH,
         accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
 
@@ -387,7 +387,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
 
       Benchmarker benchmarkb18updateStructuresCUDA("b18updateStructuresCUDA");
       benchmarkb18updateStructuresCUDA.startMeasuring();
-      b18updateStructuresCUDA(trafficPersonVec, allPathsInEdgesCUDAFormat, edgesData);
+      // b18updateStructuresCUDA(trafficPersonVec, allPathsInEdgesCUDAFormat, edgesData);
       benchmarkb18updateStructuresCUDA.stopAndEndBenchmark();
 
       Benchmarker benchmarkb18updateStructuresCUDA_n("b18updateStructuresCUDA_n");
