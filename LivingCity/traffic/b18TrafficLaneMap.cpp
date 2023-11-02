@@ -48,7 +48,7 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
       std::map<uint, std::shared_ptr<abm::Graph::Edge>> &laneMapNumToEdgeDescSP,std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],
       std::map<std::shared_ptr<abm::Graph::Edge>, uint> &edgeDescToLaneMapNumSP,std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
       std::vector<uint> &edgeIdToLaneMapNum, std::vector<uint> edgeIdToLaneMapNum_n[],
-      std::map<std::pair<int, int>, int> &laneIdToLaneIdInGpu){
+      std::map<int, int> laneIdToLaneIdInGpu[]){
   // GENERATE LANE MAP
   if (LANE_DEBUG) {
     printf("  >> createLaneMap\n");
@@ -113,6 +113,8 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
       // edge belong
       int partition_from=vertexIdToPar[std::get<0>(x.first)];
       int partition_to=vertexIdToPar[std::get<1>(x.first)];
+      assert(partition_from>=0&&partition_from<ngpus);
+      assert(partition_to>=0&&partition_to<ngpus);
       bool ifGhost=partition_from!=partition_to;// if an edge belongs to two areas
       newEdgeData.length = std::get<1>(x)->second.length;
       newEdgeData.maxSpeedMperSec = std::get<1>(x)->second.max_speed_limit_mps;
@@ -145,12 +147,15 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
       }
       edgesData_n[partition_from][tNumMapWidth_n[partition_from]]=newEdgeData;
       edgeIdToLaneMapNum_n[partition_from][edge_id] = tNumMapWidth_n[partition_from];
-      laneIdToLaneIdInGpu[std::make_pair(tNumMapWidth, partition_from)]=tNumMapWidth_n[partition_from];
+      laneIdToLaneIdInGpu[partition_from][tNumMapWidth]=tNumMapWidth_n[partition_from];
+      // laneIdToLaneIdInGpu[std::make_pair(tNumMapWidth, partition_from)]=tNumMapWidth_n[partition_from];
       if(ifGhost){
         edgesData_n[partition_to][tNumMapWidth_n[partition_to]]=newEdgeData;
         edgeIdToLaneMapNum_n[partition_to][edge_id] = tNumMapWidth_n[partition_to];
         edgeIfGhost[edge_id]=true;
-        laneIdToLaneIdInGpu[std::make_pair(tNumMapWidth, partition_to)]=tNumMapWidth_n[partition_to];
+        laneIdToLaneIdInGpu[partition_to][tNumMapWidth]=tNumMapWidth_n[partition_to];
+        tNumMapWidth_n[partition_to] += numLanes * numWidthNeeded;
+        // laneIdToLaneIdInGpu[std::make_pair(tNumMapWidth, partition_to)]=tNumMapWidth_n[partition_to];
       }
       tNumMapWidth += numLanes * numWidthNeeded;
       tNumMapWidth_n[partition_from] += numLanes * numWidthNeeded;

@@ -48,7 +48,7 @@ void createLaneMapSP_n(int ngpus, std::vector<int>vertexIdToPar,std::vector<int>
     std::map<uint, std::shared_ptr<abm::Graph::Edge>> &laneMapNumToEdgeDescSP,std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],
     std::map<std::shared_ptr<abm::Graph::Edge>, uint> &edgeDescToLaneMapNumSP,std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
     std::vector<uint> &edgeIdToLaneMapNum, std::vector<uint> edgeIdToLaneMapNum_n[],
-    std::map<std::pair<int, int>, int>& LaneIdToLaneIdInGpu);
+    std::map<int, int> LaneIdToLaneIdInGpu[]);
 
   void resetIntersections(std::vector<B18IntersectionData> &intersections,
                           std::vector<uchar> &trafficLights);

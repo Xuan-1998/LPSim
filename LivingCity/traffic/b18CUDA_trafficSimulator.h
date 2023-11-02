@@ -16,9 +16,8 @@
 
 extern void b18InitCUDA_n(bool fistInitialization, // crate buffers
                         std::vector<int>& vertexIdToPar,
-                        bool* edgeIfGhost,
                         int edges_num,
-                        std::map<std::pair<int, int>, int>& laneIdToLaneIdInGpu,
+                        std::map<int, int> laneIdToLaneIdInGpu[],
                         std::vector<LC::B18TrafficPerson> &trafficPersonVec,
                         std::vector<uint> indexPathVec_n[],
                         std::vector<LC::B18EdgeData> edgesData_n[], std::vector<uchar> laneMap_n[],
@@ -44,7 +43,8 @@ extern void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPe
                                     std::vector<LC::B18EdgeData>& edgesData);
 extern void b18updateStructuresCUDA_n(std::vector<int>& vertexIdToPar,std::vector<LC::B18TrafficPerson>& trafficPersonVec,
                                     std::vector<uint> &indexPathVec, 
-                                    std::vector<LC::B18EdgeData> edgesData[]);
+                                    std::vector<LC::B18EdgeData> edgesData[],
+                                    std::vector<personPath> allPathsInVertexes);
 extern void b18GetDataCUDA(std::vector<LC::B18TrafficPerson> &trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData);
 extern void b18GetSampleTrafficCUDA(std::vector<float>& accSpeedPerLinePerTimeInterval, 
                                 std::vector<float>& numVehPerLinePerTimeInterval);

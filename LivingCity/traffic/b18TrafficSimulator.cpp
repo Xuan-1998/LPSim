@@ -219,6 +219,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
   }
   laneMapCreation.stopAndEndBenchmark();
 
+
   QTime pathTimer;
   pathTimer.start();
 
@@ -313,7 +314,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     // b18InitCUDA(firstInitialization, trafficPersonVec, indexPathVec, edgesData,
     //     laneMap, trafficLights, intersections, startTimeH, endTimeH,
     //     accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
-    b18InitCUDA_n(firstInitialization, vertexIdToPar,edgeIfGhost, graph_->max_edge_id_,laneIdToLaneIdInGpu, trafficPersonVec, indexPathVec_n, edgesData_n,
+    b18InitCUDA_n(firstInitialization, vertexIdToPar, graph_->max_edge_id_,laneIdToLaneIdInGpu, trafficPersonVec, indexPathVec_n, edgesData_n,
         laneMap_n, trafficLights_n, intersections_n, startTimeH, endTimeH,
         accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
 
@@ -392,7 +393,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
 
       Benchmarker benchmarkb18updateStructuresCUDA_n("b18updateStructuresCUDA_n");
       benchmarkb18updateStructuresCUDA_n.startMeasuring();
-      b18updateStructuresCUDA_n(vertexIdToPar,trafficPersonVec, allPathsInEdgesCUDAFormat, edgesData_n);
+      b18updateStructuresCUDA_n(vertexIdToPar,trafficPersonVec, allPathsInEdgesCUDAFormat, edgesData_n,allPathsInVertexes);
       benchmarkb18updateStructuresCUDA_n.stopAndEndBenchmark();
 
       Benchmarker microsimulationInGPU("Microsimulation_in_GPU_batch_" + to_string(increment_index), true);
@@ -416,8 +417,10 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
         printProgressBar(progress);
         float nextMilestone = currentBatchStartTimeSecs + (progress + 0.1) * (currentBatchEndTimeSecs - currentBatchStartTimeSecs);
         while(currentTime < nextMilestone) {
+          
           b18SimulateTrafficCUDA(currentTime, trafficPersonVec.size(),
                               intersections_size_n, deltaTime, simParameters, numBlocks, threadsPerBlock);
+           
           currentTime += deltaTime;
         }
         progress += 0.1;
