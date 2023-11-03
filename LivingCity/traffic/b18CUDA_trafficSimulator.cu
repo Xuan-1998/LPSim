@@ -1062,8 +1062,11 @@ __global__ void kernel_trafficSimulation(
   int prevEdge = trafficPersonVec[p].prevEdge;
   int prevEdge_d=-1;
   getLaneIdToLaneIdInGpuValue(laneIdToLaneIdInGpu_d_keys, laneIdToLaneIdInGpu_d_values, wholeLaneMap_size,prevEdge,prevEdge_d); 
-  assert(prevEdge_d!=-1);
-  assert(prevEdge_d < edgesData_d_size);
+  if(prevEdge_d!=-1){
+    // printf("@@@@%d %u",prevEdge,trafficPersonVec[p].init_intersection);
+    assert(prevEdge_d < edgesData_d_size);
+  }
+  
 
   if (nextEdge != END_OF_PATH) {
     trafficPersonVec[p].LC_initOKLanes = 0xFF;
@@ -1086,12 +1089,15 @@ __global__ void kernel_trafficSimulation(
 
     // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
     // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
-    assert(prevEdge_d< edgesData_d_size);
-    if (elapsed_s > MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED) {
-      trafficPersonVec[p].manual_v = edgesData[prevEdge_d].length / elapsed_s;
-      edgesData[prevEdge_d].curr_iter_num_cars += 1;
-      edgesData[prevEdge_d].curr_cum_vel += trafficPersonVec[p].manual_v;
+    if(prevEdge_d!=-1){
+      assert(prevEdge_d< edgesData_d_size);
+      if (elapsed_s > MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED) {
+        trafficPersonVec[p].manual_v = edgesData[prevEdge_d].length / elapsed_s;
+        edgesData[prevEdge_d].curr_iter_num_cars += 1;
+        edgesData[prevEdge_d].curr_cum_vel += trafficPersonVec[p].manual_v;
+      }
     }
+    
 
     trafficPersonVec[p].start_time_on_prev_edge = currentTime;
     trafficPersonVec[p].prevEdge = currentEdge;
@@ -1832,8 +1838,11 @@ void b18SimulateTrafficCUDA(float currentTime,
     trafficPersonVec_d_gpus[i]=new_trafficPersonVec_d_gpus[i];
     trafficPersonModify[i]=new_trafficPersonModify[i];
     size_gpu_part[i]=new_size_gpu_part[i];
-    if(size_gpu_part[i]>0)
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
+    if(size_gpu_part[i]>0){
+      gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
+      gpuErrchk(cudaMemPrefetchAsync(trafficPersonModify[i], size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify), i, streams[i]));
+    }
+    
   }
     //   auto end = std::chrono::high_resolution_clock::now();
     
