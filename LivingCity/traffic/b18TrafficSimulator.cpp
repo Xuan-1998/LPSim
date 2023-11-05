@@ -475,7 +475,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     }
 
     // 3. Finish
-    b18GetDataCUDA(trafficPersonVec, edgesData);
+    // b18GetDataCUDA(trafficPersonVec, edgesData);
     // debug
     float totalNumSteps = 0;
     float totalCO = 0;
