@@ -81,7 +81,7 @@ uchar **laneMap_d_gpus = new uchar*[ngpus];
 int** laneIdToLaneIdInGpu_d_keys= new int*[ngpus];
 int** laneIdToLaneIdInGpu_d_values= new int*[ngpus];
 int* wholeLaneMap_size= new int[ngpus];
-int* vertexIdToPar_d;
+int** vertexIdToPar_d= new int*[ngpus];
 bool readFirstMapC=true;
 uint mapToReadShift;
 uint mapToWriteShift;
@@ -169,7 +169,7 @@ void b18InitCUDA_n(
     personIndex = nullptr;
     for(int i = 0; i < ngpus; i++){
       gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
-    
+      gpuErrchk(cudaMemPrefetchAsync(trafficPersonModify[i], size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify), i, streams[i]));
     }
     
     
@@ -238,10 +238,13 @@ void b18InitCUDA_n(
 
   }
   {// ghost data structure
-      size_t sizeI = edges_num * sizeof(bool);
-      if (firstInitialization){
-        gpuErrchk(cudaMallocManaged(&vertexIdToPar_d, vertexIdToPar.size()*sizeof(int)));
-        memcpy(vertexIdToPar_d, vertexIdToPar.data(), vertexIdToPar.size()*sizeof(int));
+      // size_t sizeI = edges_num * sizeof(bool);
+      for(int i = 0; i < ngpus; i++){
+        cudaSetDevice(i);
+        if (firstInitialization){
+          gpuErrchk(cudaMalloc((void **) &vertexIdToPar_d[i], vertexIdToPar.size()*sizeof(int)));   // Allocate array on device
+          gpuErrchk(cudaMemcpyAsync(vertexIdToPar_d[i], vertexIdToPar.data(), vertexIdToPar.size()*sizeof(int), cudaMemcpyHostToDevice, streams[i]));
+      }
         // gpuErrchk(cudaMallocManaged(&personToCopy_d, max_ghost_cars * sizeof(uint64_t )));
         // for (size_t i = 0; i < max_ghost_cars; ++i) {
         //     personToCopy_d[i] = UINT64_MAX;
@@ -548,7 +551,7 @@ void b18updateStructuresCUDA_n(std::vector<int>& vertexIdToPar,std::vector<LC::B
     }
     
   }
-    delete[] personIndex;  // 释放内存
+    delete[] personIndex; 
     personIndex = nullptr;
     for(int i = 0; i < ngpus; i++){
       gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
@@ -582,6 +585,7 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::ve
       trafficPersonVec_d[indexCursor++] = trafficPersonVec_d_gpus[i][j];
     }
   }
+  printf("%d",indexCursor-1);
   cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,size,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
   
   /*for(int i = 0; i < ngpus; i++){
@@ -1758,7 +1762,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     (i,numPeople_gpu, currentTime, mapToReadShift,
     mapToWriteShift, trafficPersonVec_d_gpus[i],trafficPersonModify[i], indexPathVec_d[i], indexPathVec_d_size,
     edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i], laneIdToLaneIdInGpu_d_keys[i], laneIdToLaneIdInGpu_d_values[i], wholeLaneMap_size[i],
-    intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,vertexIdToPar_d);
+    intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,vertexIdToPar_d[i]);
     
     // cudaEventRecord(stop, 0);
     // cudaError_t err = cudaGetLastError();
@@ -1783,6 +1787,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     // outFile.close();
     // update trafficPerson_n_gpu
     // new_trafficPersonVec_d_gpus
+    // gpuErrchk(cudaMemPrefetchAsync(trafficPersonModify[i], size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify), cudaCpuDeviceId));
     for (int j=0;j<size_gpu_part[i]/sizeof(LC::B18TrafficPerson);j++){
       LC::B18TrafficPersonModify modifyPerson=trafficPersonModify[i][j];
       if(modifyPerson.ifToCopy){
@@ -1793,6 +1798,10 @@ void b18SimulateTrafficCUDA(float currentTime,
         new_size_gpu_part[i] -= sizeof(LC::B18TrafficPerson);
       }
     }
+    // auto end = std::chrono::high_resolution_clock::now();
+    
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    // printf("Time taken by b18SimulateTrafficCUDA: %lld microseconds\n", duration.count());
     
     // TODO: use kernel function to copy/delete data
     // cudafree trafficPerson_n_gpu
@@ -1806,10 +1815,11 @@ void b18SimulateTrafficCUDA(float currentTime,
     }
   }
   if(ifCommu){
-    
-  // auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
+  
   for(int i = 0; i < ngpus; i++){
       gpuErrchk(cudaSetDevice(i));
+      gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], cudaCpuDeviceId));
       gpuErrchk(cudaMallocManaged(&new_trafficPersonVec_d_gpus[i], new_size_gpu_part[i]));
       gpuErrchk(cudaMallocManaged(&new_trafficPersonModify[i], new_size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify)));
       //initialize new_trafficPersonModify
@@ -1844,13 +1854,22 @@ void b18SimulateTrafficCUDA(float currentTime,
     }
     
   }
-    //   auto end = std::chrono::high_resolution_clock::now();
+  // cudaDeviceSynchronize();
+      auto end = std::chrono::high_resolution_clock::now();
     
-    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    // std::ofstream outFile("commu_times.txt", std::ios::app);
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::ofstream outFile("commu_times.txt", std::ios::app);
     // outFile << duration.count() << "\n";
     // outFile.close();
   }
+  // else{
+  //   for(int i = 0; i < ngpus; i++){
+  //   cudaSetDevice(i); 
+  //   cudaStreamCreate( &streams[i] );
+  //   gpuErrchk(cudaMemPrefetchAsync(trafficPersonModify[i], size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify), i, streams[i]));
+  //   }
+  // }
+     
   peopleBench.stopMeasuring();
 
         // }
