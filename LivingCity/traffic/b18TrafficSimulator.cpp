@@ -2530,7 +2530,7 @@ void writePeopleFile(
     streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
 
     for (int p = 0; p < trafficPersonVec.size(); p++) {
-      streamP << p;
+      streamP << trafficPersonVec[p].id;
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].init_intersection];
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].end_intersection];
       streamP << "," << trafficPersonVec[p].time_departure;
