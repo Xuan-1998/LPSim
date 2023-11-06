@@ -220,8 +220,8 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
       edge_count, tNumLanes_n[i], tNumMapWidth_n[i], maxLength, maxNumLanes);
     }
     // 2. RESIZE LANE MAP
-    printf("Total Memory %d\n", kMaxMapWidthM * tNumMapWidth * 2);
-    laneMap_n[i].resize(kMaxMapWidthM * tNumMapWidth * 2); // 2: to have two maps.
+    printf("Total Memory %d\n", kMaxMapWidthM * tNumMapWidth_n[i] * 2);
+    laneMap_n[i].resize(kMaxMapWidthM * tNumMapWidth_n[i] * 2); // 2: to have two maps.
     memset(laneMap_n[i].data(), -1, laneMap_n[i].size()*sizeof(unsigned char)); //
   }
 
