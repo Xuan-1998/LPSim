@@ -1733,12 +1733,14 @@ void b18SimulateTrafficCUDA(float currentTime,
   intersectionBench.startMeasuring();
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   // 1. CHANGE MAP: set map to use and clean the other
+  // cudaStream_t streams[ngpus];
   for(int i = 0; i < ngpus; i++){
+    // cudaStreamCreate(&streams[i]);
     cudaSetDevice(i);
     if (readFirstMapC==true) {
       mapToReadShift=0;
       mapToWriteShift=halfLaneMap_n[i];
-      gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap_n[i]], -1, halfLaneMap*sizeof(unsigned char)));//clean second half
+      gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap_n[i]], -1, halfLaneMap_n[i]*sizeof(unsigned char)));//clean second half
     } 
     else {
       mapToReadShift=halfLaneMap_n[i];
@@ -1827,10 +1829,6 @@ void b18SimulateTrafficCUDA(float currentTime,
         new_size_gpu_part[i] -= sizeof(LC::B18TrafficPerson);
       }
     }
-    // auto end = std::chrono::high_resolution_clock::now();
-    
-    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    // printf("Time taken by b18SimulateTrafficCUDA: %lld microseconds\n", duration.count());
     
     // TODO: use kernel function to copy/delete data
     // cudafree trafficPerson_n_gpu
