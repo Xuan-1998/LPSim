@@ -172,9 +172,12 @@ void b18InitCUDA_n(
     delete[] personIndex; 
     personIndex = nullptr;
     for(int i = 0; i < ngpus; i++){
+      if(size_gpu_part[i]>0){
       gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
       gpuErrchk(cudaMemPrefetchAsync(trafficPersonModify[i], size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify), i, streams[i]));
-    }
+ 
+      }
+         }
     
     
       
@@ -1734,13 +1737,13 @@ void b18SimulateTrafficCUDA(float currentTime,
     cudaSetDevice(i);
     if (readFirstMapC==true) {
       mapToReadShift=0;
-      mapToWriteShift=halfLaneMap;
-      gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap], -1, halfLaneMap*sizeof(unsigned char)));//clean second half
+      mapToWriteShift=halfLaneMap_n[i];
+      gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap_n[i]], -1, halfLaneMap*sizeof(unsigned char)));//clean second half
     } 
     else {
-      mapToReadShift=halfLaneMap;
+      mapToReadShift=halfLaneMap_n[i];
       mapToWriteShift=0;
-      gpuErrchk(cudaMemset(&laneMap_d[i][0], -1, halfLaneMap*sizeof(unsigned char)));//clean first half
+      gpuErrchk(cudaMemset(&laneMap_d[i][0], -1, halfLaneMap_n[i]*sizeof(unsigned char)));//clean first half
     }
   }
   readFirstMapC=!readFirstMapC;//next iteration invert use
@@ -1813,7 +1816,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     // update trafficPerson_n_gpu
     // new_trafficPersonVec_d_gpus
     
-    gpuErrchk(cudaMemPrefetchAsync(trafficPersonModify[i], size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify), cudaCpuDeviceId));
+    // gpuErrchk(cudaMemPrefetchAsync(trafficPersonModify[i], size_gpu_part[i]/sizeof(LC::B18TrafficPerson)*sizeof(LC::B18TrafficPersonModify), cudaCpuDeviceId));
     for (int j=0;j<size_gpu_part[i]/sizeof(LC::B18TrafficPerson);j++){
       LC::B18TrafficPersonModify modifyPerson=trafficPersonModify[i][j];
       if(modifyPerson.ifToCopy){
