@@ -138,6 +138,7 @@ void B18TrafficOD::randomPerson(int p, B18TrafficPerson &person,
                                 uint tgtvertex, float startTimeH) {
 
   // Data
+  person.id = p;
   person.init_intersection = srcvertex;
   person.end_intersection = tgtvertex;
   person.time_departure = startTimeH;// * 3600.0f; //seconds
