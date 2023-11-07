@@ -1241,7 +1241,7 @@ __global__ void kernel_trafficSimulation(
   if (trafficPersonVec[p].v == 0) { //if not moving not do anything else
     ushort posInLineCells = (ushort) (trafficPersonVec[p].posInLaneM);
     const uint posToSample = mapToWriteShift +
-      kMaxMapWidthM * (currentEdge +
+      kMaxMapWidthM * (currentEdge_d +
       (((int) (posInLineCells / kMaxMapWidthM)) * edgesData[currentEdge_d].numLines) +
       trafficPersonVec[p].numOfLaneInEdge) +
       posInLineCells % kMaxMapWidthM;
