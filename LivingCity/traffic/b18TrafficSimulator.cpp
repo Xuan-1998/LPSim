@@ -99,7 +99,7 @@ void B18TrafficSimulator::createLaneMapSP(const std::shared_ptr<abm::Graph>& gra
 	b18TrafficLaneMap.createLaneMapSP(graph_, laneMap, edgesData, intersections, trafficLights, laneMapNumToEdgeDescSP, edgeDescToLaneMapNumSP, edgeIdToLaneMapNum);
 }
 
-void B18TrafficSimulator::createLaneMapSP_n(int ngpus, std::vector<int>& vertexIdToPar,std::vector<int> partitions[],  bool* edgeIfGhost, const std::shared_ptr<abm::Graph>& graph_) { //
+void B18TrafficSimulator::createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[],  bool* edgeIfGhost, const std::shared_ptr<abm::Graph>& graph_) { //
 	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar,partitions, edgeIfGhost, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,laneIdToLaneIdInGpu);
 }
 
@@ -190,14 +190,14 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters,
     const int rerouteIncrementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
-    const std::vector<float> & dep_times, const std::string & networkPathSP) {
+    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar) {
   
   std::vector<personPath> allPathsInVertexes;
       
   Benchmarker laneMapCreation("Lane_Map_creation", true);
    
   laneMapCreation.startMeasuring();
-  std::vector<int> vertexIdToPar(graph_->vertex_edges_.size());
+  // std::vector<int> vertexIdToPar(graph_->vertex_edges_.size());
   bool* edgeIfGhost =new bool[graph_->max_edge_id_]();
   if (useSP) {
 	  // createLaneMapSP(graph_);
@@ -205,10 +205,10 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     // vertexIdToPar eg:[0,0,1,1,0,0,1,0]
     
     // Fill the first half with 0s
-    std::fill(vertexIdToPar.begin(), vertexIdToPar.begin() + graph_->vertex_edges_.size() / 2, 0);
+    // std::fill(vertexIdToPar.begin(), vertexIdToPar.begin() + graph_->vertex_edges_.size() / 2, 0);
 
     // Fill the second half with 1s
-    std::fill(vertexIdToPar.begin() + graph_->vertex_edges_.size() / 2, vertexIdToPar.end(), 1);
+    // std::fill(vertexIdToPar.begin() + graph_->vertex_edges_.size() / 2, vertexIdToPar.end(), 1);
     std::vector<int> partitions[ngpus];
     for (int i = 0; i < vertexIdToPar.size(); ++i) {
         partitions[vertexIdToPar[i]].push_back(i);

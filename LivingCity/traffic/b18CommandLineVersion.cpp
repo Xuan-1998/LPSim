@@ -44,6 +44,7 @@ void B18CommandLineVersion::runB18Simulation() {
   const bool showBenchmarks = settings.value("SHOW_BENCHMARKS", false).toBool();
   int rerouteIncrementMins = settings.value("REROUTE_INCREMENT", 30).toInt(); //in minutes
   std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "od_demand_5to12.csv").toString().toStdString();
+  std::string partitionsPath = settings.value("PARTITION_FILENAME", "partitions.txt").toString().toStdString();
   const bool runUnitTests = settings.value("RUN_UNIT_TESTS", false).toBool();
 
   ClientGeometry cg;
@@ -53,7 +54,7 @@ void B18CommandLineVersion::runB18Simulation() {
                                             "LIMIT_NUM_PEOPLE", "NUM_PASSES",
                                             "TIME_STEP", "START_HR", "END_HR",
                                             "SHOW_BENCHMARKS", "REROUTE_INCREMENT",
-                                            "OD_DEMAND_FILENAME", "RUN_UNIT_TESTS"};
+                                            "OD_DEMAND_FILENAME","PARTITION_FILENAME", "RUN_UNIT_TESTS"};
 
   for (const auto inputedParameter: settings.childKeys()) {
     if (inputedParameter.at(0) != QChar('#') // it's a comment
@@ -119,6 +120,23 @@ void B18CommandLineVersion::runB18Simulation() {
   RoadGraphB2018::loadABMGraph(networkPathSP, street_graph, (int) startSimulationH, (int) endSimulationH);
   loadNetwork.stopAndEndBenchmark();
 
+  std::vector<int> partitions;
+  const std::string& partitionFileName = networkPathSP + partitionsPath;
+  std::ifstream infile(partitionFileName);
+  if (!infile) {
+        std::cerr << "Cannot open partitions file:" << partitionFileName<< std::endl;
+        partitions.resize(street_graph->vertex_edges_.size());
+        std::fill(partitions.begin(), partitions.begin() + street_graph->vertex_edges_.size() / 2, 0);
+        std::fill(partitions.begin() + street_graph->vertex_edges_.size() / 2, partitions.end(), 1);  
+  }
+  else {
+    std::cout<< partitionFileName<<" as partition file"<<std::endl;
+    int parInd;
+    while (infile >> parInd) {
+          partitions.push_back(parInd);
+    }
+    infile.close();
+  }
   loadODDemandData.startMeasuring();
   const std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_ = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
   const std::vector<float> dep_times = B18TrafficSP::read_dep_times(odFileName, startSimulationH, endSimulationH);
@@ -145,7 +163,7 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
-        networkPathSP);
+        networkPathSP,partitions);
   }
 
 }
