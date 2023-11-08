@@ -39,7 +39,7 @@ namespace {
 
 }
 void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, 
-      std::vector<int>vertexIdToPar,std::vector<int> partitions[],//std::map<int,int>edgeIdToindex_n,
+      const std::vector<int>vertexIdToPar,std::vector<int> partitions[],//std::map<int,int>edgeIdToindex_n,
       bool* edgeIfGhost,
       const std::shared_ptr<abm::Graph>& graph_, std::vector<uchar> &laneMap,std::vector<uchar> laneMap_n[],
       std::vector<B18EdgeData> &edgesData, std::vector<B18EdgeData> edgesData_n[], 

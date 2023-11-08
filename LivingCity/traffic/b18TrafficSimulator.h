@@ -80,7 +80,7 @@ class B18TrafficSimulator {
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters, const int rerouteIncrementMins,
     const std::vector<std::array<abm::graph::vertex_t, 2>>& all_od_pairs,
-    const std::vector<float>& dep_times, const std::string & networkPathSP);
+    const std::vector<float>& dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar);
 
   // Lanes
   std::vector<uint> edgeIdToLaneMapNum;
@@ -99,7 +99,7 @@ class B18TrafficSimulator {
   std::map<int, int> laneIdToLaneIdInGpu[ngpus];
   void createLaneMap();
   void createLaneMapSP(const std::shared_ptr<abm::Graph>& graph_);
-  void createLaneMapSP_n(int ngpus, std::vector<int>& vertexIdToPar,std::vector<int> partitions[],bool* edgeIfGhost,const std::shared_ptr<abm::Graph>& graph_);
+  void createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[],bool* edgeIfGhost,const std::shared_ptr<abm::Graph>& graph_);
 
   // car path
   void generateCarPaths(bool useJohnsonRouting);
