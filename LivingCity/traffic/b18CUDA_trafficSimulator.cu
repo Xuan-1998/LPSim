@@ -83,7 +83,9 @@ int** laneIdMapper_d=new int*[ngpus];
 int** vertexIdToPar_d= new int*[ngpus];
 bool readFirstMapC=true;
 uint mapToReadShift;
+uint *mapToReadShift_n= new uint[ngpus];
 uint mapToWriteShift;
+uint *mapToWriteShift_n= new uint[ngpus];
 uint halfLaneMap;
 uint *halfLaneMap_n = new uint[ngpus];
 float startTime;
@@ -1748,13 +1750,13 @@ void b18SimulateTrafficCUDA(float currentTime,
     // cudaStreamCreate(&streams[i]);
     cudaSetDevice(i);
     if (readFirstMapC==true) {
-      mapToReadShift=0;
-      mapToWriteShift=halfLaneMap_n[i];
+      mapToReadShift_n[i]=0;
+      mapToWriteShift_n[i]=halfLaneMap_n[i];
       gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap_n[i]], -1, halfLaneMap_n[i]*sizeof(unsigned char)));//clean second half
     } 
     else {
-      mapToReadShift=halfLaneMap_n[i];
-      mapToWriteShift=0;
+      mapToReadShift_n[i]=halfLaneMap_n[i];
+      mapToWriteShift_n[i]=0;
       gpuErrchk(cudaMemset(&laneMap_d[i][0], -1, halfLaneMap_n[i]*sizeof(unsigned char)));//clean first half
     }
   }
@@ -1801,8 +1803,8 @@ void b18SimulateTrafficCUDA(float currentTime,
     // cudaEventCreate(&stop);
     // cudaEventRecord(start, 0);
     kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
-    (i,numPeople_gpu, currentTime, mapToReadShift,
-    mapToWriteShift, trafficPersonVec_d_gpus[i],trafficPersonModify[i], indexPathVec_d[i], indexPathVec_d_size,
+    (i,numPeople_gpu, currentTime, mapToReadShift_n[i],
+    mapToWriteShift_n[i], trafficPersonVec_d_gpus[i],trafficPersonModify[i], indexPathVec_d[i], indexPathVec_d_size,
     edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i], laneIdMapper_d[i],
     intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,vertexIdToPar_d[i],ifCommu_d[i]);
     
