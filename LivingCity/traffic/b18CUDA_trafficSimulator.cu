@@ -1156,7 +1156,7 @@ __global__ void kernel_trafficSimulation(
   float delta_v;
   uchar laneChar;
   ushort byteInLine = (ushort) floor(trafficPersonVec[p].posInLaneM);
-  ushort numOfCells = ceil((edgesData[currentEdge].length - intersectionClearance)); //intersectionClearance hardcoded to 7.8f - why?
+  ushort numOfCells = ceil((edgesData[currentEdge_d].length - intersectionClearance)); //intersectionClearance hardcoded to 7.8f - why?
 
   for (ushort b = byteInLine + 2; (b < numOfCells) && (!found) && (numCellsCheck > 0); b++, numCellsCheck--) {
     // ShiftRead + WIDTH * (width number * # lanes + # laneInEdge) + b  TODO(pavan): WHAT IS THIS?
@@ -1554,6 +1554,7 @@ __global__ void kernel_trafficSimulation(
     atomicAdd(ifCommu, 1);
     return;
   }
+  
   if(ifPassIntersection && nextEdge!=END_OF_PATH){
     //when entering ghost zone, prepare to copy
     
