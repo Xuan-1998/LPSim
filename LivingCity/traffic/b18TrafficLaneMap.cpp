@@ -214,7 +214,7 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
   
   edgesData.resize(tNumMapWidth);
   for(int i=0;i<ngpus;i++){
-    edgesData_n[i].resize(tNumMapWidth);
+    edgesData_n[i].resize(tNumMapWidth_n[i]);
     if (LANE_DEBUG) {
       printf("Num edges %d Num Lanes %d Num Lanes Width %d Max Leng %f Max num lanes %d\n",
       edge_count, tNumLanes_n[i], tNumMapWidth_n[i], maxLength, maxNumLanes);
