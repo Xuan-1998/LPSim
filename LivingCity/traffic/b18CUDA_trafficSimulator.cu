@@ -324,6 +324,23 @@ void b18InitCUDA_n(
       numVehPerLinePerTimeInterval_d_size = sizeAcc;
     }  
   }
+  // peer to peer
+  {
+    int canAccessPeer;
+    for (int i = 0; i < ngpus; i++) {
+      cudaSetDevice(i);
+        for (int j = 0; j < ngpus; j++) {
+            if (i != j) {
+                cudaDeviceCanAccessPeer(&canAccessPeer, i, j);
+                if (canAccessPeer) {
+                  cudaDeviceEnablePeerAccess(j, 0);
+                    printf("Peer2Peer support: %d-%d\n",i,j);
+                }
+            }
+        }
+    }   
+
+  }
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     gpuErrchk(cudaStreamSynchronize(streams[i]));
@@ -565,10 +582,9 @@ void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector
     for(int i = 0; i < ngpus; i++){
       cudaSetDevice(i);
       std::cout<<"Vehicles on gpu "<<i<<": "<<size_gpu_part[i]/sizeof(LC::B18TrafficPerson)<<std::endl;
-      if(size_gpu_part[i]>0){
-        vehicles_vec[i] = new thrust::device_vector<LC::B18TrafficPerson>(size_gpu_part[i]/sizeof(LC::B18TrafficPerson));
-        thrust::copy(trafficPersonVec_d_gpus[i], trafficPersonVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficPerson), vehicles_vec[i]->begin());
-    }}
+      vehicles_vec[i] = new thrust::device_vector<LC::B18TrafficPerson>(size_gpu_part[i]/sizeof(LC::B18TrafficPerson));
+      thrust::copy(trafficPersonVec_d_gpus[i], trafficPersonVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficPerson), vehicles_vec[i]->begin());
+    }
     for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     gpuErrchk(cudaStreamSynchronize(streams[i]));
