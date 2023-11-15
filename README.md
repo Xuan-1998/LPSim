@@ -2,8 +2,10 @@
 
 LPSim is a discrete time-driven simulation platform that enables microsimulation analysis for network traffic assignment for both cars and aircrafts. Its architecture incorporates a highly parallelized GPU implementation that provides efficient execution of large-scale simulations on demand and networks with hundreds of thousands of nodes and edges, as well as millions of trips. The computational performance of LPSim is assessed by testing the platform to simulate the entire Bay Area metropolitan region during morning hours, utilizing half-second time steps. The runtime for the nine-county Bay Area simulation, excluding routing and initialization, is just over within minutes depending on how many GPUs are available to be used. 
 
+<img width="1200" alt="merged_image" src="https://github.com/Xuan-1998/LPSim/assets/58761221/1c41f659-aee0-4887-99e0-39b0133154ce">
 
-<img width="569" alt="image" src="https://github.com/Xuan-1998/LPSim/assets/58761221/b5fdaa1c-92f1-4d98-b71a-5d136ff28a1d">
+
+
 
 The concept of implementing a multi-GPU simulation can be elucidated as follows: initially, the network will undergo partitioning into distinct GPU units, following which, the simulation of individuals will be executed independently within separate GPUs for multiple time-steps, prior to any communication between these subunits.
 
@@ -339,3 +341,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+
