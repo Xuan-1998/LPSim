@@ -1771,9 +1771,16 @@ struct is_in_indices {
     is_in_indices(int *_indices, int _size) : indices(_indices), size(_size) {}
 
     __device__ bool operator()(const int i) {
-        for (int j = 0; j < size; ++j) {
-            if (i == indices[j]) {
+        int left = 0;
+        int right = size - 1;
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (indices[mid] == i) {
                 return true;
+            } else if (indices[mid] < i) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
             }
         }
         return false;
@@ -1871,6 +1878,9 @@ void b18SimulateTrafficCUDA(float currentTime,
     intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,vertexIdToPar_d[i],vehicleToCopy_d[i],vehicleToRemove_d[i],copyCursor_d[i],removeCursor_d[i]);
 
     gpuErrchk(cudaPeekAtLastError());
+    }
+    for(int i = 0; i < ngpus; i++){
+    cudaSetDevice(i);
     gpuErrchk(cudaDeviceSynchronize());
     }
     int commu_times=0;
@@ -1905,11 +1915,14 @@ void b18SimulateTrafficCUDA(float currentTime,
             }
         }
         if(indicesToCopy.size()>0){
+          std::sort(indicesToCopy.begin(), indicesToCopy.end());
           gpuErrchk(cudaSetDevice(i));
           thrust::device_vector<int> indicesToCopy_d(indicesToCopy.begin(), indicesToCopy.end());
           thrust::device_vector<LC::B18TrafficPerson> output(indicesToCopy_d.size());
-          thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(indicesToCopy_d.data()), indicesToCopy_d.size()));
-          
+          // thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(indicesToCopy_d.data()), indicesToCopy_d.size()));
+          auto perm_begin = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.begin());
+          auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.end());
+          thrust::copy(perm_begin, perm_end, output.begin());
           thrust::host_vector<LC::B18TrafficPerson> host_output = output;
           
           // for (const auto& item : host_output){
@@ -1929,7 +1942,13 @@ void b18SimulateTrafficCUDA(float currentTime,
 
     }
     for(int i = 0;i < ngpus;i++){
+      cudaError_t error = cudaGetLastError();
+if (error != cudaSuccess) {
+    std::cerr << "CUDA Error: " << cudaGetErrorString(error) << std::endl;
+}
+      // vehicles_vec[0][1]=vehicles_vec[0][2];
       if(ToRemove[i].size()>0){
+        std::sort(ToRemove[i].begin(), ToRemove[i].end());
         gpuErrchk(cudaSetDevice(i));
         thrust::device_vector<int> ToRemove_d = ToRemove[i];
         // debug: get remove data
@@ -1944,9 +1963,19 @@ void b18SimulateTrafficCUDA(float currentTime,
         //   }
           
         // }
-        auto new_end = thrust::remove_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));
+        // auto new_end = thrust::remove_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));
+        int currentIndOfIndices=0;
+        for(int j=vehicles_vec[i]->size()-1;j>=0;j--){
+          if(currentIndOfIndices>=ToRemove_d.size() ||j<ToRemove_d[currentIndOfIndices])break;
+          // if j not in indices
+          if(std::find(ToRemove[i].begin(), ToRemove[i].end(), j) == ToRemove[i].end()){
+              (*vehicles_vec[i])[ToRemove_d[currentIndOfIndices]]=(*vehicles_vec[i])[j];
+              currentIndOfIndices++;
+          }
+        }
         // resize
-        vehicles_vec[i]->erase(new_end, vehicles_vec[i]->end());
+        vehicles_vec[i]->resize(vehicles_vec[i]->size() - ToRemove_d.size());
+        // vehicles_vec[i]->erase(new_end, vehicles_vec[i]->end());
       }
       
     }
