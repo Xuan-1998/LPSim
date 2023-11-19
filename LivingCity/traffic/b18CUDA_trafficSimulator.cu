@@ -23,6 +23,7 @@
 #ifndef ushort
 #define ushort uint16_t
 #endif
+#include <thread>
 #ifndef uint
 #define uint uint32_t
 #endif
@@ -1786,21 +1787,55 @@ struct is_in_indices {
         return false;
     }
 };
-struct is_not_in_indices {
-    int *indices;
-    size_t num_indices;
-
-    is_not_in_indices(int* indices, size_t num_indices) : indices(indices), num_indices(num_indices) {}
-
-    __device__ bool operator()(const int index) {
-        for (int i = 0; i < num_indices; ++i) {
-            if (index == indices[i]) {
-                return false;
-            }
+void remove_task(int i, std::vector<int>& ToRemove) {
+    gpuErrchk(cudaSetDevice(i));
+    if(ToRemove.size()>0){
+        std::sort(ToRemove.begin(), ToRemove.end());
+        
+        thrust::device_vector<int> ToRemove_d = ToRemove;
+        // debug: get remove data
+        // thrust::device_vector<LC::B18TrafficPerson> output(ToRemove_d.size());
+        // thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));   
+        // thrust::host_vector<LC::B18TrafficPerson> host_output = output;
+        // bool flg=false;
+        // for (const auto& item : host_output){
+        //   if(item.id==410 ||item.id==710 ||item.id==783){
+        //     flg=true;
+        //     std::cout<<"$$$delete "<<item.id<<" "<<item.prevEdge<<" "<<item.currentEdge<<" "<<i<<std::endl;
+        //   }
+          
+        // }
+        // auto new_end = thrust::remove_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));
+        std::vector<int> indices_from;
+        std::vector<int> indices_to;
+        // delete elements by move the last element to absence
+        int currentIndOfIndices=0;
+        for(int j=vehicles_vec[i]->size()-1;j>=0;j--){
+          if(currentIndOfIndices>=ToRemove.size() ||j<ToRemove[currentIndOfIndices])break;
+          // if j not in indices
+          if(std::find(ToRemove.begin(), ToRemove.end(), j) == ToRemove.end()){
+            indices_to.push_back(ToRemove[currentIndOfIndices]);
+            indices_from.push_back(j);
+              // (*vehicles_vec[i])[ToRemove_d[currentIndOfIndices]]=(*vehicles_vec[i])[j];
+              currentIndOfIndices++;
+          }
         }
-        return true;
-    }
-};
+        if(indices_to.size()>0){
+        thrust::device_vector<int> indices_from_d(indices_from.begin(),indices_from.end());
+        thrust::device_vector<int> indices_to_d(indices_to.begin(),indices_to.end());
+        //get last elements to be removed and their target indices
+        thrust::device_vector<LC::B18TrafficPerson> toMove(indices_from_d.size());
+        auto perm_begin = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indices_from_d.begin());
+        auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indices_from_d.end());
+        thrust::copy(perm_begin, perm_end, toMove.begin());
+        //move
+        thrust::scatter(thrust::device,toMove.begin(), toMove.end(), indices_to_d.begin(), vehicles_vec[i]->begin());
+        }
+        // resize
+        vehicles_vec[i]->resize(vehicles_vec[i]->size() - ToRemove_d.size());
+
+      }
+}
 void b18SimulateTrafficCUDA(float currentTime,
   uint numPeople,
   uint numIntersections_n[],
@@ -1853,23 +1888,10 @@ void b18SimulateTrafficCUDA(float currentTime,
 
   std::vector<int>ToCopy[ngpus];
   std::vector<int>ToRemove[ngpus];
-  
-  size_t new_size_gpu_part[ngpus]; 
-  for (int i = 0; i < ngpus; ++i) {
-    new_size_gpu_part[i] = size_gpu_part[i];
-  }
-  std::map<int,std::vector<std::pair<int,int>> >personToCopy;
  
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     int numPeople_gpu = vehicles_vec[i]->size();
-
-    
-    // auto start = std::chrono::high_resolution_clock::now();
-    //  cudaEvent_t start, stop;
-    // cudaEventCreate(&start);
-    // cudaEventCreate(&stop);
-    // cudaEventRecord(start, 0);
     LC::B18TrafficPerson* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
     kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
     (i,numPeople_gpu, currentTime, mapToReadShift_n[i],
@@ -1925,11 +1947,6 @@ void b18SimulateTrafficCUDA(float currentTime,
           thrust::copy(perm_begin, perm_end, output.begin());
           thrust::host_vector<LC::B18TrafficPerson> host_output = output;
           
-          // for (const auto& item : host_output){
-          //   if(item.id==410){         
-          //     std::cout<<"****"<<item.id<<" "<<item.prevEdge<<" "<<item.currentEdge<<" "<<i<<" "<<j<<std::endl;
-          //   }      
-          // }
           gpuErrchk(cudaSetDevice(j));
           vehicles_vec[j]->resize(vehicles_vec[j]->size() + indicesToCopy.size());    
           LC::B18TrafficPerson* target_ptr = thrust::raw_pointer_cast(vehicles_vec[j]->data()) + vehicles_vec[j]->size()- indicesToCopy.size();
@@ -1941,43 +1958,12 @@ void b18SimulateTrafficCUDA(float currentTime,
       
 
     }
-    for(int i = 0;i < ngpus;i++){
-      cudaError_t error = cudaGetLastError();
-if (error != cudaSuccess) {
-    std::cerr << "CUDA Error: " << cudaGetErrorString(error) << std::endl;
-}
-      // vehicles_vec[0][1]=vehicles_vec[0][2];
-      if(ToRemove[i].size()>0){
-        std::sort(ToRemove[i].begin(), ToRemove[i].end());
-        gpuErrchk(cudaSetDevice(i));
-        thrust::device_vector<int> ToRemove_d = ToRemove[i];
-        // debug: get remove data
-        // thrust::device_vector<LC::B18TrafficPerson> output(ToRemove_d.size());
-        // thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));   
-        // thrust::host_vector<LC::B18TrafficPerson> host_output = output;
-        // bool flg=false;
-        // for (const auto& item : host_output){
-        //   if(item.id==410 ||item.id==710 ||item.id==783){
-        //     flg=true;
-        //     std::cout<<"$$$delete "<<item.id<<" "<<item.prevEdge<<" "<<item.currentEdge<<" "<<i<<std::endl;
-        //   }
-          
-        // }
-        // auto new_end = thrust::remove_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));
-        int currentIndOfIndices=0;
-        for(int j=vehicles_vec[i]->size()-1;j>=0;j--){
-          if(currentIndOfIndices>=ToRemove_d.size() ||j<ToRemove_d[currentIndOfIndices])break;
-          // if j not in indices
-          if(std::find(ToRemove[i].begin(), ToRemove[i].end(), j) == ToRemove[i].end()){
-              (*vehicles_vec[i])[ToRemove_d[currentIndOfIndices]]=(*vehicles_vec[i])[j];
-              currentIndOfIndices++;
-          }
-        }
-        // resize
-        vehicles_vec[i]->resize(vehicles_vec[i]->size() - ToRemove_d.size());
-        // vehicles_vec[i]->erase(new_end, vehicles_vec[i]->end());
-      }
-      
+     std::vector<std::thread> threads;
+    for (int i = 0; i < ngpus; ++i) {
+        threads.emplace_back(remove_task, i,std::ref(ToRemove[i])); 
+    }
+    for (auto& t : threads) {
+        t.join();
     }
     
   }
