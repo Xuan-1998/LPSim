@@ -1945,7 +1945,6 @@ void b18SimulateTrafficCUDA(float currentTime,
           auto perm_begin = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.begin());
           auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.end());
           thrust::copy(perm_begin, perm_end, output.begin());
-          thrust::host_vector<LC::B18TrafficPerson> host_output = output;
           
           gpuErrchk(cudaSetDevice(j));
           vehicles_vec[j]->resize(vehicles_vec[j]->size() + indicesToCopy.size());    
