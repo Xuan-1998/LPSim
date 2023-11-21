@@ -99,13 +99,12 @@ int **vehicleToRemove_d = nullptr;
 int **removeCursor_d = nullptr;
 int *copyCursor = nullptr;
 int *removeCursor = nullptr;
-
-
+LC::B18IntersectionData **intersections_d  = nullptr;
+uchar **trafficLights_d  = nullptr;
 // std::map<int,std::vector<LC::B18TrafficPerson> >personToCopy;
 // std::map<int,std::vector<int> >personToRemove;//eg: 1->{1,3,5},2->{9},3->{} (gpuIndex->personList)
 
-LC::B18IntersectionData **intersections_d  = new LC::B18IntersectionData*[ngpus];
-uchar **trafficLights_d = new uchar*[ngpus];
+
 
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
@@ -153,6 +152,8 @@ void b18InitCUDA_n(
   removeCursor_d= new int*[ngpus];
   copyCursor= new int[ngpus];
   removeCursor= new int[ngpus];
+  intersections_d  = new LC::B18IntersectionData*[ngpus];
+  trafficLights_d = new uchar*[ngpus];
   vehicles_vec = new thrust::device_vector<LC::B18TrafficPerson>*[ngpus];
 
   cudaStream_t *streams = new cudaStream_t[ngpus];
@@ -1896,15 +1897,10 @@ void b18SimulateTrafficCUDA(float currentTime,
   // Simulate intersections.
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
-
-    kernel_intersectionOneSimulation << < ceil(numIntersections_n[i] / 512.0f), 512 >> > (numIntersections_n[i], currentTime, intersections_d[i], trafficLights_d[i]);
-    
-    // cudaError_t err = cudaPeekAtLastError();
-    // if (err != cudaSuccess) {
-    //   printf("CUDA Error: %s\n", cudaGetErrorString(err));
-    // }
-    gpuErrchk(cudaPeekAtLastError());
-
+    if(numIntersections_n[i]>0){
+      kernel_intersectionOneSimulation << < ceil(numIntersections_n[i] / 512.0f), 512 >> > (numIntersections_n[i], currentTime, intersections_d[i], trafficLights_d[i]);
+      gpuErrchk(cudaPeekAtLastError());
+    }
   }
   intersectionBench.stopMeasuring();
   
