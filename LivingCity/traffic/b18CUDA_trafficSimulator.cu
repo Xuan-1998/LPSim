@@ -296,8 +296,11 @@ void b18InitCUDA_n(
       
       for(int i=0;i<ngpus;i++){
         std::map<int,int>laneMapper=laneIdToLaneIdInGpu[i];
+        int largestKey=0;
+       if (!laneMapper.empty()){
         auto largestKeyIter = laneMapper.rbegin(); // biggest key
-        int largestKey = largestKeyIter->first+1;
+        largestKey = largestKeyIter->first+1;
+       } 
         laneIdMapper[i]= new int[largestKey];
         std::fill_n(laneIdMapper[i], largestKey, -1);
         
