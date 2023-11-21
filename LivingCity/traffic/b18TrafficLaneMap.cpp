@@ -40,7 +40,6 @@ namespace {
 }
 void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, 
       const std::vector<int>vertexIdToPar,std::vector<int> partitions[],//std::map<int,int>edgeIdToindex_n,
-      bool* edgeIfGhost,
       const std::shared_ptr<abm::Graph>& graph_, std::vector<uchar> &laneMap,std::vector<uchar> laneMap_n[],
       std::vector<B18EdgeData> &edgesData, std::vector<B18EdgeData> edgesData_n[], 
       std::vector<B18IntersectionData> &intersections, std::vector<B18IntersectionData> intersections_n[],
@@ -152,7 +151,7 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
       if(ifGhost){
         edgesData_n[partition_to][tNumMapWidth_n[partition_to]]=newEdgeData;
         edgeIdToLaneMapNum_n[partition_to][edge_id] = tNumMapWidth_n[partition_to];
-        edgeIfGhost[edge_id]=true;
+        // edgeIfGhost[edge_id]=true;
         laneIdToLaneIdInGpu[partition_to][tNumMapWidth]=tNumMapWidth_n[partition_to];
         tNumMapWidth_n[partition_to] += numLanes * numWidthNeeded;
         // laneIdToLaneIdInGpu[std::make_pair(tNumMapWidth, partition_to)]=tNumMapWidth_n[partition_to];

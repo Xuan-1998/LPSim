@@ -26,12 +26,13 @@ using namespace std::chrono;
 void B18CommandLineVersion::runB18Simulation() {
   QSettings settings(QCoreApplication::applicationDirPath() + "/command_line_options.ini",
       QSettings::IniFormat);
+  const int ngpus = settings.value("NUM_GPUS", 1).toInt();
   bool useCPU = settings.value("USE_CPU", false).toBool();
   bool useJohnsonRouting = settings.value("USE_JOHNSON_ROUTING", false).toBool();
   bool useSP = settings.value("USE_SP_ROUTING", false).toBool();
   bool loadPrevPaths = settings.value("LOAD_PREV_PATHS", false).toBool();
   bool savePrevPaths = settings.value("SAVE_PREV_PATHS", false).toBool();
-
+  
   QString networkPath = settings.value("NETWORK_PATH").toString();
   const std::string networkPathSP = networkPath.toStdString();
 
@@ -54,7 +55,7 @@ void B18CommandLineVersion::runB18Simulation() {
                                             "LIMIT_NUM_PEOPLE", "NUM_PASSES",
                                             "TIME_STEP", "START_HR", "END_HR",
                                             "SHOW_BENCHMARKS", "REROUTE_INCREMENT",
-                                            "OD_DEMAND_FILENAME","PARTITION_FILENAME", "RUN_UNIT_TESTS"};
+                                            "OD_DEMAND_FILENAME","PARTITION_FILENAME", "NUM_GPUS","RUN_UNIT_TESTS"};
 
   for (const auto inputedParameter: settings.childKeys()) {
     if (inputedParameter.at(0) != QChar('#') // it's a comment
@@ -68,7 +69,7 @@ void B18CommandLineVersion::runB18Simulation() {
       std::cout << "Argument " << parameter << " is missing from command_line_options. Setting it to its default value." << std::endl;
     }
   }
-
+  std::cout<<ngpus<<" gpus"<<std::endl;
   if (rerouteIncrementMins < 0){
     throw std::invalid_argument("Invalid reroute increment value.");
   } else if (rerouteIncrementMins == 0) {
@@ -124,10 +125,15 @@ void B18CommandLineVersion::runB18Simulation() {
   const std::string& partitionFileName = networkPathSP + partitionsPath;
   std::ifstream infile(partitionFileName);
   if (!infile) {
-        std::cerr << "Cannot open partitions file:" << partitionFileName<< std::endl;
+        std::cerr << "Cannot open partitions file:" << partitionFileName<<" Use default eqaul division"<< std::endl;
         partitions.resize(street_graph->vertex_edges_.size());
-        std::fill(partitions.begin(), partitions.begin() + street_graph->vertex_edges_.size() / 2, 0);
-        std::fill(partitions.begin() + street_graph->vertex_edges_.size() / 2, partitions.end(), 1);  
+        // default: eqaul division
+        for (int i = 0; i < ngpus; ++i) {
+        int partitionSize = street_graph->vertex_edges_.size() / ngpus;
+        int startIndex = i * partitionSize;
+        int endIndex = (i == ngpus - 1) ? street_graph->vertex_edges_.size() : (i + 1) * partitionSize;
+        std::fill(partitions.begin() + startIndex, partitions.begin() + endIndex, i);
+        }
   }
   else {
     std::cout<< partitionFileName<<" as partition file"<<std::endl;
@@ -160,7 +166,7 @@ void B18CommandLineVersion::runB18Simulation() {
         useJohnsonRouting);
   } else {
 	  //if useSP, convert all_paths to indexPathVec format and run simulation
-    b18TrafficSimulator.simulateInGPU(numOfPasses, startSimulationH, endSimulationH,
+    b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
         networkPathSP,partitions);

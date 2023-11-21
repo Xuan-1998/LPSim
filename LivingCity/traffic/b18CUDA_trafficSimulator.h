@@ -14,7 +14,7 @@
 #include <vector>
 
 
-extern void b18InitCUDA_n(bool fistInitialization, // crate buffers
+extern void b18InitCUDA_n(const int ngpus, bool fistInitialization, // crate buffers
                         const std::vector<int>& vertexIdToPar,
                         int edges_num,
                         std::map<int, int> laneIdToLaneIdInGpu[],

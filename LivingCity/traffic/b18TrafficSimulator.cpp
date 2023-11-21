@@ -99,8 +99,10 @@ void B18TrafficSimulator::createLaneMapSP(const std::shared_ptr<abm::Graph>& gra
 	b18TrafficLaneMap.createLaneMapSP(graph_, laneMap, edgesData, intersections, trafficLights, laneMapNumToEdgeDescSP, edgeDescToLaneMapNumSP, edgeIdToLaneMapNum);
 }
 
-void B18TrafficSimulator::createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[],  bool* edgeIfGhost, const std::shared_ptr<abm::Graph>& graph_) { //
-	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar,partitions, edgeIfGhost, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,laneIdToLaneIdInGpu);
+void B18TrafficSimulator::createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[], const std::shared_ptr<abm::Graph>& graph_,
+std::vector<uchar> laneMap_n[],std::vector<B18EdgeData> edgesData_n[],std::vector<B18IntersectionData> intersections_n[],std::vector<uchar> trafficLights_n[],std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
+std::vector<uint> edgeIdToLaneMapNum_n[],std::map<int, int> laneIdToLaneIdInGpu[]) { //
+	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar,partitions, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,laneIdToLaneIdInGpu);
 }
 
 void B18TrafficSimulator::generateCarPaths(bool useJohnsonRouting) { //
@@ -186,19 +188,31 @@ void B18TrafficSimulator::updateEdgeImpedances(
 //////////////////////////////////////////////////
 // GPU
 //////////////////////////////////////////////////
-void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float startTimeH, const float endTimeH,
+void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, const float startTimeH, const float endTimeH,
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters,
     const int rerouteIncrementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
     const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar) {
+  
+  std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
+  std::vector<uchar> laneMap_n[ngpus];
+  std::vector<B18EdgeData> edgesData_n[ngpus];
+  std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> edgeDescToLaneMapNum_n[ngpus];
+  std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[ngpus];
+  std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[ngpus];
+  std::map<int, int> laneIdToLaneIdInGpu[ngpus];
+  std::vector<uint> indexPathVec_n[ngpus];
+  std::vector<uchar> trafficLights_n[ngpus];
+  std::vector<B18IntersectionData> intersections_n[ngpus];
+  
+  
+  
   
   std::vector<personPath> allPathsInVertexes;
       
   Benchmarker laneMapCreation("Lane_Map_creation", true);
    
   laneMapCreation.startMeasuring();
-  // std::vector<int> vertexIdToPar(graph_->vertex_edges_.size());
-  bool* edgeIfGhost =new bool[graph_->max_edge_id_]();
   if (useSP) {
 	  // createLaneMapSP(graph_);
     // std::vector<int> partitions[ngpus]= {{0,1,3},{2,4,5,6,7,8,9}};
@@ -209,11 +223,23 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
 
     // Fill the second half with 1s
     // std::fill(vertexIdToPar.begin() + graph_->vertex_edges_.size() / 2, vertexIdToPar.end(), 1);
+      //check vertexIdToPar legal
+  auto maxElement = std::max_element(vertexIdToPar.begin(), vertexIdToPar.end());
+  if (maxElement != vertexIdToPar.end()){
+    if(*maxElement>=ngpus){
+      printf("NUM_GPUS is %d but vertexIdToPar has element %d\n",ngpus,*maxElement);
+      exit(1);
+    }
+  }
+  else{
+    printf("vertexIdToPar error\n");
+    exit(1);
+  }
     std::vector<int> partitions[ngpus];
     for (int i = 0; i < vertexIdToPar.size(); ++i) {
         partitions[vertexIdToPar[i]].push_back(i);
     }
-    createLaneMapSP_n(ngpus,vertexIdToPar,partitions, edgeIfGhost, graph_);
+    createLaneMapSP_n(ngpus,vertexIdToPar,partitions, graph_,laneMap_n, edgesData_n, intersections_n, trafficLights_n, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP_n,edgeIdToLaneMapNum_n, laneIdToLaneIdInGpu);
   } else {
 	  createLaneMap();
   }
@@ -314,7 +340,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     // b18InitCUDA(firstInitialization, trafficPersonVec, indexPathVec, edgesData,
     //     laneMap, trafficLights, intersections, startTimeH, endTimeH,
     //     accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
-    b18InitCUDA_n(firstInitialization, vertexIdToPar, graph_->max_edge_id_,laneIdToLaneIdInGpu, trafficPersonVec, indexPathVec_n, edgesData_n,
+    b18InitCUDA_n(ngpus, firstInitialization, vertexIdToPar, graph_->max_edge_id_,laneIdToLaneIdInGpu, trafficPersonVec, indexPathVec_n, edgesData_n,
         laneMap_n, trafficLights_n, intersections_n, startTimeH, endTimeH,
         accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
 
@@ -422,9 +448,12 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
                               intersections_size_n, deltaTime, simParameters, numBlocks, threadsPerBlock);
            
           currentTime += deltaTime;
+          // if(currentTime>18030)break;
         }
         progress += 0.1;
+        // if(currentTime>18030)break;
       }
+      // if(currentTime>18030)break;
       b18GetDataCUDA(trafficPersonVec, edgesData);
       b18GetSampleTrafficCUDA(accSpeedPerLinePerTimeInterval,
                             numVehPerLinePerTimeInterval);
