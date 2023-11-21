@@ -6,7 +6,7 @@
 #ifndef LC_B18_TRAFFIC_SIMULATOR_H
 #define LC_B18_TRAFFIC_SIMULATOR_H
 // #define ngpus 2
-constexpr int ngpus = 2;
+// const int ngpus = 2;
 #include "../misctools/misctools.h"
 
 #include "b18TrafficOD.h"
@@ -76,7 +76,7 @@ class B18TrafficSimulator {
 
   void updateEdgeImpedances(const std::shared_ptr<abm::Graph>& graph_, const int increment_index);
   
-  void simulateInGPU(const int numOfPasses, const float startTimeH, const float endTimeH,
+  void simulateInGPU(const int ngpus, const int numOfPasses, const float startTimeH, const float endTimeH,
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters, const int rerouteIncrementMins,
     const std::vector<std::array<abm::graph::vertex_t, 2>>& all_od_pairs,
@@ -84,22 +84,21 @@ class B18TrafficSimulator {
 
   // Lanes
   std::vector<uint> edgeIdToLaneMapNum;
-  std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
   std::vector<uchar> laneMap;
-  std::vector<uchar> laneMap_n[ngpus];
   std::vector<B18EdgeData> edgesData;
-  std::vector<B18EdgeData> edgesData_n[ngpus];
+  
   std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> edgeDescToLaneMapNum;
-  std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> edgeDescToLaneMapNum_n[ngpus];
+  
   std::map<uint, RoadGraph::roadGraphEdgeDesc_BI> laneMapNumToEdgeDesc;
   std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP;
-  std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[ngpus];
+  
   std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP;
-  std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[ngpus];
-  std::map<int, int> laneIdToLaneIdInGpu[ngpus];
+ 
   void createLaneMap();
   void createLaneMapSP(const std::shared_ptr<abm::Graph>& graph_);
-  void createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[],bool* edgeIfGhost,const std::shared_ptr<abm::Graph>& graph_);
+  void createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[], const std::shared_ptr<abm::Graph>& graph_,
+  std::vector<uchar> laneMap_n[],std::vector<B18EdgeData> edgesData_n[],std::vector<B18IntersectionData> intersections_n[],std::vector<uchar> trafficLights_n[],std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
+  std::vector<uint> edgeIdToLaneMapNum_n[],std::map<int, int> laneIdToLaneIdInGpu[]);
 
   // car path
   void generateCarPaths(bool useJohnsonRouting);
@@ -107,7 +106,7 @@ class B18TrafficSimulator {
   // People
   std::vector<B18TrafficPerson> trafficPersonVec;
   std::vector<uint> indexPathVec;
-  std::vector<uint> indexPathVec_n[ngpus];
+  
   std::vector<uint> indexPathVecOrder;
 
 #ifdef B18_RUN_WITH_GUI
@@ -127,9 +126,9 @@ class B18TrafficSimulator {
 
   // Traffic lights
   std::vector<uchar> trafficLights;
-  std::vector<uchar> trafficLights_n[ngpus];
+  
   std::vector<B18IntersectionData> intersections;
-  std::vector<B18IntersectionData> intersections_n[ngpus];
+  
 
   // measurements
   std::vector<float> accSpeedPerLinePerTimeInterval;

@@ -35,8 +35,7 @@
 // CONSTANTS
 
 #define MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED 5
-#define ngpus 2
-#define max_ghost_cars 20000
+
 __constant__ float intersectionClearance = 7.8f; //TODO(pavan): WHAT IS THIS?
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -65,41 +64,41 @@ inline void printMemoryUsage() {
 // intermediate variable for each gpu?
 LC::B18TrafficPerson *trafficPersonVec_d;
 // GPU i traffic person vector, i in (0, ..., ngpus)
-
-thrust::device_vector<LC::B18TrafficPerson>* vehicles_vec[ngpus];
+int ngpus;
+thrust::device_vector<LC::B18TrafficPerson>** vehicles_vec = nullptr;
 int num_people_gpu;
-LC::B18TrafficPerson **trafficPersonVec_d_gpus = new LC::B18TrafficPerson*[ngpus];
-uint **indexPathVec_d = new uint*[ngpus];
+LC::B18TrafficPerson **trafficPersonVec_d_gpus = nullptr;
+uint **indexPathVec_d = nullptr;
 uint indexPathVec_d_size;
-LC::B18EdgeData **edgesData_d = new LC::B18EdgeData*[ngpus];
-uint *edgesData_d_size= new uint[ngpus];
-uint *laneMap_d_size= new uint[ngpus];
-uint * trafficLights_d_size= new uint[ngpus];
+LC::B18EdgeData **edgesData_d = nullptr;
+uint *edgesData_d_size= nullptr;
+uint *laneMap_d_size= nullptr;
+uint * trafficLights_d_size= nullptr;
 uint accSpeedPerLinePerTimeInterval_d_size;
 uint numVehPerLinePerTimeInterval_d_size;
-size_t size_gpu_part[ngpus]; 
+size_t *size_gpu_part= nullptr;
 __constant__ bool calculatePollution = true;
 __constant__ float cellSize = 1.0f;
 
-uchar **laneMap_d = new uchar*[ngpus];
-uchar **laneMap_d_gpus = new uchar*[ngpus];
-int** laneIdMapper_d=new int*[ngpus];
-int** vertexIdToPar_d= new int*[ngpus];
+uchar **laneMap_d= nullptr;
+uchar **laneMap_d_gpus = nullptr;
+int** laneIdMapper_d = nullptr;
+int** vertexIdToPar_d = nullptr;
 bool readFirstMapC=true;
 uint mapToReadShift;
-uint *mapToReadShift_n= new uint[ngpus];
+uint *mapToReadShift_n = nullptr;
 uint mapToWriteShift;
-uint *mapToWriteShift_n= new uint[ngpus];
+uint *mapToWriteShift_n = nullptr;
 uint halfLaneMap;
-uint *halfLaneMap_n = new uint[ngpus];
+uint *halfLaneMap_n = nullptr;
 float startTime;
 const int buffer_size=10000; 
-int **vehicleToCopy_d = new int*[ngpus];
-int **copyCursor_d= new int*[ngpus];
-int **vehicleToRemove_d = new int*[ngpus];
-int **removeCursor_d= new int*[ngpus];
-int *copyCursor= new int[ngpus];
-int *removeCursor= new int[ngpus];
+int **vehicleToCopy_d = nullptr;
+int **copyCursor_d = nullptr;
+int **vehicleToRemove_d = nullptr;
+int **removeCursor_d = nullptr;
+int *copyCursor = nullptr;
+int *removeCursor = nullptr;
 
 
 // std::map<int,std::vector<LC::B18TrafficPerson> >personToCopy;
@@ -111,6 +110,7 @@ uchar **trafficLights_d = new uchar*[ngpus];
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
 void b18InitCUDA_n(
+  int num_gpus,
   bool firstInitialization,
   const std::vector<int>& vertexIdToPar,
   int edges_num,
@@ -125,7 +125,37 @@ void b18InitCUDA_n(
   std::vector<float>& accSpeedPerLinePerTimeInterval,
   std::vector<float>& numVehPerLinePerTimeInterval,
   float deltaTime) {
-  cudaStream_t streams[ngpus];
+  ngpus = num_gpus;
+  int maxGpus = 0;
+  cudaGetDeviceCount(&maxGpus);
+  if(maxGpus<ngpus){
+    printf("NUM_GPUS is %d but only %d gpus on device\n",ngpus,maxGpus);
+    exit(1);
+  }
+  assert(maxGpus>=ngpus);
+  trafficPersonVec_d_gpus = new LC::B18TrafficPerson*[ngpus];
+  indexPathVec_d = new uint*[ngpus];
+  edgesData_d = new LC::B18EdgeData*[ngpus];
+  edgesData_d_size= new uint[ngpus];
+  laneMap_d_size= new uint[ngpus];
+  trafficLights_d_size= new uint[ngpus];
+  size_gpu_part= new size_t[ngpus];
+  laneMap_d = new uchar*[ngpus];
+  laneMap_d_gpus = new uchar*[ngpus];
+  laneIdMapper_d=new int*[ngpus];
+  vertexIdToPar_d= new int*[ngpus];
+  mapToReadShift_n= new uint[ngpus];
+  mapToWriteShift_n= new uint[ngpus];
+  halfLaneMap_n = new uint[ngpus];
+  vehicleToCopy_d = new int*[ngpus];
+  copyCursor_d= new int*[ngpus];
+  vehicleToRemove_d = new int*[ngpus];
+  removeCursor_d= new int*[ngpus];
+  copyCursor= new int[ngpus];
+  removeCursor= new int[ngpus];
+  vehicles_vec = new thrust::device_vector<LC::B18TrafficPerson>*[ngpus];
+
+  cudaStream_t *streams = new cudaStream_t[ngpus];
   for(int i = 0; i < ngpus; i++){
       cudaStreamCreate( &streams[i]);
   }
@@ -257,15 +287,7 @@ void b18InitCUDA_n(
           gpuErrchk(cudaMemset(copyCursor_d[i], 0, sizeof(int)));
           
           
-      }
-        // gpuErrchk(cudaMallocManaged(&personToCopy_d, max_ghost_cars * sizeof(uint64_t )));
-        // for (size_t i = 0; i < max_ghost_cars; ++i) {
-        //     personToCopy_d[i] = UINT64_MAX;
-        // }
-        // gpuErrchk(cudaMallocManaged(&personToRemove_d, max_ghost_cars * sizeof(uint64_t )));
-        // for (size_t i = 0; i < max_ghost_cars; ++i) {
-        //     personToRemove_d[i] = UINT64_MAX;
-        // }
+        }
       }
   }
   {// laneIdToLaneIdInGpu
@@ -345,10 +367,12 @@ void b18InitCUDA_n(
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     gpuErrchk(cudaStreamSynchronize(streams[i]));
+    gpuErrchk(cudaStreamDestroy(streams[i]));
     printMemoryUsage();
   }
   cudaError_t error = cudaGetLastError();
-printf("CUDA error: %s\n", cudaGetErrorString(error));
+  printf("CUDA error: %s\n", cudaGetErrorString(error));
+  delete[] streams;
 }
 
 void b18InitCUDA(
@@ -533,7 +557,7 @@ void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec
 void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector<LC::B18TrafficPerson>& trafficPersonVec,std::vector<uint> &indexPathVec,std::vector<LC::B18EdgeData> edgesData_n[],std::vector<personPath> allPathsInVertexes){
   std::cout<< ">> b18updateStructuresCUDA" << std::endl;
   //indexPathVec
-  cudaStream_t streams[ngpus];
+  cudaStream_t *streams = new cudaStream_t[ngpus];
   size_t sizeIn = indexPathVec.size() * sizeof(uint);
   indexPathVec_d_size = indexPathVec.size();
   size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
@@ -589,10 +613,12 @@ void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector
     for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     gpuErrchk(cudaStreamSynchronize(streams[i]));
+    gpuErrchk(cudaStreamDestroy(streams[i]));
   }
     printMemoryUsage();
     cudaError_t error = cudaGetLastError();
     printf("CUDA error: %s\n", cudaGetErrorString(error));
+    delete[] streams;
 }
 
 void b18FinishCUDA(void){

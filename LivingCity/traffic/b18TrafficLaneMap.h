@@ -39,7 +39,7 @@ class B18TrafficLaneMap {
       std::map<std::shared_ptr<abm::Graph::Edge>, uint> &edgeDescToLaneMapNumSP,
       std::vector<uint> &edgeIdToLaneMapNum);
 
-void createLaneMapSP_n(int ngpus, const std::vector<int>vertexIdToPar,std::vector<int> partitions[], bool*edgeIfGhost,
+void createLaneMapSP_n(int ngpus, const std::vector<int>vertexIdToPar,std::vector<int> partitions[],
     const std::shared_ptr<abm::Graph>& graph_, 
     std::vector<uchar> &laneMap,std::vector<uchar> laneMap_n[],
     std::vector<B18EdgeData> &edgesData, std::vector<B18EdgeData> edgesData_n[], 
