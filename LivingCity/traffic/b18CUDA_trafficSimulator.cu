@@ -1817,6 +1817,23 @@ struct is_in_indices {
         return false;
     }
 };
+void copy_task(int i, int j, std::vector<int>& indicesToCopy,int targetLoc){
+  if(indicesToCopy.size()>0){
+  std::sort(indicesToCopy.begin(), indicesToCopy.end());
+  gpuErrchk(cudaSetDevice(i));
+  thrust::device_vector<int> indicesToCopy_d(indicesToCopy.begin(), indicesToCopy.end());
+  thrust::device_vector<LC::B18TrafficPerson> output(indicesToCopy_d.size());
+  // thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(indicesToCopy_d.data()), indicesToCopy_d.size()));
+  auto perm_begin = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.begin());
+  auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.end());
+  thrust::copy(perm_begin, perm_end, output.begin());
+  
+  gpuErrchk(cudaSetDevice(j));
+  LC::B18TrafficPerson* target_ptr = thrust::raw_pointer_cast(vehicles_vec[j]->data()) + targetLoc;
+  gpuErrchk(cudaMemcpyPeer(target_ptr, j, thrust::raw_pointer_cast(output.data()), i, output.size() * sizeof(LC::B18TrafficPerson)));
+
+}
+}
 void remove_task(int i, std::vector<int>& ToRemove) {
     gpuErrchk(cudaSetDevice(i));
     if(ToRemove.size()>0){
@@ -1930,9 +1947,11 @@ void b18SimulateTrafficCUDA(float currentTime,
     cudaSetDevice(i);
     gpuErrchk(cudaDeviceSynchronize());
     }
+    std::vector<int> currentLoc(ngpus,0);//current target copy beginning index of vehicles_vec
     int commu_times=0;
     for(int i = 0; i < ngpus; i++){
       cudaSetDevice(i);
+      currentLoc[i]=vehicles_vec[i]->size();
       gpuErrchk(cudaMemcpy(&copyCursor[i], copyCursor_d[i], sizeof(int), cudaMemcpyDeviceToHost));
       gpuErrchk(cudaMemcpy(&removeCursor[i], removeCursor_d[i], sizeof(int), cudaMemcpyDeviceToHost));
       ToCopy[i].resize(copyCursor[i]);
@@ -1950,37 +1969,33 @@ void b18SimulateTrafficCUDA(float currentTime,
       outFile << commu_times << "\n";
       outFile.close();
     // select vehicles to be copied
-    std::vector<int>indicesToCopy;
+    std::vector<int> indicesToCopy[ngpus*ngpus];
+    std::vector<int> targetLoc(ngpus*ngpus, -1);// target copy beginning index of vehicles_vec, i-j -> i*ngpus+j
+    
     for(int i = 0;i < ngpus;i++){
       for(int j = 0; j < ngpus; j++){
         if(i==j)continue;
         // copy from gpu[i] to gpu[j]
-        indicesToCopy.clear();        
+        targetLoc[i*ngpus+j]=currentLoc[j];   
         for(int k=0;k<copyCursor[i];k+=2){
             if(ToCopy[i][k+1] == j){
-              indicesToCopy.push_back(ToCopy[i][k]);
+              indicesToCopy[i*ngpus+j].push_back(ToCopy[i][k]);
             }
         }
-        if(indicesToCopy.size()>0){
-          std::sort(indicesToCopy.begin(), indicesToCopy.end());
-          gpuErrchk(cudaSetDevice(i));
-          thrust::device_vector<int> indicesToCopy_d(indicesToCopy.begin(), indicesToCopy.end());
-          thrust::device_vector<LC::B18TrafficPerson> output(indicesToCopy_d.size());
-          // thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(indicesToCopy_d.data()), indicesToCopy_d.size()));
-          auto perm_begin = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.begin());
-          auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.end());
-          thrust::copy(perm_begin, perm_end, output.begin());
-          
-          gpuErrchk(cudaSetDevice(j));
-          vehicles_vec[j]->resize(vehicles_vec[j]->size() + indicesToCopy.size());    
-          LC::B18TrafficPerson* target_ptr = thrust::raw_pointer_cast(vehicles_vec[j]->data()) + vehicles_vec[j]->size()- indicesToCopy.size();
-          gpuErrchk(cudaMemcpyPeer(target_ptr, j, thrust::raw_pointer_cast(output.data()), i, output.size() * sizeof(LC::B18TrafficPerson)));
-
-        }
-        
+        currentLoc[j] += indicesToCopy[i*ngpus+j].size();       
       }
-      
-
+    }
+    for(int i = 0;i < ngpus;i++){
+      vehicles_vec[i]->resize(currentLoc[i]);   
+    }
+    std::vector<std::thread> copy_threads;
+    for (int i = 0; i < ngpus; ++i)
+    for (int j = 0; j < ngpus; ++j) {
+      if(i!=j && targetLoc[i*ngpus+j]!=-1)
+        copy_threads.emplace_back(copy_task, i,j,std::ref(indicesToCopy[i*ngpus+j]),targetLoc[i*ngpus+j]); 
+    }
+    for (auto& t : copy_threads) {
+        t.join();
     }
      std::vector<std::thread> threads;
     for (int i = 0; i < ngpus; ++i) {
