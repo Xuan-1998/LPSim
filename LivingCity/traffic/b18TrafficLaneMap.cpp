@@ -123,6 +123,7 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
 
       const int numWidthNeeded = ceil(newEdgeData.length / kMaxMapWidthM);
       newEdgeData.numLines = numLanes;
+      newEdgeData.prevInters = std::get<0>(std::get<0>(x));
       newEdgeData.nextInters = std::get<1>(std::get<0>(x));
 
       edgeDescToLaneMapNumSP_n[partition_from].insert(std::make_pair(x.second, tNumMapWidth_n[partition_from]));
