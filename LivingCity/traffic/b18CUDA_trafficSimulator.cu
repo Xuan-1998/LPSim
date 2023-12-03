@@ -1966,12 +1966,9 @@ __global__ void updateLaneMap(uchar *laneMap, int size, int laneMap_d_size, int 
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     if(index<size){
       assert(updateLaneValues[index] >= 0 && updateLaneValues[index] <= 255);
-      if(updateLaneIndex[index]>=laneMap_d_size){
-        printf("%d %d \n",updateLaneIndex[index],laneMap_d_size);
-      }
       assert(updateLaneIndex[index]<laneMap_d_size);
       laneMap[updateLaneIndex[index]] = static_cast<uint8_t>(updateLaneValues[index]);
-      // laneMap[updateLaneIndex[index]] = updateLaneValues[index];
+
     }
     
 }
