@@ -2108,6 +2108,7 @@ void b18SimulateTrafficCUDA(float currentTime,
       }
     }
     for(int i = 0;i < ngpus;i++){
+      cudaSetDevice(i);
       vehicles_vec[i]->resize(currentLoc[i]);   
     }
     std::vector<std::thread> copy_threads;
