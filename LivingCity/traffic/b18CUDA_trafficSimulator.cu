@@ -1687,6 +1687,8 @@ __global__ void kernel_trafficSimulation(
     
   }
 
+
+
   if(vertexIdToPar_d[edgesData[currentEdge_d].nextInters]!=gpuIndex){
     int cursor = atomicAdd(removeCursor,1);
     vehicleToremove[cursor]=p;
