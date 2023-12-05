@@ -2042,6 +2042,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     }
     std::vector<int> currentLoc(ngpus,0);//current target copy beginning index of vehicles_vec
     int commu_times=0;
+    int lane_update_size=0;
     for(int i = 0; i < ngpus; i++){
       cudaSetDevice(i);
       currentLoc[i]=vehicles_vec[i]->size();
@@ -2057,17 +2058,11 @@ void b18SimulateTrafficCUDA(float currentTime,
       if(copyCursor[i]>0||removeCursor[i]>0){
         commu_times+=copyCursor[i]/2+removeCursor[i];
       }
+      lane_update_size+=ghostLaneCursor[i]/4;
     }
   
-
-    if(commu_times>0){
-      std::ofstream outFile("commu_times.txt", std::ios::app);
-      outFile << commu_times << "\n";
-      outFile.close();
-    // select vehicles to be copied
-    std::vector<std::vector<int>> indicesToCopy(ngpus*ngpus);
-    std::vector<int> targetLoc(ngpus*ngpus, -1);// target copy beginning index of vehicles_vec, i-j -> i*ngpus+j
-    std::vector<std::vector<int>> laneToUpdateIndex(ngpus);
+    if(lane_update_size>0){
+      std::vector<std::vector<int>> laneToUpdateIndex(ngpus);
     std::vector<std::vector<int>> laneToUpdateValues(ngpus);
     for(int i = 0;i < ngpus;i++){
       for(int j = 0; j < ghostLaneCursor[i]; j+=4){
@@ -2090,6 +2085,15 @@ void b18SimulateTrafficCUDA(float currentTime,
         gpuErrchk(cudaPeekAtLastError());
       }
     }
+  }
+  if(commu_times>0){
+      std::ofstream outFile("commu_times.txt", std::ios::app);
+      outFile << commu_times << "\n";
+      outFile.close();
+    // select vehicles to be copied
+    std::vector<std::vector<int>> indicesToCopy(ngpus*ngpus);
+    std::vector<int> targetLoc(ngpus*ngpus, -1);// target copy beginning index of vehicles_vec, i-j -> i*ngpus+j
+    
     // for(int i = 0; i < ngpus; i++){
     // cudaSetDevice(i);
     // gpuErrchk(cudaDeviceSynchronize());
