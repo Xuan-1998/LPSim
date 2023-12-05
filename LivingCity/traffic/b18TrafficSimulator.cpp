@@ -99,10 +99,10 @@ void B18TrafficSimulator::createLaneMapSP(const std::shared_ptr<abm::Graph>& gra
 	b18TrafficLaneMap.createLaneMapSP(graph_, laneMap, edgesData, intersections, trafficLights, laneMapNumToEdgeDescSP, edgeDescToLaneMapNumSP, edgeIdToLaneMapNum);
 }
 
-void B18TrafficSimulator::createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[], const std::shared_ptr<abm::Graph>& graph_,
+void B18TrafficSimulator::createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar, const std::shared_ptr<abm::Graph>& graph_,
 std::vector<uchar> laneMap_n[],std::vector<B18EdgeData> edgesData_n[],std::vector<B18IntersectionData> intersections_n[],std::vector<uchar> trafficLights_n[],std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
 std::vector<uint> edgeIdToLaneMapNum_n[],std::map<int, int> laneIdToLaneIdInGpu[]) { //
-	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar,partitions, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,laneIdToLaneIdInGpu);
+	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,laneIdToLaneIdInGpu);
 }
 
 void B18TrafficSimulator::generateCarPaths(bool useJohnsonRouting) { //
@@ -235,11 +235,8 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     printf("vertexIdToPar error\n");
     exit(1);
   }
-    std::vector<int> partitions[ngpus];
-    for (int i = 0; i < vertexIdToPar.size(); ++i) {
-        partitions[vertexIdToPar[i]].push_back(i);
-    }
-    createLaneMapSP_n(ngpus,vertexIdToPar,partitions, graph_,laneMap_n, edgesData_n, intersections_n, trafficLights_n, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP_n,edgeIdToLaneMapNum_n, laneIdToLaneIdInGpu);
+
+    createLaneMapSP_n(ngpus,vertexIdToPar, graph_,laneMap_n, edgesData_n, intersections_n, trafficLights_n, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP_n,edgeIdToLaneMapNum_n, laneIdToLaneIdInGpu);
   } else {
 	  createLaneMap();
   }

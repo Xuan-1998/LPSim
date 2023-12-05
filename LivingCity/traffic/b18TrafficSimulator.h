@@ -96,7 +96,7 @@ class B18TrafficSimulator {
  
   void createLaneMap();
   void createLaneMapSP(const std::shared_ptr<abm::Graph>& graph_);
-  void createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar,std::vector<int> partitions[], const std::shared_ptr<abm::Graph>& graph_,
+  void createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar, const std::shared_ptr<abm::Graph>& graph_,
   std::vector<uchar> laneMap_n[],std::vector<B18EdgeData> edgesData_n[],std::vector<B18IntersectionData> intersections_n[],std::vector<uchar> trafficLights_n[],std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
   std::vector<uint> edgeIdToLaneMapNum_n[],std::map<int, int> laneIdToLaneIdInGpu[]);
 
