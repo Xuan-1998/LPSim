@@ -38,8 +38,7 @@ namespace {
   }
 
 }
-void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, 
-      const std::vector<int>vertexIdToPar,std::vector<int> partitions[],//std::map<int,int>edgeIdToindex_n,
+void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, const std::vector<int>vertexIdToPar,
       const std::shared_ptr<abm::Graph>& graph_, std::vector<uchar> &laneMap,std::vector<uchar> laneMap_n[],
       std::vector<B18EdgeData> &edgesData, std::vector<B18EdgeData> edgesData_n[], 
       std::vector<B18IntersectionData> &intersections, std::vector<B18IntersectionData> intersections_n[],
@@ -52,7 +51,15 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
   if (LANE_DEBUG) {
     printf("  >> createLaneMap\n");
   }
-
+    std::vector<int> partitions[ngpus];
+    std::vector<int> vertexIdMapper(vertexIdToPar.size());
+    int partitionSizes[ngpus] = {};// initailize 0
+    for (int i = 0; i < vertexIdToPar.size(); ++i) {
+      int partitionId = vertexIdToPar[i];
+      vertexIdMapper[i] = partitionSizes[partitionId];
+      partitions[partitionId].push_back(i);
+      partitionSizes[partitionId]++; 
+    }
   // 1. Cretae edgesData and find requires sizes.
   RoadGraph::roadGraphEdgeIter_BI ei, ei_end;
   int edge_count = 0;
@@ -125,7 +132,8 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus,
       newEdgeData.numLines = numLanes;
       newEdgeData.prevInters = std::get<0>(std::get<0>(x));
       newEdgeData.nextInters = std::get<1>(std::get<0>(x));
-
+      newEdgeData.nextIntersMapped=vertexIdMapper[newEdgeData.nextInters];
+      
       edgeDescToLaneMapNumSP_n[partition_from].insert(std::make_pair(x.second, tNumMapWidth_n[partition_from]));
       laneMapNumToEdgeDescSP_n[partition_from].insert(std::make_pair(tNumMapWidth_n[partition_from], x.second));
       if(ifGhost){
