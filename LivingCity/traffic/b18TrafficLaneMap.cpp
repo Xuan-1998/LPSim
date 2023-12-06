@@ -286,7 +286,7 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, const std::vector<int>verte
           QVector3D edgeDir = (p1 - p0).normalized();
           float angle = angleRef - atan2(edgeDir.y(), edgeDir.x());
           edgeAngleOut.push_back(std::make_pair(edge, angle));
-          if (edgeDescToLaneMapNumSP.find(edge) == edgeDescToLaneMapNumSP.end()) {
+          if (edgeDescToLaneMapNumSP_n[i].find(edge) == edgeDescToLaneMapNumSP_n[i].end()) {
             std::cout << "p0 = " << edge->first.first << "\n";
             std::cout << "p1 = " << edge->first.second << "\n";
             printf("->ERROR OUT\n");//edge desc not found in map
@@ -304,7 +304,7 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, const std::vector<int>verte
           QVector3D edgeDir = (p0 - p1).normalized();
           float angle = angleRef - atan2(edgeDir.y(), edgeDir.x());
           edgeAngleIn.push_back(std::make_pair(edge, angle));
-          if (edgeDescToLaneMapNumSP.find(edge) == edgeDescToLaneMapNumSP.end()) {
+          if (edgeDescToLaneMapNumSP_n[i].find(edge) == edgeDescToLaneMapNumSP_n[i].end()) {
             printf("->ERROR IN\n");//edge desc not found in map
             continue;
           }
@@ -335,15 +335,15 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, const std::vector<int>verte
           if ((outCount < edgeAngleOut.size() && inCount < edgeAngleIn.size() && 
               edgeAngleOut[outCount] <= edgeAngleIn[inCount]) ||
               (outCount < edgeAngleOut.size() && inCount >= edgeAngleIn.size())) {
-            assert(edgeDescToLaneMapNumSP[edgeAngleOut[outCount].first] < 0x007fffff && "Edge number is too high");
-            intersections_n[i][j].edge[totalCount] = edgeDescToLaneMapNumSP[edgeAngleOut[outCount].first];
+            assert(edgeDescToLaneMapNumSP_n[i][edgeAngleOut[outCount].first] < 0x007fffff && "Edge number is too high");
+            intersections_n[i][j].edge[totalCount] = edgeDescToLaneMapNumSP_n[i][edgeAngleOut[outCount].first];
             intersections_n[i][j].edge[totalCount] |= (edgesData_n[i][intersections_n[i][j].edge[totalCount]].numLines << 24); //put the number of lines in each edge
             intersections_n[i][j].edge[totalCount] |= kMaskOutEdge; // 0x000000 mask to define out edge
             //std::cout << "edgeDesc " << edgeDescToLaneMapNumSP[edgeAngleOut[outCount].first] << "\n";
             outCount++;
           } else {
-            assert(edgeDescToLaneMapNumSP[edgeAngleIn[inCount].first] < 0x007fffff && "Edge number is too high");
-            intersections_n[i][j].edge[totalCount] = edgeDescToLaneMapNumSP[edgeAngleIn[inCount].first];
+            assert(edgeDescToLaneMapNumSP_n[i][edgeAngleIn[inCount].first] < 0x007fffff && "Edge number is too high");
+            intersections_n[i][j].edge[totalCount] = edgeDescToLaneMapNumSP_n[i][edgeAngleIn[inCount].first];
             intersections_n[i][j].edge[totalCount] |= (edgesData_n[i][intersections_n[i][j].edge[totalCount]].numLines << 24); //put the number of lines in each edge
             intersections_n[i][j].edge[totalCount] |= kMaskInEdge; // 0x800000 mask to define in edge
             inCount++;
