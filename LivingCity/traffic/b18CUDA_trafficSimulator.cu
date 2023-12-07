@@ -1277,7 +1277,7 @@ __global__ void kernel_trafficSimulation(
   // e) MOVING ALONG IN THE NEXT EDGE
   if (!found && numCellsCheck > 0) { //check if in next line
     if ((nextEdge != END_OF_PATH) &&
-      (edgesData[currentEdge_d].nextIntersMapped !=
+      (edgesData[currentEdge_d].nextInters !=
         trafficPersonVec[p].end_intersection)) { // we haven't arrived to destination (check next line)
       ushort nextEdgeLaneToBe = trafficPersonVec[p].numOfLaneInEdge; //same lane
 
