@@ -36,7 +36,7 @@
 
 #define MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED 5
 
-__constant__ float intersectionClearance = 7.8f; //TODO(pavan): WHAT IS THIS?
+__constant__ float intersectionClearance = 0.0f; //TODO(pavan): WHAT IS THIS?
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true) {
@@ -1249,7 +1249,7 @@ __global__ void kernel_trafficSimulation(
   ushort byteInLine = (ushort) floor(trafficPersonVec[p].posInLaneM);
   ushort numOfCells = ceil((edgesData[currentEdge_d].length - intersectionClearance)); //intersectionClearance hardcoded to 7.8f - why?
 
-  for (ushort b = byteInLine + 2; (b < numOfCells) && (!found) && (numCellsCheck > 0); b++, numCellsCheck--) {
+  for (ushort b = byteInLine + 1; (b < numOfCells) && (!found) && (numCellsCheck > 0); b++, numCellsCheck--) {
     // ShiftRead + WIDTH * (width number * # lanes + # laneInEdge) + b  TODO(pavan): WHAT IS THIS?
     //TODO(pavan): double check what mapToReadShift is printing out
     assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
