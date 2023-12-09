@@ -1311,7 +1311,7 @@ __global__ void kernel_trafficSimulation(
 
   
   float s_star;
-  if (found && delta_v > 0) { //car in front and slower than us
+  if (found && (delta_v > 0 || (delta_v==0 &&trafficPersonVec[p].v==0))) { //car in front and slower than us
     // 2.1.2 calculate dv_dt
     // The following operation is taken from Designing Large-Scale Interactive Traffic Animations for Urban Modeling
     // Section 4.3.1. Car-Following Model formula (2)
