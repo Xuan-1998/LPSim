@@ -2553,27 +2553,47 @@ void writePeopleFile(
   if (peopleFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving People file... (size " << trafficPersonVec.size() << ")" << std::endl;
     QTextStream streamP(&peopleFile);
-    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
-
+    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,travel_time,distance\n";
     for (int p = 0; p < trafficPersonVec.size(); p++) {
-      streamP << trafficPersonVec[p].id;
+      int n2 = sizeof(trafficPersonVec[p].travel_time)/sizeof(trafficPersonVec[p].travel_time[0]);
+      QString str2 = "";
+      for (int i = 0; i < n2; i++) {
+              if (trafficPersonVec[p].travel_time[i] == -0.5) {
+                break;
+              }
+              str2 += QString::fromStdString(to_string(trafficPersonVec[p].travel_time[i])) + QString::fromStdString(" ");
+          }
+      streamP << p;
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].init_intersection];
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].end_intersection];
       streamP << "," << trafficPersonVec[p].time_departure;
       streamP << "," << trafficPersonVec[p].num_steps * deltaTime;
-      streamP << "," << trafficPersonVec[p].co;
-      streamP << "," << trafficPersonVec[p].gas;
+      streamP << "," << str2; // the travel time we added
       streamP << "," << trafficPersonVec[p].dist_traveled;
-      streamP << "," << trafficPersonVec[p].a;
-      streamP << "," << trafficPersonVec[p].b;
-      streamP << "," << trafficPersonVec[p].T;
-      streamP << "," << (trafficPersonVec[p].cum_v / trafficPersonVec[p].num_steps) * 3600 / 1609.34;
-      streamP << "," << trafficPersonVec[p].active;
-      streamP << "," << trafficPersonVec[p].last_time_simulated;
-      streamP << "," << trafficPersonVec[p].path_length_cpu;
-      streamP << "," << trafficPersonVec[p].path_length_gpu;
+    
       streamP << "\n";
     }
+    // streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
+
+    // for (int p = 0; p < trafficPersonVec.size(); p++) {
+    //   streamP << trafficPersonVec[p].id;
+    //   streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].init_intersection];
+    //   streamP << "," << graph_->nodeIndex_to_osmid_[trafficPersonVec[p].end_intersection];
+    //   streamP << "," << trafficPersonVec[p].time_departure;
+    //   streamP << "," << trafficPersonVec[p].num_steps * deltaTime;
+    //   streamP << "," << trafficPersonVec[p].co;
+    //   streamP << "," << trafficPersonVec[p].gas;
+    //   streamP << "," << trafficPersonVec[p].dist_traveled;
+    //   streamP << "," << trafficPersonVec[p].a;
+    //   streamP << "," << trafficPersonVec[p].b;
+    //   streamP << "," << trafficPersonVec[p].T;
+    //   streamP << "," << (trafficPersonVec[p].cum_v / trafficPersonVec[p].num_steps) * 3600 / 1609.34;
+    //   streamP << "," << trafficPersonVec[p].active;
+    //   streamP << "," << trafficPersonVec[p].last_time_simulated;
+    //   streamP << "," << trafficPersonVec[p].path_length_cpu;
+    //   streamP << "," << trafficPersonVec[p].path_length_gpu;
+    //   streamP << "\n";
+    // }
 
     peopleFile.close();
     std::cout << "> Finished saving People file." << std::endl;
@@ -2596,10 +2616,8 @@ void writeRouteFile(int numOfPass,
   if (routeFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving Route file..." << std::endl;
     QTextStream streamR(&routeFile);
-    streamR << "p:route:distance\n";
-
     for (const personPath& aPersonPath: allPathsInVertexes){
-      streamR << aPersonPath.person_id << ":[";
+      //streamR << aPersonPath.person_id << ":[";
       float distance = 0;
       for (int j = 0; j < aPersonPath.pathInVertexes.size()-1; j++){
         auto vertexFrom = aPersonPath.pathInVertexes[j];
@@ -2612,7 +2630,7 @@ void writeRouteFile(int numOfPass,
         }
 
         // Check that indexPathInit matches the first edge for that person
-        assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
+        // assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
         // if (allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit + j] != edgeIdToLaneMapNum[oneEdgeInCPUFormat]){
         //   std::cout << "For person " << aPersonPath.person_id
         //             << ", indexPathInit is " << trafficPersonVec[aPersonPath.person_id].indexPathInit
@@ -2625,8 +2643,40 @@ void writeRouteFile(int numOfPass,
         distance += edgesData[oneEdgeInGPUFormat].length;
 
       }
-      streamR << "]:" << distance << "\n";
+      //streamR << "]:" << distance << "\n";
+      streamR << "\n";
     }
+    // streamR << "p:route:distance\n";
+
+    // for (const personPath& aPersonPath: allPathsInVertexes){
+    //   streamR << aPersonPath.person_id << ":[";
+    //   float distance = 0;
+    //   for (int j = 0; j < aPersonPath.pathInVertexes.size()-1; j++){
+    //     auto vertexFrom = aPersonPath.pathInVertexes[j];
+    //     auto vertexTo = aPersonPath.pathInVertexes[j+1];
+    //     auto oneEdgeInCPUFormat = graph_->edge_ids_[vertexFrom][vertexTo];
+    //     auto oneEdgeInGPUFormat =  edgeIdToLaneMapNum[oneEdgeInCPUFormat];
+    //     streamR << oneEdgeInCPUFormat;
+    //     if (j < aPersonPath.pathInVertexes.size() - 2){
+    //       streamR << ",";
+    //     }
+
+    //     // Check that indexPathInit matches the first edge for that person
+    //     assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
+    //     // if (allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit + j] != edgeIdToLaneMapNum[oneEdgeInCPUFormat]){
+    //     //   std::cout << "For person " << aPersonPath.person_id
+    //     //             << ", indexPathInit is " << trafficPersonVec[aPersonPath.person_id].indexPathInit
+    //     //             << ", which means the first edge in CUDA format is " << allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit + j]
+    //     //             << ". However, edgeIdToLaneMapNum[oneEdgeInCPUFormat] is " << oneEdgeInGPUFormat
+    //     //             << std::endl;
+    //     //   throw runtime_error("Initial edges do not match.");
+    //     // }
+
+    //     distance += edgesData[oneEdgeInGPUFormat].length;
+
+    //   }
+    //   streamR << "]:" << distance << "\n";
+    // }
     routeFile.close();
   }
   std::cout << "> Finished saving Route file." << std::endl;

@@ -1044,6 +1044,24 @@ __global__ void kernel_trafficSimulation(
   // check that the current path index does not exceed the size of the path index vector
   assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficPersonVec[p].indexPathCurr] == END_OF_PATH) {
+    float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+
+    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
+    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
+    if (trafficPersonVec[p].window_flag < 300) {
+      
+      if (trafficPersonVec[p].window_flag == 0) {
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].window_flag++;
+      } else {
+          if (trafficPersonVec[p].currentEdge  != trafficPersonVec[p].prevEdge) {
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].window_flag++;    
+        }
+      }
+    }
     trafficPersonVec[p].active = 2; //finished
     return;
   }
@@ -1069,6 +1087,21 @@ __global__ void kernel_trafficSimulation(
     trafficPersonVec[p].last_time_simulated = currentTime;
     
     if (firstEdge == END_OF_PATH) {
+      float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+      if (trafficPersonVec[p].window_flag < 300) {
+      
+      if (trafficPersonVec[p].window_flag == 0) {
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].window_flag++;
+      } else {
+          if (trafficPersonVec[p].currentEdge  != trafficPersonVec[p].prevEdge) {
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].window_flag++;    
+        }
+      }
+    }
       trafficPersonVec[p].active = 2;
       return;
     }
@@ -1153,7 +1186,7 @@ __global__ void kernel_trafficSimulation(
   int indexCurrentEdge = trafficPersonVec[p].indexPathCurr;
   assert(indexCurrentEdge < indexPathVec_d_size);
   uint currentEdge = indexPathVec[indexCurrentEdge];
-  trafficPersonVec[p].currentEdge=currentEdge;
+  // trafficPersonVec[p].currentEdge=currentEdge;
   int currentEdge_d=-1;
   // return;
   currentEdge_d=laneMapper[currentEdge];
@@ -1213,10 +1246,23 @@ __global__ void kernel_trafficSimulation(
   //when we're on a new edge for the first time
   if (currentEdge == trafficPersonVec[p].nextEdge) {
     trafficPersonVec[p].end_time_on_prev_edge = currentTime - deltaTime;
-    float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
-
     // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
     // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
+    float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+      if (trafficPersonVec[p].window_flag < 300) {
+      
+      if (trafficPersonVec[p].window_flag == 0) {
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].window_flag++;
+      } else {
+          if (trafficPersonVec[p].currentEdge  != trafficPersonVec[p].prevEdge) {
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].window_flag++;    
+        }
+      }
+    }
     if(prevEdge_d!=-1){
       assert(prevEdge_d< edgesData_d_size);
       if (elapsed_s > MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED) {
@@ -1425,6 +1471,25 @@ __global__ void kernel_trafficSimulation(
       trafficPersonVec[p].LC_initOKLanes = 0xFF;
       trafficPersonVec[p].LC_endOKLanes = 0xFF;
     } else {
+       float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+
+    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
+    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
+    if (trafficPersonVec[p].window_flag < 300) {
+      
+      if (trafficPersonVec[p].window_flag == 0) {
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].window_flag++;
+      } else {
+          if (trafficPersonVec[p].currentEdge  != trafficPersonVec[p].prevEdge) {
+          // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
+          trafficPersonVec[p].currentEdge = trafficPersonVec[p].prevEdge;
+          trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].window_flag++;    
+        }
+      }
+    }
       trafficPersonVec[p].active == 2;
     }
     trafficPersonVec[p].indexPathCurr++;
