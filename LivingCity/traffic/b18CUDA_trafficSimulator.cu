@@ -669,6 +669,13 @@ void sortTrafficPersonsById(std::vector<LC::B18TrafficPerson>& trafficPersonVec)
 }
 void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
   // copy back people
+  int vehicle_size=0;
+  for(int i=0; i < ngpus; i++){
+    cudaSetDevice(i);
+    vehicle_size+=vehicles_vec[i]->size();
+  }
+  trafficPersonVec.resize(vehicle_size);
+  std::cout<<"size of vehicles_vec: "<<vehicle_size<<std::endl;
   int indexCursor=0;
   for(int i=0; i < ngpus; i++){
     cudaSetDevice(i);
@@ -690,6 +697,20 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::ve
             return a.id < b.id;
         }
     );
+
+  // merge replicate
+    for (size_t i = 0; i < trafficPersonVec.size(); ++i) {
+        if (i + 1 < trafficPersonVec.size() && trafficPersonVec[i].id == trafficPersonVec[i + 1].id) {
+            if (trafficPersonVec[i] == trafficPersonVec[i + 1]) {
+                // If equal, then merge
+                trafficPersonVec.erase(trafficPersonVec.begin() + i + 1);
+                --i;
+            } else {
+                throw std::runtime_error("Error: Found different instances with the same id.");
+            }
+        }
+    }
+
   /*for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
@@ -1918,22 +1939,12 @@ void copy_task(int i, int j, std::vector<int>& indicesToCopy,int targetLoc){
 void remove_task(int i, std::vector<int>& ToRemove) {
     gpuErrchk(cudaSetDevice(i));
     if(ToRemove.size()>0){
+        // Assert that ToRemove has no duplicates
+        assert(std::adjacent_find(ToRemove.begin(), ToRemove.end()) == ToRemove.end());
         std::sort(ToRemove.begin(), ToRemove.end());
-        
+        // Assert that the indices in ToRemove are within bounds
+        assert(ToRemove.back() < vehicles_vec[i]->size());
         thrust::device_vector<int> ToRemove_d = ToRemove;
-        // debug: get remove data
-        // thrust::device_vector<LC::B18TrafficPerson> output(ToRemove_d.size());
-        // thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));   
-        // thrust::host_vector<LC::B18TrafficPerson> host_output = output;
-        // bool flg=false;
-        // for (const auto& item : host_output){
-        //   if(item.id==410 ||item.id==710 ||item.id==783){
-        //     flg=true;
-        //     std::cout<<"$$$delete "<<item.id<<" "<<item.prevEdge<<" "<<item.currentEdge<<" "<<i<<std::endl;
-        //   }
-          
-        // }
-        // auto new_end = thrust::remove_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), is_in_indices(thrust::raw_pointer_cast(ToRemove_d.data()), ToRemove_d.size()));
         std::vector<int> indices_from;
         std::vector<int> indices_to;
         // delete elements by move the last element to absence
