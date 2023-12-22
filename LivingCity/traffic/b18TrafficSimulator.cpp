@@ -184,7 +184,20 @@ void B18TrafficSimulator::updateEdgeImpedances(
   std::copy(avg_edge_vel.begin(), avg_edge_vel.end(), output_iterator);
   allEdgesVelBenchmark.stopAndEndBenchmark();
 }
-
+std::string personPathToString(const personPath& path) {
+    std::stringstream ss;
+    ss << path.person_id;
+    for (int vertex : path.pathInVertexes) {
+        ss << ", " << vertex;
+    }
+    return ss.str();
+}
+void savePaths(const std::vector<personPath>& paths, const std::string& filename) {
+    std::ofstream file(filename);
+    for (const auto& path : paths) {
+        file << personPathToString(path) << "\n";
+    }
+}
 //////////////////////////////////////////////////
 // GPU
 //////////////////////////////////////////////////
@@ -408,7 +421,21 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
 
       allPathsInEdgesCUDAFormat = B18TrafficSP::convertPathsToCUDAFormat(
           allPathsInVertexes, edgeIdToLaneMapNum, graph_, trafficPersonVec);
+//    std::cout << "For person 61507, indexPathInit is " << trafficPersonVec[61507].indexPathInit<<" allPathsInEdgesCUDAFormat[]="<<allPathsInEdgesCUDAFormat[trafficPersonVec[61507].indexPathInit]<<std::endl;
+//    QFile indexPathInitFile("indexPathInit01.csv");
+//    if (indexPathInitFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+//    std::cout << "> Saving indexPathInitFile... (size " << trafficPersonVec.size() << ")" << std::endl;
+//    QTextStream streamP(&indexPathInitFile);
+//    for (int p = 0; p < trafficPersonVec.size(); p++) {
+//       streamP << trafficPersonVec[p].id<<","<<trafficPersonVec[p].indexPathInit<<"\n";
+//    }
+//    indexPathInitFile.close();
+//    }
 
+//   std::ofstream edgeIdToLaneFile("./edgeIdToLaneMapNum00_.txt");
+//   std::ostream_iterator<float> output_iterator_edgeIdToLane(edgeIdToLaneFile, "\n");
+//   std::copy(edgeIdToLaneMapNum.begin(), edgeIdToLaneMapNum.end(), output_iterator_edgeIdToLane);
+//   savePaths(allPathsInVertexes, "pathsInVertexes00_.txt");
       Benchmarker benchmarkb18updateStructuresCUDA("b18updateStructuresCUDA");
       benchmarkb18updateStructuresCUDA.startMeasuring();
       // b18updateStructuresCUDA(trafficPersonVec, allPathsInEdgesCUDAFormat, edgesData);
@@ -2630,15 +2657,15 @@ void writeRouteFile(int numOfPass,
         }
 
         // Check that indexPathInit matches the first edge for that person
-        // assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
-        // if (allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit + j] != edgeIdToLaneMapNum[oneEdgeInCPUFormat]){
-        //   std::cout << "For person " << aPersonPath.person_id
-        //             << ", indexPathInit is " << trafficPersonVec[aPersonPath.person_id].indexPathInit
-        //             << ", which means the first edge in CUDA format is " << allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit + j]
-        //             << ". However, edgeIdToLaneMapNum[oneEdgeInCPUFormat] is " << oneEdgeInGPUFormat
-        //             << std::endl;
-        //   throw runtime_error("Initial edges do not match.");
-        // }
+        assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
+        if (allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit + j] != edgeIdToLaneMapNum[oneEdgeInCPUFormat]){
+          std::cout << "For person " << aPersonPath.person_id
+                    << ", indexPathInit is " << trafficPersonVec[aPersonPath.person_id].indexPathInit
+                    << ", which means the first edge in CUDA format is " << allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit + j]
+                    << ". However, edgeIdToLaneMapNum[oneEdgeInCPUFormat] is " << oneEdgeInGPUFormat
+                    << std::endl;
+          throw runtime_error("Initial edges do not match.");
+        }
 
         distance += edgesData[oneEdgeInGPUFormat].length;
 
