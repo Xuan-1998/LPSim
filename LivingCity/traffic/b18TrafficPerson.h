@@ -70,6 +70,7 @@ struct B18TrafficPerson {
   unsigned short LC_stateofLaneChanging;
 
   int isInIntersection;
+  int multimode = 1;
   bool operator==(const B18TrafficPerson& other) const {
         return id == other.id &&
                init_intersection == other.init_intersection &&
@@ -110,6 +111,7 @@ struct B18TrafficPerson {
                LC_initOKLanes == other.LC_initOKLanes &&
                LC_endOKLanes == other.LC_endOKLanes &&
                LC_stateofLaneChanging == other.LC_stateofLaneChanging &&
+               multimode == other.multimode &&
                isInIntersection == other.isInIntersection;
     }
 };

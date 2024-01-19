@@ -59,6 +59,22 @@ inline void printMemoryUsage() {
   double used_db = total_db - free_db;
   printf("GPU memory usage: used = %.0f, free = %.0f MB, total = %.0f MB\n", used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0, total_db / 1024.0 / 1024.0);
 }
+///
+//multimode test
+void b18Multimode(LC::B18TrafficPerson person) {
+    int multimodeValue = person.multimode;
+    switch (multimodeValue) {
+        case 1:
+          std::cout << "Executing logic for multimodeValue 1" << std::endl;
+          break;
+        case 2:
+          std::cout << "Executing logic for multimodeValue 2" << std::endl;
+          break;
+        default:
+          std::cout << "Executing logic for multimodeValue DEFAULT" << std::endl;
+          break;
+    }
+}
 ////////////////////////////////
 // VARIABLES on device(s)
 // intermediate variable for each gpu?
@@ -168,6 +184,10 @@ void b18InitCUDA_n(
   intersections_d  = new LC::B18IntersectionData*[ngpus];
   trafficLights_d = new uchar*[ngpus];
   vehicles_vec = new thrust::device_vector<LC::B18TrafficPerson>*[ngpus];
+
+  LC::B18TrafficPerson person1;
+  person1.multimode = 1;
+  b18Multimode(person1);
 
   cudaStream_t *streams = new cudaStream_t[ngpus];
   for(int i = 0; i < ngpus; i++){
@@ -2160,5 +2180,4 @@ void b18SimulateTrafficCUDA(float currentTime,
         // }
 
 }
-
 
