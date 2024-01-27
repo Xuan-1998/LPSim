@@ -183,7 +183,8 @@ void B18TrafficSP::filterODByTimeRange(
     std::vector<abm::graph::vertex_t>& filtered_od_pairs_sources_,
     std::vector<abm::graph::vertex_t>& filtered_od_pairs_targets_,
     std::vector<float>& filtered_dep_times_,
-    std::vector<uint>& pathsOrder) {
+    std::vector<uint>& pathsOrder,
+    int mode) {
   
   if (od_pairs.size() != dep_times_in_seconds.size()){
     throw std::runtime_error("Input from trips should match in size.");
@@ -253,7 +254,8 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const float currentBatchStartTimeSecs,
   const float currentBatchEndTimeSecs,
   const int reroute_batch_number,
-  std::vector<LC::B18TrafficPerson>& trafficPersonVec) {
+  std::vector<LC::B18TrafficPerson>& trafficPersonVec,
+  int mode) {
 
   if (all_od_pairs_.size() != dep_times.size())
     throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
@@ -271,7 +273,8 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
                                     filtered_od_pairs_sources_,
                                     filtered_od_pairs_targets_,
                                     filtered_dep_times_,
-                                    pathsOrder);
+                                    pathsOrder,
+                                    mode);
   
   std::cout << "Simulating trips with dep_time between "
     << convertSecondsToTime(currentBatchStartTimeSecs)

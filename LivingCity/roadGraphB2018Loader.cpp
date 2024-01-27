@@ -228,6 +228,7 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
   const int indexLen = headers.indexOf("length");
   const int indexLanes = headers.indexOf("lanes");
   const int indexSpeedMH = headers.indexOf("speed_mph");
+  const int indexmode = headers.indexOf("mode");
 
   QHash<int, std::pair<uint, uint>> dynEdgToEdge;
   std::pair<RoadGraph::roadGraphEdgeDesc_BI, bool> e0_pair;
@@ -250,6 +251,7 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
 
     uint64_t start = fields[indexU].toLongLong();
     uint64_t end = fields[indexV].toLongLong();
+    uint mode = fields[indexmode].toInt();
 
     if ((!dynIndToInd.contains(start)) || (!dynIndToInd.contains(end))) {
       if (saveNoAvailableNodes) {
