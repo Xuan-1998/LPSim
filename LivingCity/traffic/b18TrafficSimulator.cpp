@@ -205,7 +205,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters,
     const int rerouteIncrementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
-    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar) {
+    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, const std::vector<int>& modes) {
   
   std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
   std::vector<uchar> laneMap_n[ngpus];
@@ -415,12 +415,12 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
 
       auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs, graph_, dep_times,
                                             currentBatchStartTimeSecs, currentBatchEndTimeSecs,
-                                            (const int) increment_index, trafficPersonVec);
+                                            (const int) increment_index, trafficPersonVec, modes);
     
       allPathsInVertexes.insert(std::end(allPathsInVertexes), std::begin(currentBatchPathsInVertexes), std::end(currentBatchPathsInVertexes));
 
       allPathsInEdgesCUDAFormat = B18TrafficSP::convertPathsToCUDAFormat(
-          allPathsInVertexes, edgeIdToLaneMapNum, graph_, trafficPersonVec);
+          allPathsInVertexes, edgeIdToLaneMapNum, graph_, trafficPersonVec, modes);
 //    std::cout << "For person 61507, indexPathInit is " << trafficPersonVec[61507].indexPathInit<<" allPathsInEdgesCUDAFormat[]="<<allPathsInEdgesCUDAFormat[trafficPersonVec[61507].indexPathInit]<<std::endl;
 //    QFile indexPathInitFile("indexPathInit01.csv");
 //    if (indexPathInitFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {

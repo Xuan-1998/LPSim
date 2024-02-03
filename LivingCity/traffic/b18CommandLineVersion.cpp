@@ -160,7 +160,12 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.createB2018People(startSimulationH, endSimulationH, limitNumPeople, addRandomPeople, useSP);
   }
 
-  
+  std::vector<int> modes;
+  RoadGraph::roadGraphEdgeIter_BI ei, ei_end;
+  for (boost::tie(ei, ei_end) = edges(cg.roadGraph.myRoadGraph_BI); ei != ei_end; ++ei) {
+      int mode = cg.roadGraph.myRoadGraph_BI[*ei].mode;
+      modes.push_back(mode);}
+
   if (useCPU) {
     b18TrafficSimulator.simulateInCPU_MultiPass(numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting);
@@ -169,7 +174,7 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
-        networkPathSP,partitions);
+        networkPathSP,partitions,modes);
   }
 
 }
