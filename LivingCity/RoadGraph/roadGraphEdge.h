@@ -153,6 +153,7 @@ class RoadGraphEdge {
   float edge_weight;
   int priority;
 
+  int mode;
 
   unsigned int numberOfLanes;
 

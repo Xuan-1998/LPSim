@@ -184,7 +184,7 @@ void B18TrafficSP::filterODByTimeRange(
     std::vector<abm::graph::vertex_t>& filtered_od_pairs_targets_,
     std::vector<float>& filtered_dep_times_,
     std::vector<uint>& pathsOrder,
-    int mode) {
+    const std::vector<int>& modes) {
   
   if (od_pairs.size() != dep_times_in_seconds.size()){
     throw std::runtime_error("Input from trips should match in size.");
@@ -197,18 +197,22 @@ void B18TrafficSP::filterODByTimeRange(
   std::cout << "Filtering in the range ["
             << currentBatchStartTimeSecs << ", "
             << currentBatchEndTimeSecs << ")." << std::endl;
-
+  int ALLOWED_MODE = 1; //example for multimode
   filtered_dep_times_.clear();
   for (uint person_id = 0; person_id < od_pairs.size(); person_id++) {
     if (isgreaterequal(dep_times_in_seconds.at(person_id), currentBatchStartTimeSecs)
         && isless(dep_times_in_seconds.at(person_id), currentBatchEndTimeSecs)) {
-      filtered_od_pairs_sources_.push_back(od_pairs.at(person_id).at(0));
-      filtered_od_pairs_targets_.push_back(od_pairs.at(person_id).at(1));
-      filtered_dep_times_.push_back(dep_times_in_seconds.at(person_id));
-      pathsOrder.push_back(person_id);
+      int mode_for_this_person = modes.at(person_id);
+      if (mode_for_this_person == ALLOWED_MODE) {
+        filtered_od_pairs_sources_.push_back(od_pairs.at(person_id).at(0));
+        filtered_od_pairs_targets_.push_back(od_pairs.at(person_id).at(1));
+        filtered_dep_times_.push_back(dep_times_in_seconds.at(person_id));
+        pathsOrder.push_back(person_id);
+      }
     }
   }
 }
+
 
 std::string convertSecondsToTime(const float seconds) {
   std::string strHour = std::to_string(int(seconds) / 3600);
@@ -255,7 +259,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const float currentBatchEndTimeSecs,
   const int reroute_batch_number,
   std::vector<LC::B18TrafficPerson>& trafficPersonVec,
-  int mode) {
+  const std::vector<int>& modes) {
 
   if (all_od_pairs_.size() != dep_times.size())
     throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
@@ -274,7 +278,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
                                     filtered_od_pairs_targets_,
                                     filtered_dep_times_,
                                     pathsOrder,
-                                    mode);
+                                    modes);
   
   std::cout << "Simulating trips with dep_time between "
     << convertSecondsToTime(currentBatchStartTimeSecs)
@@ -315,13 +319,14 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
   const std::vector<personPath>& pathsInVertexes,
   const std::vector<uint> &edgeIdToLaneMapNum,
   const std::shared_ptr<abm::Graph>& graph_,
-  std::vector<B18TrafficPerson>& trafficPersonVec) {
+  std::vector<B18TrafficPerson>& trafficPersonVec,
+  const std::vector<int>& modes) {
   std::vector<uint> allPathsInEdgesCUDAFormat;
 
   for (const personPath & aPersonPath: pathsInVertexes) {
     assert(aPersonPath.person_id < trafficPersonVec.size());
     int personPathLength = 0;
-
+    
     // assign current indexPathInit and assert there are no reassignments
     if (trafficPersonVec[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET &&
           trafficPersonVec[aPersonPath.person_id].indexPathInit != allPathsInEdgesCUDAFormat.size()) {
@@ -332,14 +337,22 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
     }
     trafficPersonVec[aPersonPath.person_id].indexPathInit = allPathsInEdgesCUDAFormat.size();
 
+    int mode_for_this_person = modes[aPersonPath.person_id];
+    int ALLOWED_MODE = 1; //example
     // convert the path from vertexes to edges in CUDA format (laneMapNum)
     for (int j=0; j < aPersonPath.pathInVertexes.size()-1; j++) {
       auto vertexFrom = aPersonPath.pathInVertexes[j];
       auto vertexTo = aPersonPath.pathInVertexes[j+1];
       auto oneEdgeInCPUFormat = graph_->edge_ids_[vertexFrom][vertexTo];
       assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
-      allPathsInEdgesCUDAFormat.emplace_back(edgeIdToLaneMapNum[oneEdgeInCPUFormat]);
-      personPathLength++;
+      if (mode_for_this_person == ALLOWED_MODE) {
+        allPathsInEdgesCUDAFormat.emplace_back(edgeIdToLaneMapNum[oneEdgeInCPUFormat]);
+        personPathLength++;
+      }else{
+        std::cerr << "Error: Edge " << oneEdgeInCPUFormat 
+          << " is not valid for mode " << mode_for_this_person 
+          << " for person " << aPersonPath.person_id << std::endl;
+      }
     }
     allPathsInEdgesCUDAFormat.emplace_back(END_OF_PATH);
     trafficPersonVec[aPersonPath.person_id].path_length_cpu = aPersonPath.pathInVertexes.size() - 1; // not including END_OF_PATH

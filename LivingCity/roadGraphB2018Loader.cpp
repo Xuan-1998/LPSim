@@ -251,7 +251,7 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
 
     uint64_t start = fields[indexU].toLongLong();
     uint64_t end = fields[indexV].toLongLong();
-    uint mode = fields[indexmode].toInt();
+    int mode = fields[indexMode].toInt();
 
     if ((!dynIndToInd.contains(start)) || (!dynIndToInd.contains(end))) {
       if (saveNoAvailableNodes) {
@@ -297,6 +297,7 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
     inRoadGraph.myRoadGraph_BI[e0_pair.first].edgeLength = length;
     inRoadGraph.myRoadGraph_BI[e0_pair.first].maxSpeedMperSec = speedMS;
     inRoadGraph.myRoadGraph_BI[e0_pair.first].faci = ind;
+    inRoadGraph.myRoadGraph_BI[e0_pair.first].mode = mode;
     // add to edge
     dynEdgToEdge[ind] = std::make_pair(dynIndToInd[start], dynIndToInd[end]);
   }

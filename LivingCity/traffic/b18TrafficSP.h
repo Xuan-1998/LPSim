@@ -63,7 +63,7 @@ class B18TrafficSP {
     const float currentBatchEndTimeSecs,
     const int reroute_batch_number,
     std::vector<LC::B18TrafficPerson>& trafficPersonVec,
-    int mode);
+    const std::vector<int>& modes);
 
   static void initialize_person_to_init_edge(
     std::vector<abm::graph::edge_id_t>& all_paths,
@@ -83,13 +83,14 @@ class B18TrafficSP {
     std::vector<abm::graph::vertex_t>& filtered_od_pairs_targets_,
     std::vector<float>& filtered_dep_times_,
     std::vector<uint>& pathsOrder,
-    int mode);
+    const std::vector<int>& modes);
 
   static std::vector<uint> convertPathsToCUDAFormat (
     const std::vector<personPath>& pathsInVertexes,
     const std::vector<uint> &edgeIdToLaneMapNum,
     const std::shared_ptr<abm::Graph>& graph_,
-    std::vector<B18TrafficPerson>& trafficPersonVec);
+    std::vector<B18TrafficPerson>& trafficPersonVec,
+    const std::vector<int>& modes);
 
   explicit B18TrafficSP(const std::shared_ptr<abm::Graph>& graph) : graph_{graph} {};
  private:
