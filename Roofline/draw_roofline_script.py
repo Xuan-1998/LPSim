@@ -25,7 +25,7 @@ for file in files:
         # filter record for a kernel execution
         df = df[df['ID']== 1]
 
-    # calculate "Time"
+    # Add: calculate "Time"
         new_rows = []
         for id_value in df['ID'].unique():
             df_id = df[df['ID'] == id_value]
@@ -49,6 +49,7 @@ for file in files:
 
         dfmetric['Time'] = dfmetric['kernel_time'] / dfmetric['Count']
 
+        # Add: new metrics
         dfmetric['inst_executed'] =dfmetric['sm__inst_executed.sum']/ dfmetric['Count']
         dfmetric['inst_thread_executed'] = dfmetric['smsp__thread_inst_executed.sum']/ dfmetric['Count']
         dfmetric['inst_executed_global_loads'] = dfmetric['smsp__sass_inst_executed_op_global_ld.sum']/ dfmetric['Count']

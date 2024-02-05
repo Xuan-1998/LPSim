@@ -33,10 +33,12 @@ def roofline(filename, Peformance, AIHBM, AIL2=None, AIL1=None,warp_instruction_
         print('flag needs to be one of HBM, L2, L1, and all!')
         return
     LABELS = [x[:maxchar] for x in LABELS]
+    
+    # Modify: slope and peak of roofline
     memRoofs = [('L1', 19287.3/128),('L2', 2212 / 32), ('HBM', 1190 / 32)]
+    cmpRoofs = [ ('Theoretical Peak', 609.12)]
     # memRoofs = [('L1', 19287.3/32), ('L2', 3877.6/32), ('HBM', 1346/32)]
     # cmpRoofs = [('Tensor', 96.9), ('DP', 7.8)]
-    cmpRoofs = [ ('Theoretical Peak', 609.12)]
     fig = plt.figure(1, figsize=(10.67, 6.6))
     plt.clf()
     ax = fig.gca()
@@ -90,7 +92,7 @@ def roofline(filename, Peformance, AIHBM, AIL2=None, AIL1=None,warp_instruction_
         y = x * roof
         ax.plot(x[:smem_ix_elbow[i] + 1], y[:smem_ix_elbow[i] + 1], c='k', ls='-', lw='2')
 
-    # # global memory wall
+    # Add: global memory wall
     # stride0_x = 1
     # stride0_y = 0
     # for roof in memRoofs:
@@ -152,13 +154,13 @@ def roofline(filename, Peformance, AIHBM, AIL2=None, AIL1=None,warp_instruction_
                     linestyle='None', ms=markersize, markerfacecolor='none', \
                     markeredgewidth=markerwidth, label=LABELS[i] if LABELS else "unknown")
 
-        # global memory wall point
+        # Add: global memory wall point
         ax.plot(float(loadstore_intensity[i]), float(loadstore_performance[i]), c='orange', marker=styles[0], \
                     linestyle='None', ms=markersize, markerfacecolor='none', \
                     markeredgewidth=markerwidth, label=LABELS[i] if LABELS else "unknown")
 
 
-    # thread predication line
+    # Add: thread predication line
     ax.axhline(y=warp_instruction_throughput, color='grey', linestyle='--')
     marker_handles = []
 
