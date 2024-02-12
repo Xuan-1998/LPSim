@@ -2129,7 +2129,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     std::vector<std::thread> copy_threads;
     for (int i = 0; i < ngpus; ++i)
     for (int j = 0; j < ngpus; ++j) {
-      if(i!=j && targetLoc[i*ngpus+j]!=-1)
+      if(i!=j && targetLoc[i*ngpus+j]!=-1&&indicesToCopy[i*ngpus+j].size()>0)
         copy_threads.emplace_back(copy_task, i,j,std::ref(indicesToCopy[i*ngpus+j]),targetLoc[i*ngpus+j]); 
     }
     for (auto& t : copy_threads) {
