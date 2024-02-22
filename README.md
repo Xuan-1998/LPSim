@@ -126,13 +126,19 @@ sudo systemctl restart docker
 sudo apt-get install -y nvidia-container-toolkit
 ```
 
-2. You can build it yourself and run it
+2. You also need to check the status of NVIDIA GPU on your instance or local machine
+```bash
+nvidia-smi
+```
+If error occurs e.g. on GCloud, you can check and install the correct NVIDIA driver version for your GPU on https://www.nvidia.cn/Download/index.aspx.
+
+3. You can build it yourself and run it
 ```bash
 
 docker run -it --rm --gpus all -v "$PWD":/lpsim -w /lpsim  xuanjiang1998/lpsim:v1 bash
 ```
 
-3. Once inside the container, compile and run
+4. Once inside the container, compile and run
 ```bash
 qmake LivingCity/LivingCity.pro
 make
