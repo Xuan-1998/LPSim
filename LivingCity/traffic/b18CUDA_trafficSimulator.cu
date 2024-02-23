@@ -19,6 +19,9 @@
 #include <algorithm> 
 #include "../../src/benchmarker.h"
 #include "sp/config.h"
+#include <iomanip>
+#include <chrono>
+#include <ctime>
 
 #ifndef ushort
 #define ushort uint16_t
@@ -675,7 +678,7 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::ve
     vehicle_size+=vehicles_vec[i]->size();
   }
   trafficPersonVec.resize(vehicle_size);
-  std::cout<<"size of vehicles_vec: "<<vehicle_size<<std::endl;
+  // std::cout<<"size of vehicles_vec: "<<vehicle_size<<std::endl;
   int indexCursor=0;
   for(int i=0; i < ngpus; i++){
     cudaSetDevice(i);
@@ -1082,7 +1085,7 @@ __global__ void kernel_trafficSimulation(
       firstEdge_d=laneMapper[firstEdge];
       // getLaneIdToLaneIdInGpuValue(laneIdToLaneIdInGpu_d_keys, laneIdToLaneIdInGpu_d_values, wholeLaneMap_size,firstEdge,firstEdge_d); // turn overall edgeId(laneId) to edge(lane) index in edgesData[i]
       // if(firstEdge_d==-1){
-        // printf("%d: %u\n",trafficPersonVec[p].id,firstEdge);
+      //   printf("%d %d %f %d: %u\n",p, gpuIndex,currentTime,trafficPersonVec[p].id,firstEdge);
       // }
       assert(firstEdge_d!=-1);
     }
@@ -2038,7 +2041,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     cudaSetDevice(i);
     int numPeople_gpu = vehicles_vec[i]->size();
     LC::B18TrafficPerson* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
-    kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
+    kernel_trafficSimulation <<<  ceil(numPeople_gpu/ 384.0f), threadsPerBlock>> >
     (i,numPeople_gpu, currentTime, mapToReadShift_n[i],
     mapToWriteShift_n[i],vehicles_ptr, indexPathVec_d[i], indexPathVec_d_size,
     edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i], laneIdMapper_d[i],
@@ -2047,6 +2050,12 @@ void b18SimulateTrafficCUDA(float currentTime,
 
     gpuErrchk(cudaPeekAtLastError());
     }
+    // std::ofstream outFile("gpu_usage_sim_time.txt", std::ios::app);
+    
+    // auto realTime = std::chrono::system_clock::now();
+    // std::time_t t = std::chrono::system_clock::to_time_t(realTime);
+    // outFile <<currentTime<<","<< std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << std::endl;
+    // outFile.close();
     for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     gpuErrchk(cudaDeviceSynchronize());
@@ -2129,7 +2138,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     std::vector<std::thread> copy_threads;
     for (int i = 0; i < ngpus; ++i)
     for (int j = 0; j < ngpus; ++j) {
-      if(i!=j && targetLoc[i*ngpus+j]!=-1)
+      if(i!=j && targetLoc[i*ngpus+j]!=-1&&indicesToCopy[i*ngpus+j].size()>0)
         copy_threads.emplace_back(copy_task, i,j,std::ref(indicesToCopy[i*ngpus+j]),targetLoc[i*ngpus+j]); 
     }
     for (auto& t : copy_threads) {
