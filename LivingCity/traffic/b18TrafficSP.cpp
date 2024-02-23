@@ -207,6 +207,30 @@ void B18TrafficSP::filterODByTimeRange(
       pathsOrder.push_back(person_id);
     }
   }
+  // create index array for sorting
+  std::vector<size_t> indices(filtered_dep_times_.size());
+  std::iota(indices.begin(), indices.end(), 0); 
+  // sort based on dep_time
+  std::sort(indices.begin(), indices.end(),
+            [&](size_t i, size_t j) -> bool {
+                return filtered_dep_times_[i] < filtered_dep_times_[j];
+            });
+
+  // use index array to sort filtered_od_pairs_sources_, filtered_od_pairs_targets_ and filtered_dep_times_
+  std::vector<abm::graph::vertex_t> sorted_sources, sorted_targets;
+  std::vector<float> sorted_dep_times;
+  std::vector<uint> sortedPathsOrder;
+  for (auto idx : indices) {
+      sorted_sources.push_back(filtered_od_pairs_sources_[idx]);
+      sorted_targets.push_back(filtered_od_pairs_targets_[idx]);
+      sorted_dep_times.push_back(filtered_dep_times_[idx]);
+      sortedPathsOrder.push_back(pathsOrder[idx]);
+  }
+
+  filtered_od_pairs_sources_ = sorted_sources;
+  filtered_od_pairs_targets_ = sorted_targets;
+  filtered_dep_times_ = sorted_dep_times;
+  pathsOrder = sortedPathsOrder;
 }
 
 std::string convertSecondsToTime(const float seconds) {
