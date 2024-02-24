@@ -369,6 +369,7 @@ unsigned long* laneMapW
     laneMapWC[(maxWidthL*(cEdge + lN)) * 8 + (uint)(posInLaneC)] = 0;
     return;
   }
+
   //2.2 move
   bool goNextEdge = false;
   posInLaneC += numCToMove;//new possition
@@ -377,8 +378,8 @@ unsigned long* laneMapW
     goNextEdge = true;
   }
 
-  // move next edge
-  if (goNextEdge == true) {
+  // move next edge (when it is not bicycle)
+  if (goNextEdge == true && people.carType[p] != 1) {
 
     people.currIndEdge[p]++;//move next edge
     cEdge = people.nextEdge[people.currIndEdge[p]];//curent edge
@@ -391,7 +392,14 @@ unsigned long* laneMapW
     }
 
   }
+  //Assuming that when cartype =1, it is a bicycle. and bicycle does not need to move to another edge(?)
+  if(people.carType[p] == 1){
+    laneMapWC[(maxWidthL*(cEdge + lN)) * 8 + uint(posInLaneC)] = v  * vCT2MS;//(assuming that it is not as fast as the normal car?)
+  }
+  else{
   laneMapWC[(maxWidthL*(cEdge + lN)) * 8 + uint(posInLaneC)] = v * 3 * vCT2MS;//to ms triple
+  }
+  
   people.posInLaneC[p] = posInLaneC;//position in lane (we assume that it is long enought to hold it)
 }
 
