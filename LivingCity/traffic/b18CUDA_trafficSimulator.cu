@@ -714,13 +714,7 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::ve
         }
     }
 
-  /*for(int i = 0; i < ngpus; i++){
-    cudaSetDevice(i);
-    size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
-    size_t size_edges = edgesData_d_size * sizeof(LC::B18EdgeData);
-    cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,size,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
-    cudaMemcpy(edgesData.data(),edgesData_d,size_edges,cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
-  }*/
+
 }
 
 
@@ -1733,69 +1727,6 @@ __global__ void kernel_trafficSimulation(
     
 }
 
-/*
-__global__ void kernel_intersectionSTOPSimulation(
-     uint numIntersections, 
-     float currentTime, 
-     LC::B18IntersectionData *intersections, 
-     uchar *trafficLights,
-     LC::B18EdgeData* edgesData,//for the length
-     uchar* laneMap,//to check if there are cars
-     uint mapToReadShift) {
-     int i = blockIdx.x * blockDim.x + threadIdx.x;
-     if (i<numIntersections) {//CUDA check (inside margins)
-
-     const float deltaEvent = 0.0f; 
-
-     //if(i==0)printf("i %d\n",i);
-     if (currentTime > intersections[i].nextEvent && intersections[i].totalInOutEdges > 0) {
-       uint edgeOT = intersections[i].edge[intersections[i].state];
-       uchar numLinesO = edgeOT >> 24;
-       uint edgeONum = edgeOT & kMaskLaneMap; // 0xFFFFF
-
-       // red old traffic lights
-       for (int nL = 0; nL < numLinesO; nL++) {
-         trafficLights[edgeONum + nL] = 0x00; //red old traffic light
-       }
-
-       for (int iN = 0; iN <= intersections[i].totalInOutEdges + 1; iN++) { //to give a round
-         intersections[i].state = (intersections[i].state + 1) %
-           intersections[i].totalInOutEdges;//next light
-
-         if ((intersections[i].edge[intersections[i].state] & kMaskInEdge) == kMaskInEdge) {  // 0x800000
-           uint edgeIT = intersections[i].edge[intersections[i].state];
-           uint edgeINum = edgeIT & kMaskLaneMap; //get edgeI 0xFFFFF
-           uchar numLinesI = edgeIT >> 24;
-           /// check if someone in this edge
-           int rangeToCheck = 5.0f; //5m
-           ushort firstPosToCheck = edgesData[edgeINum].length - intersectionClearance; //last po
-           bool atLeastOneStopped = false;
-
-           for (int posCheck = firstPosToCheck; rangeToCheck >= 0 && posCheck >= 0; posCheck--, rangeToCheck--) { //as many cells as the rangeToCheck says
-             for (int nL = 0; nL < numLinesI; nL++) {
-               //int cellNum = mapToReadShift + maxWidth * (edgeINum + nL) + posCheck;
-               const uint posToSample = mapToReadShift + kMaxMapWidthM * (edgeINum + (((int) (posCheck / kMaxMapWidthM)) * numLinesI) + nL) + posCheck % kMaxMapWidthM;
-
-
-               if (laneMap[posToSample] == 0) { //car stopped
-                 trafficLights[edgeINum + nL] = 0x0F; // STOP SIGN 0x0F--> Let pass
-                 atLeastOneStopped = true;
-               }
-             }
-           }
-
-           if (atLeastOneStopped == true) {
-             intersections[i].nextEvent = currentTime + deltaEvent; //just move forward time if changed (otherwise check in next iteration)
-             break;
-           }
-         }
-       }
-     }
-     ///
-   }
-   
-}//
-*/
 
 __global__ void kernel_intersectionOneSimulation(
       uint numIntersections,
