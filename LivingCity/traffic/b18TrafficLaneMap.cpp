@@ -46,7 +46,7 @@ void B18TrafficLaneMap::createLaneMapSP_n(int ngpus, const std::vector<int>verte
       std::map<uint, std::shared_ptr<abm::Graph::Edge>> &laneMapNumToEdgeDescSP,std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],
       std::map<std::shared_ptr<abm::Graph::Edge>, uint> &edgeDescToLaneMapNumSP,std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
       std::vector<uint> &edgeIdToLaneMapNum, std::vector<uint> edgeIdToLaneMapNum_n[],
-      std::map<int, int> laneIdToLaneIdInGpu[]){
+      std::map<uint, uint> laneIdToLaneIdInGpu[]){
   // GENERATE LANE MAP
   if (LANE_DEBUG) {
     printf("  >> createLaneMap\n");

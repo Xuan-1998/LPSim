@@ -98,7 +98,7 @@ class B18TrafficSimulator {
   void createLaneMapSP(const std::shared_ptr<abm::Graph>& graph_);
   void createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar, const std::shared_ptr<abm::Graph>& graph_,
   std::vector<uchar> laneMap_n[],std::vector<B18EdgeData> edgesData_n[],std::vector<B18IntersectionData> intersections_n[],std::vector<uchar> trafficLights_n[],std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
-  std::vector<uint> edgeIdToLaneMapNum_n[],std::map<int, int> laneIdToLaneIdInGpu[]);
+  std::vector<uint> edgeIdToLaneMapNum_n[],std::map<uint, uint> laneIdToLaneIdInGpu[]);
 
   // car path
   void generateCarPaths(bool useJohnsonRouting);
