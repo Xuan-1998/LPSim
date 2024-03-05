@@ -101,7 +101,7 @@ void B18TrafficSimulator::createLaneMapSP(const std::shared_ptr<abm::Graph>& gra
 
 void B18TrafficSimulator::createLaneMapSP_n(int ngpus, const std::vector<int>& vertexIdToPar, const std::shared_ptr<abm::Graph>& graph_,
 std::vector<uchar> laneMap_n[],std::vector<B18EdgeData> edgesData_n[],std::vector<B18IntersectionData> intersections_n[],std::vector<uchar> trafficLights_n[],std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[],std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[],
-std::vector<uint> edgeIdToLaneMapNum_n[],std::map<int, int> laneIdToLaneIdInGpu[]) { //
+std::vector<uint> edgeIdToLaneMapNum_n[],std::map<uint, uint> laneIdToLaneIdInGpu[]) { //
 	b18TrafficLaneMap.createLaneMapSP_n (ngpus, vertexIdToPar, graph_, laneMap, laneMap_n, edgesData, edgesData_n, intersections, intersections_n, trafficLights, trafficLights_n, laneMapNumToEdgeDescSP, laneMapNumToEdgeDescSP_n, edgeDescToLaneMapNumSP, edgeDescToLaneMapNumSP_n, edgeIdToLaneMapNum,edgeIdToLaneMapNum_n,laneIdToLaneIdInGpu);
 }
 
@@ -213,7 +213,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
   std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> edgeDescToLaneMapNum_n[ngpus];
   std::map<uint, std::shared_ptr<abm::Graph::Edge>> laneMapNumToEdgeDescSP_n[ngpus];
   std::map<std::shared_ptr<abm::Graph::Edge>, uint> edgeDescToLaneMapNumSP_n[ngpus];
-  std::map<int, int> laneIdToLaneIdInGpu[ngpus];
+  std::map<uint, uint> laneIdToLaneIdInGpu[ngpus];
   std::vector<uint> indexPathVec_n[ngpus];
   std::vector<uchar> trafficLights_n[ngpus];
   std::vector<B18IntersectionData> intersections_n[ngpus];
