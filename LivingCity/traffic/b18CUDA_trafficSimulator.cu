@@ -466,7 +466,7 @@ void b18InitCUDA(
       gpuErrchk(cudaSetDevice(i));
       // indexPathVec
       size_t sizeIn = indexPathVec.size() * sizeof(uint);
-      indexPathVec_d_size = indexPathVec.size();
+      indexPathVec_d_size[i] = indexPathVec.size();
       if (firstInitialization) {
         gpuErrchk(cudaMalloc(&indexPathVec_d[i], sizeIn));   // Allocate array on device
         gpuErrchk(cudaMemcpyAsync(indexPathVec_d[i], indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice, streams[i]));
@@ -559,7 +559,6 @@ void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec
   //indexPathVec
   cudaStream_t streams[ngpus];
   size_t sizeIn = indexPathVec.size() * sizeof(uint);
-  indexPathVec_d_size = indexPathVec.size();
   size_t sizeD = edgesData.size() * sizeof(LC::B18EdgeData);
   size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
   for(int i=0; i < ngpus; i++){
@@ -567,6 +566,7 @@ void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec
     cudaStreamCreate( &streams[i] );
     // copy index path vector 
     cudaFree(indexPathVec_d[i]);
+    indexPathVec_d_size[i] = indexPathVec.size();
     gpuErrchk(cudaMalloc((void **) &indexPathVec_d[i], sizeIn));
     gpuErrchk(cudaMemcpyAsync(indexPathVec_d[i], indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice, streams[i]));
     // copy edge data
@@ -589,7 +589,6 @@ void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector
   //indexPathVec
   cudaStream_t *streams = new cudaStream_t[ngpus];
   size_t sizeIn = indexPathVec.size() * sizeof(uint);
-  indexPathVec_d_size = indexPathVec.size();
   size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
   //update size of vehicle on gpu(because of ghost)
   for (const personPath & aPersonPath: allPathsInVertexes){
@@ -606,6 +605,7 @@ void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector
     cudaStreamCreate( &streams[i] );
     // copy index path vector 
     cudaFree(indexPathVec_d[i]);
+    indexPathVec_d_size[i] = indexPathVec.size();
     gpuErrchk(cudaMalloc((void **) &indexPathVec_d[i], sizeIn));
     gpuErrchk(cudaMemcpyAsync(indexPathVec_d[i], indexPathVec.data(), sizeIn, cudaMemcpyHostToDevice, streams[i]));
     // copy edge data
