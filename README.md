@@ -7,6 +7,7 @@ LPSim is a discrete time-driven simulation platform that enables microsimulation
 
 
 
+
 The concept of implementing a multi-GPU simulation can be elucidated as follows: initially, the network will undergo partitioning into distinct GPU units, following which, the simulation of individuals will be executed independently within separate GPUs for multiple time-steps, prior to any communication between these subunits.
 
 
