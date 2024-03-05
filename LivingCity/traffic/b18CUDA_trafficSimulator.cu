@@ -72,7 +72,7 @@ thrust::device_vector<LC::B18TrafficPerson>** vehicles_vec = nullptr;
 int num_people_gpu;
 LC::B18TrafficPerson **trafficPersonVec_d_gpus = nullptr;
 uint **indexPathVec_d = nullptr;
-uint indexPathVec_d_size;
+uint *indexPathVec_d_size = nullptr;
 LC::B18EdgeData **edgesData_d = nullptr;
 uint *edgesData_d_size= nullptr;
 uint *laneMap_d_size= nullptr;
@@ -144,6 +144,7 @@ void b18InitCUDA_n(
   assert(maxGpus>=ngpus);
   trafficPersonVec_d_gpus = new LC::B18TrafficPerson*[ngpus];
   indexPathVec_d = new uint*[ngpus];
+  indexPathVec_d_size = new uint[ngpus];
   edgesData_d = new LC::B18EdgeData*[ngpus];
   edgesData_d_size= new uint[ngpus];
   laneMap_d_size= new uint[ngpus];
@@ -232,7 +233,7 @@ void b18InitCUDA_n(
       gpuErrchk(cudaSetDevice(i));
       // indexPathVec
       size_t sizeIn = indexPathVec_n[i].size() * sizeof(uint);
-      indexPathVec_d_size = indexPathVec_n[i].size();
+      indexPathVec_d_size[i] = indexPathVec_n[i].size();
       if (firstInitialization) {
         gpuErrchk(cudaMalloc(&indexPathVec_d[i], sizeIn));   // Allocate array on device
         gpuErrchk(cudaMemcpyAsync(indexPathVec_d[i], indexPathVec_n[i].data(), sizeIn, cudaMemcpyHostToDevice, streams[i]));
@@ -1974,7 +1975,7 @@ void b18SimulateTrafficCUDA(float currentTime,
     LC::B18TrafficPerson* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
     kernel_trafficSimulation <<<  ceil(numPeople_gpu/ 384.0f), threadsPerBlock>> >
     (i,numPeople_gpu, currentTime, mapToReadShift_n[i],
-    mapToWriteShift_n[i],vehicles_ptr, indexPathVec_d[i], indexPathVec_d_size,
+    mapToWriteShift_n[i],vehicles_ptr, indexPathVec_d[i], indexPathVec_d_size[i],
     edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i], laneIdMapper_d[i],
     intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,
     vertexIdToPar_d[i],vehicleToCopy_d[i],vehicleToRemove_d[i],copyCursor_d[i],removeCursor_d[i],ghostLaneBuffer_d[i],ghostLaneCursor_d[i]);
