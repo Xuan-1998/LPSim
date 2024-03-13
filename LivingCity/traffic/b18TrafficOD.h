@@ -38,10 +38,10 @@ class B18TrafficOD {
   cv::Mat *jobDistribution;
   const parameters simParameters;
 
-  void randomPerson(int p, B18TrafficVehicle &person, QVector3D housePos3D,
+  void randomVehicle(int p, B18TrafficVehicle &vehicle, QVector3D housePos3D,
                     QVector3D jobPos3D, float startTimeH,
                     LC::RoadGraph::roadBGLGraph_BI &roadGraph);
-  void randomPerson(int p, B18TrafficVehicle &person, uint srcvertex,
+  void randomVehicle(int p, B18TrafficVehicle &vehicle, uint srcvertex,
                     uint tgtvertex, float startTimeH);
 
 #ifdef B18_RUN_WITH_GUI
@@ -50,22 +50,22 @@ class B18TrafficOD {
   // generate random
   void createRandomPeople(int numberPerGen,
                           float startTimeH, float endTimeH,
-                          std::vector<B18TrafficVehicle> &trafficPersonVec,
+                          std::vector<B18TrafficVehicle> &trafficVehicleVec,
                           PeopleJobInfoLayers &simPeopleJobInfoLayersn,
                           LC::RoadGraph::roadBGLGraph_BI &roadGraph);
 #endif
 
   // generate from b18
   void loadB18TrafficPeople(float startTimeH, float endTimeH,
-      std::vector<B18TrafficVehicle> &trafficPersonVec, RoadGraph::roadBGLGraph_BI &roadGraph,
+      std::vector<B18TrafficVehicle> &trafficVehicleVec, RoadGraph::roadBGLGraph_BI &roadGraph,
       const int limitNumPeople, const bool addRandomPeople);
 
   void loadB18TrafficPeopleSP(float startTimeH, float endTimeH,
-    std::vector<B18TrafficVehicle> &trafficPersonVec, // out
+    std::vector<B18TrafficVehicle> &trafficVehicleVec, // out
     const std::shared_ptr<abm::Graph>& graph_, const int limitNumPeople, const bool addRandomPeople,
     const std::vector<float> dep_times);
 
-  void resetTrafficPersonJob(std::vector<B18TrafficVehicle> &trafficPersonVec);
+  void resetTrafficVehicleJob(std::vector<B18TrafficVehicle> &trafficVehicleVec);
 };
 }
 

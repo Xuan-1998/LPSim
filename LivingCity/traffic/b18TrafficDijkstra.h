@@ -22,14 +22,14 @@ class B18TrafficDijstra {
  public:
 
   static void calculateSeveralPeopleRoute(LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-                                   std::vector<B18TrafficVehicle> &trafficPersonVec,
+                                   std::vector<B18TrafficVehicle> &trafficVehicleVec,
                                    std::vector<uint>& indexPathVec,
                                    uint &currIndexPath,
                                    std::vector<uint>& peopleStartInInter,
                                    std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum);
   // MULTI
   static void generateRoutesMulti(LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-                           std::vector<B18TrafficVehicle> &trafficPersonVec,
+                           std::vector<B18TrafficVehicle> &trafficVehicleVec,
                            std::vector<uint>& indexPathVec,
                            std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum,
                            int weigthMode = 0, float sample = 1.0f);

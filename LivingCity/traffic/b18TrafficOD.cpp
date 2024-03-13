@@ -133,33 +133,33 @@ void B18TrafficOD::sampleDistribution(int numberToSample,
   }
 }
 #endif
-void B18TrafficOD::randomPerson(int p, B18TrafficVehicle &person,
+void B18TrafficOD::randomVehicle(int p, B18TrafficVehicle &vehicle,
                                 uint srcvertex,
                                 uint tgtvertex, float startTimeH) {
 
   // Data
-  person.id = p;
-  person.init_intersection = srcvertex;
-  person.end_intersection = tgtvertex;
-  person.time_departure = startTimeH;// * 3600.0f; //seconds
+  vehicle.id = p;
+  vehicle.init_intersection = srcvertex;
+  vehicle.end_intersection = tgtvertex;
+  vehicle.time_departure = startTimeH;// * 3600.0f; //seconds
   // Status
   qsrand(p);
   
-  person.a = simParameters.a;
-  person.b = simParameters.b;
-  person.T = simParameters.T;
-  person.v = 0;
-  person.num_steps = 0;
-  person.co = 0;
-  person.active = 0;
-  person.numOfLaneInEdge = 0;
-  person.color = p << 8;
-  person.LC_stateofLaneChanging = 0;
-  person.indexPathInit = 0; // 0 should point to -1.
+  vehicle.a = simParameters.a;
+  vehicle.b = simParameters.b;
+  vehicle.T = simParameters.T;
+  vehicle.v = 0;
+  vehicle.num_steps = 0;
+  vehicle.co = 0;
+  vehicle.active = 0;
+  vehicle.numOfLaneInEdge = 0;
+  vehicle.color = p << 8;
+  vehicle.LC_stateofLaneChanging = 0;
+  vehicle.indexPathInit = 0; // 0 should point to -1.
 
 }
 
-void B18TrafficOD::randomPerson(int p, B18TrafficVehicle &person,
+void B18TrafficOD::randomVehicle(int p, B18TrafficVehicle &vehicle,
                                 QVector3D housePos3D, QVector3D jobPos3D,
                                 float startTimeH,
                                 LC::RoadGraph::roadBGLGraph_BI &roadGraph) {
@@ -190,13 +190,13 @@ void B18TrafficOD::randomPerson(int p, B18TrafficVehicle &person,
     }
   }
 
-  randomPerson(p, person, srcvertex, tgtvertex, startTimeH);
+  randomVehicle(p, vehicle, srcvertex, tgtvertex, startTimeH);
 }
 
-void B18TrafficOD::resetTrafficPersonJob(std::vector<B18TrafficVehicle>
-    &trafficPersonVec) {
-  for (int p = 0; p < trafficPersonVec.size(); p++) {
-    trafficPersonVec[p].active = 0;
+void B18TrafficOD::resetTrafficVehicleJob(std::vector<B18TrafficVehicle>
+    &trafficVehicleVec) {
+  for (int p = 0; p < trafficVehicleVec.size(); p++) {
+    trafficVehicleVec[p].active = 0;
   }
 }//
 
@@ -204,11 +204,11 @@ void B18TrafficOD::resetTrafficPersonJob(std::vector<B18TrafficVehicle>
 void B18TrafficOD::createRandomPeople(
   int numberPerGen,
   float startTimeH, float endTimeH,
-  std::vector<B18TrafficPerson> &trafficPersonVec,
+  std::vector<B18TrafficVehicle> &trafficVehicleVec,
   PeopleJobInfoLayers &simPeopleJobInfoLayers,
   LC::RoadGraph::roadBGLGraph_BI &roadGraph) {
   if (PERSON_DEBUG) {
-    printf(">> generateTrafficPersonJob\n");
+    printf(">> generateTrafficVehicleJob\n");
   }
 
   QTime timer;
@@ -238,7 +238,7 @@ void B18TrafficOD::createRandomPeople(
 
   // 3. Generate PEOPLE TRAFFIC
   timer.restart();
-  trafficPersonVec.resize(numberPerGen);
+  trafficVehicleVec.resize(numberPerGen);
   qsrand(6541799621);
 
   float midTime = (startTimeH + endTimeH) / 2.0f;
@@ -246,7 +246,7 @@ void B18TrafficOD::createRandomPeople(
   for (int p = 0; p < numberPerGen; p++) {
     float goToWorkH = midTime + LC::misctools::genRand(startTimeH - midTime,
                       endTimeH - startTimeH);
-    randomPerson(p, trafficPersonVec[p], peopleDis[p], jobDis[p], goToWorkH,
+    randomVehicle(p, trafficVehicleVec[p], peopleDis[p], jobDis[p], goToWorkH,
                  roadGraph);
   }
 
@@ -256,7 +256,7 @@ void B18TrafficOD::createRandomPeople(
   }
 
   if (PERSON_DEBUG) {
-    printf("<< generateTrafficPersonJob\n");
+    printf("<< generateTrafficVehicleJob\n");
   }
 }//
 #endif
@@ -342,10 +342,10 @@ float sampleFileDistribution() {
 
 void B18TrafficOD::loadB18TrafficPeople(
     float startTimeH, float endTimeH,
-    std::vector<B18TrafficVehicle> &trafficPersonVec, // out
+    std::vector<B18TrafficVehicle> &trafficVehicleVec, // out
     RoadGraph::roadBGLGraph_BI &roadGraph, const int limitNumPeople, const bool addRandomPeople) {
 
-  trafficPersonVec.clear();
+  trafficVehicleVec.clear();
   QTime timer;
   timer.start();
 
@@ -360,7 +360,7 @@ void B18TrafficOD::loadB18TrafficPeople(
     else
       return RoadGraphB2018::totalNumPeople;
   }();
-  trafficPersonVec.resize(totalNumPeople);
+  trafficVehicleVec.resize(totalNumPeople);
 
   boost::mt19937 rng;
   srand(45321654);
@@ -389,13 +389,13 @@ void B18TrafficOD::loadB18TrafficPeople(
         goToWorkH = sampleFileDistribution();
       }
 
-      randomPerson(numPeople, trafficPersonVec[numPeople], src_vertex, tgt_vertex,
+      randomVehicle(numPeople, trafficVehicleVec[numPeople], src_vertex, tgt_vertex,
                    goToWorkH);
-      // printf("go to work %.2f --> %.2f\n", goToWork, (trafficPersonVec[p].time_departure / 3600.0f));
+      // printf("go to work %.2f --> %.2f\n", goToWork, (trafficVehicleVec[p].time_departure / 3600.0f));
       numPeople++;
     }
   }
-  //printf("trafficPersonVec size = %d", trafficPersonVec.size());
+  //printf("trafficVehicleVec size = %d", trafficVehicleVec.size());
 
   if (totalNumPeople > numPeople) {
     std::cerr << "Current amount: " << numPeople << std::endl;
@@ -417,7 +417,7 @@ void B18TrafficOD::loadB18TrafficPeople(
         goToWorkH = sampleFileDistribution();
       }
 
-      randomPerson(numPeople, trafficPersonVec[numPeople], src_vertex, tgt_vertex,
+      randomVehicle(numPeople, trafficVehicleVec[numPeople], src_vertex, tgt_vertex,
                    goToWorkH);
     }
   }
@@ -436,9 +436,9 @@ void B18TrafficOD::loadB18TrafficPeople(
     std::vector<int> bins(numBins);
     std::fill(bins.begin(), bins.end(), 0);
 
-    for (int p = 0; p < trafficPersonVec.size(); p++) {
-      // printf("depart %.2f\n", (trafficPersonVec[p].time_departure / 3600.0f));
-      float t = (trafficPersonVec[p].time_departure / 3600.0f) - startTimeH;
+    for (int p = 0; p < trafficVehicleVec.size(); p++) {
+      // printf("depart %.2f\n", (trafficVehicleVec[p].time_departure / 3600.0f));
+      float t = (trafficVehicleVec[p].time_departure / 3600.0f) - startTimeH;
 
       int binN = t / binLength;
 
@@ -460,9 +460,9 @@ void B18TrafficOD::loadB18TrafficPeople(
     int numBuckets = ceil((endSamples - startSamples) * numBucketsPerHour);
     std::vector<int> bins(numBuckets, 0);
 
-    for (int p = 0; p < trafficPersonVec.size(); p++) {
-      // printf("depart %.2f\n", (trafficPersonVec[p].time_departure / 3600.0f));
-      float time = (trafficPersonVec[p].time_departure / 3600.0f);
+    for (int p = 0; p < trafficVehicleVec.size(); p++) {
+      // printf("depart %.2f\n", (trafficVehicleVec[p].time_departure / 3600.0f));
+      float time = (trafficVehicleVec[p].time_departure / 3600.0f);
       int targetBucket = (time - startSamples) * numBucketsPerHour;
 
       if (targetBucket < 0 || targetBucket >= hToWDistribution.size()) {
@@ -483,11 +483,11 @@ void B18TrafficOD::loadB18TrafficPeople(
 
 void B18TrafficOD::loadB18TrafficPeopleSP(
     float startTimeH, float endTimeH,
-    std::vector<B18TrafficVehicle> &trafficPersonVec, // out
+    std::vector<B18TrafficVehicle> &trafficVehicleVec, // out
     const std::shared_ptr<abm::Graph>& graph_,
     const int limitNumPeople, const bool addRandomPeople, const std::vector<float> dep_times) {
 
-  trafficPersonVec.clear();
+  trafficVehicleVec.clear();
   QTime timer;
   timer.start();
 
@@ -503,7 +503,7 @@ void B18TrafficOD::loadB18TrafficPeopleSP(
     else
       return RoadGraphB2018::totalNumPeople;
   }();
-  trafficPersonVec.resize(totalNumPeople);
+  trafficVehicleVec.resize(totalNumPeople);
 
   /*
   boost::mt19937 rng;
@@ -535,9 +535,9 @@ void B18TrafficOD::loadB18TrafficPeopleSP(
       }
       */
 
-      randomPerson(numPeople, trafficPersonVec[numPeople], src_vertex, tgt_vertex,
+      randomVehicle(numPeople, trafficVehicleVec[numPeople], src_vertex, tgt_vertex,
                    goToWorkH);
-      // printf("go to work %.2f --> %.2f\n", goToWork, (trafficPersonVec[p].time_departure / 3600.0f));
+      // printf("go to work %.2f --> %.2f\n", goToWork, (trafficVehicleVec[p].time_departure / 3600.0f));
       numPeople++;
     }
   }
@@ -562,7 +562,7 @@ void B18TrafficOD::loadB18TrafficPeopleSP(
         goToWorkH = sampleFileDistribution();
       }
 
-      randomPerson(numPeople, trafficPersonVec[numPeople], src_vertex, tgt_vertex,
+      randomVehicle(numPeople, trafficVehicleVec[numPeople], src_vertex, tgt_vertex,
                    goToWorkH);
     }
   }
@@ -583,9 +583,9 @@ void B18TrafficOD::loadB18TrafficPeopleSP(
     std::vector<int> bins(numBins);
     std::fill(bins.begin(), bins.end(), 0);
 
-    for (int p = 0; p < trafficPersonVec.size(); p++) {
-      // printf("depart %.2f\n", (trafficPersonVec[p].time_departure / 3600.0f));
-      float t = (trafficPersonVec[p].time_departure / 3600.0f) - startTimeH;
+    for (int p = 0; p < trafficVehicleVec.size(); p++) {
+      // printf("depart %.2f\n", (trafficVehicleVec[p].time_departure / 3600.0f));
+      float t = (trafficVehicleVec[p].time_departure / 3600.0f) - startTimeH;
 
       int binN = t / binLength;
 
@@ -607,9 +607,9 @@ void B18TrafficOD::loadB18TrafficPeopleSP(
     int numBuckets = ceil((endSamples - startSamples) * numBucketsPerHour);
     std::vector<int> bins(numBuckets, 0);
 
-    for (int p = 0; p < trafficPersonVec.size(); p++) {
-      // printf("depart %.2f\n", (trafficPersonVec[p].time_departure / 3600.0f));
-      float time = (trafficPersonVec[p].time_departure / 3600.0f);
+    for (int p = 0; p < trafficVehicleVec.size(); p++) {
+      // printf("depart %.2f\n", (trafficVehicleVec[p].time_departure / 3600.0f));
+      float time = (trafficVehicleVec[p].time_departure / 3600.0f);
       int targetBucket = (time - startSamples) * numBucketsPerHour;
 
       if (targetBucket < 0 || targetBucket >= hToWDistribution.size()) {

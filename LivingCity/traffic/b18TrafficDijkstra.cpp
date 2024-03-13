@@ -43,22 +43,22 @@ typedef default_assignment_associative_property_map<PredecessorMap> PredecessorM
 
 void B18TrafficDijstra::calculateSeveralPeopleRoute(
   LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-  std::vector<B18TrafficVehicle> &trafficPersonVec,
+  std::vector<B18TrafficVehicle> &trafficVehicleVec,
   std::vector<uint> &indexPathVec,
   uint &currIndexPath,
   std::vector<uint> &peopleStartInInter,
   std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum) {
 
-  LC::RoadGraph::roadGraphVertexDesc_BI srcvertex = trafficPersonVec[peopleStartInInter[0]].init_intersection;
+  LC::RoadGraph::roadGraphVertexDesc_BI srcvertex = trafficVehicleVec[peopleStartInInter[0]].init_intersection;
   //check not already at the destination
   int n = boost::num_vertices(roadGraph);
 
   for (int p = 0; p < peopleStartInInter.size(); p++) {
     LC::RoadGraph::roadGraphVertexDesc_BI tgtvertex =
-      trafficPersonVec[peopleStartInInter[p]].end_intersection;
+      trafficVehicleVec[peopleStartInInter[p]].end_intersection;
 
     if (tgtvertex == srcvertex || srcvertex < 0 || srcvertex >= n || tgtvertex < 0 || tgtvertex >= n) { //source same than target (we have arrived)
-      trafficPersonVec[peopleStartInInter[p]].indexPathInit = 0; // that index points to -1
+      trafficVehicleVec[peopleStartInInter[p]].indexPathInit = 0; // that index points to -1
       peopleStartInInter.erase(peopleStartInInter.begin() + p);
       p--;
     }
@@ -102,7 +102,7 @@ void B18TrafficDijstra::calculateSeveralPeopleRoute(
   // if not map predecessor all failed
   if (mapPredecessor.size() <= 0) {
     for (int p = 0; p < peopleStartInInter.size(); p++) {
-      trafficPersonVec[peopleStartInInter[p]].indexPathInit = 0; // that index points to -1
+      trafficVehicleVec[peopleStartInInter[p]].indexPathInit = 0; // that index points to -1
     }
     return;
   }
@@ -111,9 +111,9 @@ void B18TrafficDijstra::calculateSeveralPeopleRoute(
   // for each person find the path using the map predecersor
   for (int p = 0; p < peopleStartInInter.size(); p++) {
     // Set person index to path.
-    trafficPersonVec[peopleStartInInter[p]].indexPathInit = currIndexPath;
+    trafficVehicleVec[peopleStartInInter[p]].indexPathInit = currIndexPath;
     // create path
-    uint vertex = trafficPersonVec[peopleStartInInter[p]].end_intersection;
+    uint vertex = trafficVehicleVec[peopleStartInInter[p]].end_intersection;
     //printf("s %d d %d\n",srcvertex,vertex);
     std::vector<uint> path;
 
@@ -138,7 +138,7 @@ void B18TrafficDijstra::calculateSeveralPeopleRoute(
 
     //printf("path %d\n",path.size());
     // put path lanes in nextEdgeM
-    //trafficPersonVec[peopleStartInInter[p]].nextPathEdge=nextEdgeM.size();//the first path edge will be in that possition in nextEdge
+    //trafficVehicleVec[peopleStartInInter[p]].nextPathEdge=nextEdgeM.size();//the first path edge will be in that possition in nextEdge
     for (int pa = path.size() - 1; pa > 0; pa--) {
       std::pair<RoadGraph::roadGraphEdgeDesc_BI, bool> edge_pair = boost::edge(
             path[pa], path[pa - 1], roadGraph);
@@ -171,10 +171,10 @@ void B18TrafficDijstra::calculateSeveralPeopleRoute(
   ////////////////////
   // Debug
   const bool kDebugFirstPerson = false;
-  if (trafficPersonVec.size()>0 && kDebugFirstPerson) {
+  if (trafficVehicleVec.size()>0 && kDebugFirstPerson) {
     int currIndex = 0;
     while (true) {
-      uint laneMap = indexPathVec[trafficPersonVec[0].indexPathInit + currIndex];
+      uint laneMap = indexPathVec[trafficVehicleVec[0].indexPathInit + currIndex];
       if (laneMap != -1) {
         printf("-> %u ", laneMap);
         currIndex++;
@@ -191,7 +191,7 @@ void B18TrafficDijstra::calculateSeveralPeopleRoute(
 
 void B18TrafficDijstra::generateRoutesMulti(
   LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-  std::vector<B18TrafficVehicle> &trafficPersonVec,
+  std::vector<B18TrafficVehicle> &trafficVehicleVec,
   std::vector<uint>& indexPathVec,  
   std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum,
   int weigthMode,
@@ -200,7 +200,7 @@ void B18TrafficDijstra::generateRoutesMulti(
   uint currIndexPath = 0; // counter to keep track where to put more
   std::vector<uint> oldIndexPathVec = std::move(indexPathVec); // avoid copying
   indexPathVec = std::vector<uint>();
-  indexPathVec.resize(trafficPersonVec.size() * 140); // initial allocation (so we do not add)
+  indexPathVec.resize(trafficVehicleVec.size() * 140); // initial allocation (so we do not add)
   indexPathVec[currIndexPath++] = -1; // first path is empty
   // Just using the lane length and number of edges
   if (weigthMode == 0 || weigthMode == 1) {
@@ -264,14 +264,14 @@ void B18TrafficDijstra::generateRoutesMulti(
     printf("Start Dikstra\n");
     QHash<uint, std::vector<uint>> intersectionToPeople;
 
-    for (int p = 0; p < trafficPersonVec.size(); p++) {
+    for (int p = 0; p < trafficVehicleVec.size(); p++) {
 
       // Some people do not change route.
       if (sample != 1.0f) {
         if (sample > (((float)qrand()) / RAND_MAX)) { // not recalculate
           // Copy route directly
-          uint oldIndex = trafficPersonVec[p].indexPathInit;
-          trafficPersonVec[p].indexPathInit = currIndexPath;
+          uint oldIndex = trafficVehicleVec[p].indexPathInit;
+          trafficVehicleVec[p].indexPathInit = currIndexPath;
           uint index = 0;
           while (oldIndexPathVec[oldIndex + index] != -1) {
             indexPathVec[currIndexPath++] = oldIndexPathVec[oldIndex + index];
@@ -282,7 +282,7 @@ void B18TrafficDijstra::generateRoutesMulti(
         }
       }
 
-      uint iI = trafficPersonVec[p].init_intersection;
+      uint iI = trafficVehicleVec[p].init_intersection;
       intersectionToPeople[iI].push_back(p);
     }
 
@@ -299,15 +299,15 @@ void B18TrafficDijstra::generateRoutesMulti(
       //printf("peopleStartInInter.size() %d\n",peopleStartInInter.size());
       calculateSeveralPeopleRoute(
         roadGraph, 
-        trafficPersonVec, 
+        trafficVehicleVec, 
         indexPathVec, 
         currIndexPath,
         peopleStartInInter,
         edgeDescToLaneMapNum);
       ++i;
 
-      if ((trafficPersonVec.size() > 100) && ((proccP % int(trafficPersonVec.size()/100) == 0))) {
-        printf("Dikstra: %d of %d in %d ms\n", proccP, trafficPersonVec.size(), timer.elapsed());
+      if ((trafficVehicleVec.size() > 100) && ((proccP % int(trafficVehicleVec.size()/100) == 0))) {
+        printf("Dikstra: %d of %d in %d ms\n", proccP, trafficVehicleVec.size(), timer.elapsed());
       }
     }
 
