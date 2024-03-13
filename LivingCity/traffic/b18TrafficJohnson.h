@@ -15,7 +15,7 @@ class B18TrafficJohnson {
 
   static void generateRoutes(
       LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-      std::vector<B18TrafficPerson> &trafficPersonVec,
+      std::vector<B18TrafficVehicle> &trafficPersonVec,
       std::vector<uint>& indexPathVec,
       std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum,
       int weigthMode = 0,

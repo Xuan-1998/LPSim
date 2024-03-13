@@ -29,7 +29,7 @@ typedef DistanceProperty::matrix_map_type DistanceMatrixMap;
 
 void B18TrafficJohnson::generateRoutes(
     LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-    std::vector<B18TrafficPerson> &trafficPersonVec,
+    std::vector<B18TrafficVehicle> &trafficPersonVec,
     std::vector<uint>& indexPathVec,
     std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum,
     int weigthMode, float sample) {

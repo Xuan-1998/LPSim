@@ -133,7 +133,7 @@ void B18TrafficOD::sampleDistribution(int numberToSample,
   }
 }
 #endif
-void B18TrafficOD::randomPerson(int p, B18TrafficPerson &person,
+void B18TrafficOD::randomPerson(int p, B18TrafficVehicle &person,
                                 uint srcvertex,
                                 uint tgtvertex, float startTimeH) {
 
@@ -159,7 +159,7 @@ void B18TrafficOD::randomPerson(int p, B18TrafficPerson &person,
 
 }
 
-void B18TrafficOD::randomPerson(int p, B18TrafficPerson &person,
+void B18TrafficOD::randomPerson(int p, B18TrafficVehicle &person,
                                 QVector3D housePos3D, QVector3D jobPos3D,
                                 float startTimeH,
                                 LC::RoadGraph::roadBGLGraph_BI &roadGraph) {
@@ -193,7 +193,7 @@ void B18TrafficOD::randomPerson(int p, B18TrafficPerson &person,
   randomPerson(p, person, srcvertex, tgtvertex, startTimeH);
 }
 
-void B18TrafficOD::resetTrafficPersonJob(std::vector<B18TrafficPerson>
+void B18TrafficOD::resetTrafficPersonJob(std::vector<B18TrafficVehicle>
     &trafficPersonVec) {
   for (int p = 0; p < trafficPersonVec.size(); p++) {
     trafficPersonVec[p].active = 0;
@@ -342,7 +342,7 @@ float sampleFileDistribution() {
 
 void B18TrafficOD::loadB18TrafficPeople(
     float startTimeH, float endTimeH,
-    std::vector<B18TrafficPerson> &trafficPersonVec, // out
+    std::vector<B18TrafficVehicle> &trafficPersonVec, // out
     RoadGraph::roadBGLGraph_BI &roadGraph, const int limitNumPeople, const bool addRandomPeople) {
 
   trafficPersonVec.clear();
@@ -483,7 +483,7 @@ void B18TrafficOD::loadB18TrafficPeople(
 
 void B18TrafficOD::loadB18TrafficPeopleSP(
     float startTimeH, float endTimeH,
-    std::vector<B18TrafficPerson> &trafficPersonVec, // out
+    std::vector<B18TrafficVehicle> &trafficPersonVec, // out
     const std::shared_ptr<abm::Graph>& graph_,
     const int limitNumPeople, const bool addRandomPeople, const std::vector<float> dep_times) {
 

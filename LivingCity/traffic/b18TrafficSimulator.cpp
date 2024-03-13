@@ -893,7 +893,7 @@ void simulateOnePersonCPU(
   float currentTime,
   uint mapToReadShift,
   uint mapToWriteShift,
-  std::vector<LC::B18TrafficPerson> &trafficPersonVec,
+  std::vector<LC::B18TrafficVehicle> &trafficPersonVec,
   std::vector<uint> &indexPathVec,
   std::vector<LC::B18EdgeData> &edgesData,
   std::vector<uchar> &laneMap,
@@ -1803,7 +1803,7 @@ void simulateOneIntersectionCPU(uint i, float currentTime,
   }
 }//
 
-void sampleTraffic(std::vector<B18TrafficPerson> &trafficPersonVec,
+void sampleTraffic(std::vector<B18TrafficVehicle> &trafficPersonVec,
                    std::vector<uint> &indexPathVec,
                    std::vector<float> &accSpeedPerLinePerTimeInterval,
                    std::vector<float> &numVehPerLinePerTimeInterval, uint offset) {
@@ -2554,7 +2554,7 @@ void B18TrafficSimulator::render(VBORenderManager &rendManager) {
 void writeIndexPathInitFile(
   int numOfPass,
   int start_time, int end_time,
-  const std::vector<B18TrafficPerson> &trafficPersonVec){
+  const std::vector<B18TrafficVehicle> &trafficPersonVec){
   QFile indexPathInitFile(QString::number(numOfPass) + "_indexPathInit" + QString::number(start_time) + "to" + QString::number(end_time) + ".csv");
   if (indexPathInitFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving indexPathInit file... (size " << trafficPersonVec.size() << ")" << std::endl;
@@ -2574,7 +2574,7 @@ void writePeopleFile(
   int numOfPass,
   const std::shared_ptr<abm::Graph> & graph_,
   int start_time, int end_time,
-  const std::vector<B18TrafficPerson> &trafficPersonVec,
+  const std::vector<B18TrafficVehicle> &trafficPersonVec,
   float deltaTime){
   QFile peopleFile(QString::number(numOfPass) + "_people" + QString::number(start_time) + "to" + QString::number(end_time) + ".csv");
   if (peopleFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
@@ -2614,7 +2614,7 @@ bool isLastEdgeOfPath(abm::graph::edge_id_t edgeInPath){
 void writeRouteFile(int numOfPass,
   const std::vector<personPath> allPathsInVertexes,
   int start_time, int end_time,
-  const std::vector<B18TrafficPerson> &trafficPersonVec,
+  const std::vector<B18TrafficVehicle> &trafficPersonVec,
   const std::shared_ptr<abm::Graph> & graph_,
   const std::vector<uint>& allPathsInEdgesCUDAFormat,
   const std::vector<uint>& edgeIdToLaneMapNum,
