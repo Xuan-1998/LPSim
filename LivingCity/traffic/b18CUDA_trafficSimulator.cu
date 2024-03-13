@@ -65,12 +65,12 @@ inline void printMemoryUsage() {
 ////////////////////////////////
 // VARIABLES on device(s)
 // intermediate variable for each gpu?
-LC::B18TrafficPerson *trafficPersonVec_d;
+LC::B18TrafficVehicle *trafficPersonVec_d;
 // GPU i traffic person vector, i in (0, ..., ngpus)
 int ngpus;
-thrust::device_vector<LC::B18TrafficPerson>** vehicles_vec = nullptr;
+thrust::device_vector<LC::B18TrafficVehicle>** vehicles_vec = nullptr;
 int num_people_gpu;
-LC::B18TrafficPerson **trafficPersonVec_d_gpus = nullptr;
+LC::B18TrafficVehicle **trafficPersonVec_d_gpus = nullptr;
 uint **indexPathVec_d = nullptr;
 uint indexPathVec_d_size;
 LC::B18EdgeData **edgesData_d = nullptr;
@@ -111,7 +111,7 @@ uint **laneToUpdateIndex_d = nullptr;
 uint **laneToUpdateValues_d = nullptr;
 LC::B18IntersectionData **intersections_d  = nullptr;
 uchar **trafficLights_d  = nullptr;
-// std::map<int,std::vector<LC::B18TrafficPerson> >personToCopy;
+// std::map<int,std::vector<LC::B18TrafficVehicle> >personToCopy;
 // std::map<int,std::vector<int> >personToRemove;//eg: 1->{1,3,5},2->{9},3->{} (gpuIndex->personList)
 
 
@@ -124,7 +124,7 @@ void b18InitCUDA_n(
   const std::vector<int>& vertexIdToPar,
   int edges_num,
   std::map<uint, uint>laneIdToLaneIdInGpu[],
-  std::vector<LC::B18TrafficPerson>& trafficPersonVec, 
+  std::vector<LC::B18TrafficVehicle>& trafficPersonVec, 
   std::vector<uint> indexPathVec_n[], 
   std::vector<LC::B18EdgeData> edgesData_n[], 
   std::vector<uchar> laneMap_n[], 
@@ -142,7 +142,7 @@ void b18InitCUDA_n(
     exit(1);
   }
   assert(maxGpus>=ngpus);
-  trafficPersonVec_d_gpus = new LC::B18TrafficPerson*[ngpus];
+  trafficPersonVec_d_gpus = new LC::B18TrafficVehicle*[ngpus];
   indexPathVec_d = new uint*[ngpus];
   edgesData_d = new LC::B18EdgeData*[ngpus];
   edgesData_d_size= new uint[ngpus];
@@ -170,7 +170,7 @@ void b18InitCUDA_n(
   laneToUpdateValues_d = new uint*[ngpus];
   intersections_d  = new LC::B18IntersectionData*[ngpus];
   trafficLights_d = new uchar*[ngpus];
-  vehicles_vec = new thrust::device_vector<LC::B18TrafficPerson>*[ngpus];
+  vehicles_vec = new thrust::device_vector<LC::B18TrafficVehicle>*[ngpus];
 
   cudaStream_t *streams = new cudaStream_t[ngpus];
   for(int i = 0; i < ngpus; i++){
@@ -181,7 +181,7 @@ void b18InitCUDA_n(
   const uint numStepsPerSample = 30.0f / deltaTime; //each min
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   { // people
-    size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+    size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficVehicle);
     
     if (firstInitialization){
       gpuErrchk(cudaMallocManaged(&trafficPersonVec_d, size));
@@ -193,25 +193,25 @@ void b18InitCUDA_n(
     for(int i = 0; i < ngpus; i++){
         size_gpu_part[i]=0;
     }
-    // size_gpu_part[ngpus-1] = (trafficPersonVec.size() - num_people_gpu *(ngpus-1)) * sizeof(LC::B18TrafficPerson);
+    // size_gpu_part[ngpus-1] = (trafficPersonVec.size() - num_people_gpu *(ngpus-1)) * sizeof(LC::B18TrafficVehicle);
 
     // Allocate memory for each half on the respective GPU
-    //LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
+    //LC::B18TrafficVehicle **trafficPersonVec_d_gpus[ngpus];
 
     // Copy the first half to GPU 0 and the second half to GPU 1
 
     // compute initial size of trafficPerson on each gpu
-    for(const LC::B18TrafficPerson trafficPerson_i : trafficPersonVec){
+    for(const LC::B18TrafficVehicle trafficPerson_i : trafficPersonVec){
       unsigned int init_intersectionId=trafficPerson_i.init_intersection;
       int targetPartition=vertexIdToPar[init_intersectionId];
-      size_gpu_part[targetPartition]+= sizeof(LC::B18TrafficPerson);
+      size_gpu_part[targetPartition]+= sizeof(LC::B18TrafficVehicle);
     }
     for(int i = 0; i < ngpus; i++){
-      trafficPersonVec_d_gpus[i] = new LC::B18TrafficPerson[size_gpu_part[i]/sizeof(LC::B18TrafficPerson)];
+      trafficPersonVec_d_gpus[i] = new LC::B18TrafficVehicle[size_gpu_part[i]/sizeof(LC::B18TrafficVehicle)];
     }
     int* personIndex = new int[ngpus]();
-    for(const LC::B18TrafficPerson trafficPerson_i : trafficPersonVec){
-      // for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++){
+    for(const LC::B18TrafficVehicle trafficPerson_i : trafficPersonVec){
+      // for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficVehicle); j++){
         unsigned int init_intersectionId=trafficPerson_i.init_intersection;
         int targetPartition=vertexIdToPar[init_intersectionId];
         trafficPersonVec_d_gpus[targetPartition][personIndex[targetPartition]++] = trafficPerson_i; 
@@ -220,8 +220,8 @@ void b18InitCUDA_n(
     personIndex = nullptr;
     for(int i = 0; i < ngpus; i++){
       cudaSetDevice(i);
-      vehicles_vec[i] = new thrust::device_vector<LC::B18TrafficPerson>(size_gpu_part[i]/sizeof(LC::B18TrafficPerson));
-      thrust::copy(trafficPersonVec_d_gpus[i], trafficPersonVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficPerson), vehicles_vec[i]->begin());
+      vehicles_vec[i] = new thrust::device_vector<LC::B18TrafficVehicle>(size_gpu_part[i]/sizeof(LC::B18TrafficVehicle));
+      thrust::copy(trafficPersonVec_d_gpus[i], trafficPersonVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficVehicle), vehicles_vec[i]->begin());
     }
     
     
@@ -406,7 +406,7 @@ void b18InitCUDA_n(
 
 void b18InitCUDA(
   bool firstInitialization,
-  std::vector<LC::B18TrafficPerson>& trafficPersonVec, 
+  std::vector<LC::B18TrafficVehicle>& trafficPersonVec, 
   std::vector<uint> &indexPathVec, 
   std::vector<LC::B18EdgeData>& edgesData, 
   std::vector<uchar>& laneMap, 
@@ -425,7 +425,7 @@ void b18InitCUDA(
   const uint numStepsPerSample = 30.0f / deltaTime; //each min
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   { // people
-    size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+    size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficVehicle);
     // if (firstInitialization) gpuErrchk(cudaMalloc((void **) &trafficPersonVec_d, size));   // Allocate array on device
 
     // gpuErrchk(cudaMemcpy(trafficPersonVec_d, trafficPersonVec.data(), size, cudaMemcpyHostToDevice));
@@ -441,12 +441,12 @@ void b18InitCUDA(
     // Calculate the size of each half
     num_people_gpu = int(trafficPersonVec.size() / ngpus);
     for(int i = 0; i < ngpus; i++){
-        size_gpu_part[i] = num_people_gpu * sizeof(LC::B18TrafficPerson);
+        size_gpu_part[i] = num_people_gpu * sizeof(LC::B18TrafficVehicle);
     }
-    size_gpu_part[ngpus-1] = (trafficPersonVec.size() - num_people_gpu *(ngpus-1)) * sizeof(LC::B18TrafficPerson);
+    size_gpu_part[ngpus-1] = (trafficPersonVec.size() - num_people_gpu *(ngpus-1)) * sizeof(LC::B18TrafficVehicle);
 
     // Allocate memory for each half on the respective GPU
-    //LC::B18TrafficPerson **trafficPersonVec_d_gpus[ngpus];
+    //LC::B18TrafficVehicle **trafficPersonVec_d_gpus[ngpus];
 
     // Copy the first half to GPU 0 and the second half to GPU 1
     for(int i = 0; i < ngpus; i++){
@@ -454,7 +454,7 @@ void b18InitCUDA(
       gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[i], size_gpu_part[i]));
       // trafficPersonVec.data() returns a pointer to the memory of the data of the struct object
       // struct supports plain assignment
-      for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++){
+      for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficVehicle); j++){
         trafficPersonVec_d_gpus[i][j] = trafficPersonVec[i * num_people_gpu + j]; 
       }
       gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
@@ -553,13 +553,13 @@ void b18InitCUDA(
   }
 }
 
-void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec,std::vector<uint> &indexPathVec,std::vector<LC::B18EdgeData>& edgesData){
+void b18updateStructuresCUDA(std::vector<LC::B18TrafficVehicle>& trafficPersonVec,std::vector<uint> &indexPathVec,std::vector<LC::B18EdgeData>& edgesData){
   std::cout<< ">> b18updateStructuresCUDA" << std::endl;
   //indexPathVec
   cudaStream_t streams[ngpus];
   size_t sizeIn = indexPathVec.size() * sizeof(uint);
   size_t sizeD = edgesData.size() * sizeof(LC::B18EdgeData);
-  size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficVehicle);
   for(int i=0; i < ngpus; i++){
     cudaSetDevice(i);
     cudaStreamCreate( &streams[i] );
@@ -576,26 +576,26 @@ void b18updateStructuresCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec
     cudaFree(trafficPersonVec_d_gpus[i]);
     
     gpuErrchk(cudaMallocManaged(&trafficPersonVec_d_gpus[i], size_gpu_part[i]));
-    for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++){
+    for(int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficVehicle); j++){
         trafficPersonVec_d_gpus[i][j] = trafficPersonVec[i * num_people_gpu + j]; 
     }  
     gpuErrchk(cudaMemPrefetchAsync(trafficPersonVec_d_gpus[i], size_gpu_part[i], i, streams[i]));
   }
   printMemoryUsage();
 }
-void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector<LC::B18TrafficPerson>& trafficPersonVec,std::vector<uint> &indexPathVec,std::vector<LC::B18EdgeData> edgesData_n[],std::vector<personPath> allPathsInVertexes){
+void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector<LC::B18TrafficVehicle>& trafficPersonVec,std::vector<uint> &indexPathVec,std::vector<LC::B18EdgeData> edgesData_n[],std::vector<personPath> allPathsInVertexes){
   std::cout<< ">> b18updateStructuresCUDA" << std::endl;
   //indexPathVec
   cudaStream_t *streams = new cudaStream_t[ngpus];
   size_t sizeIn = indexPathVec.size() * sizeof(uint);
-  size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  size_t size = trafficPersonVec.size() * sizeof(LC::B18TrafficVehicle);
   //update size of vehicle on gpu(because of ghost)
   for (const personPath & aPersonPath: allPathsInVertexes){
     if(aPersonPath.pathInVertexes.size()>1){
       int initPar=vertexIdToPar[trafficPersonVec[aPersonPath.person_id].init_intersection];
       int secondPar=vertexIdToPar[aPersonPath.pathInVertexes[1]];
       if(initPar!=secondPar){
-        size_gpu_part[secondPar]+=sizeof(LC::B18TrafficPerson);
+        size_gpu_part[secondPar]+=sizeof(LC::B18TrafficVehicle);
       }
     }
   }
@@ -616,7 +616,7 @@ void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector
     // copy traffic person vector
     delete vehicles_vec[i];
     delete[] trafficPersonVec_d_gpus[i];
-   trafficPersonVec_d_gpus[i] = new LC::B18TrafficPerson[size_gpu_part[i]/sizeof(LC::B18TrafficPerson)];
+   trafficPersonVec_d_gpus[i] = new LC::B18TrafficVehicle[size_gpu_part[i]/sizeof(LC::B18TrafficVehicle)];
   }
   
   uint* personIndex = new uint[ngpus]();
@@ -635,9 +635,9 @@ void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector
     personIndex = nullptr;
     for(int i = 0; i < ngpus; i++){
       cudaSetDevice(i);
-      std::cout<<"Vehicles on gpu "<<i<<": "<<size_gpu_part[i]/sizeof(LC::B18TrafficPerson)<<std::endl;
-      vehicles_vec[i] = new thrust::device_vector<LC::B18TrafficPerson>(size_gpu_part[i]/sizeof(LC::B18TrafficPerson));
-      thrust::copy(trafficPersonVec_d_gpus[i], trafficPersonVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficPerson), vehicles_vec[i]->begin());
+      std::cout<<"Vehicles on gpu "<<i<<": "<<size_gpu_part[i]/sizeof(LC::B18TrafficVehicle)<<std::endl;
+      vehicles_vec[i] = new thrust::device_vector<LC::B18TrafficVehicle>(size_gpu_part[i]/sizeof(LC::B18TrafficVehicle));
+      thrust::copy(trafficPersonVec_d_gpus[i], trafficPersonVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficVehicle), vehicles_vec[i]->begin());
     }
     for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
@@ -663,14 +663,14 @@ void b18FinishCUDA(void){
     cudaFree(numVehPerLinePerTimeInterval_d);
   }
 }
-bool compareById(const LC::B18TrafficPerson& a, const LC::B18TrafficPerson& b) {
+bool compareById(const LC::B18TrafficVehicle& a, const LC::B18TrafficVehicle& b) {
     return a.id < b.id;
 }
 
-void sortTrafficPersonsById(std::vector<LC::B18TrafficPerson>& trafficPersonVec) {
+void sortTrafficPersonsById(std::vector<LC::B18TrafficVehicle>& trafficPersonVec) {
     
 }
-void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
+void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
   // copy back people
   int vehicle_size=0;
   for(int i=0; i < ngpus; i++){
@@ -687,16 +687,16 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::ve
   }
   
   // for(int i = 0; i < ngpus; i++){
-  //     for (int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficPerson); j++) {
+  //     for (int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficVehicle); j++) {
   //     trafficPersonVec_d[indexCursor++] = trafficPersonVec_d_gpus[i][j];
   //   }
   // }
   // trafficPersonVec.clear();
   // trafficPersonVec.resize(indexCursor);
-  // // cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,indexCursor*sizeof(LC::B18TrafficPerson),cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
-  // memcpy( trafficPersonVec.data(),trafficPersonVec_d, indexCursor*sizeof(LC::B18TrafficPerson));
+  // // cudaMemcpy(trafficPersonVec.data(),trafficPersonVec_d,indexCursor*sizeof(LC::B18TrafficVehicle),cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
+  // memcpy( trafficPersonVec.data(),trafficPersonVec_d, indexCursor*sizeof(LC::B18TrafficVehicle));
   std::sort(trafficPersonVec.begin(), trafficPersonVec.end(),
-        [](const LC::B18TrafficPerson& a, const LC::B18TrafficPerson& b) {
+        [](const LC::B18TrafficVehicle& a, const LC::B18TrafficVehicle& b) {
             return a.id < b.id;
         }
     );
@@ -1032,7 +1032,7 @@ __global__ void kernel_trafficSimulation(
   float currentTime,
   uint mapToReadShift,
   uint mapToWriteShift,
-  LC::B18TrafficPerson *trafficPersonVec,
+  LC::B18TrafficVehicle *trafficPersonVec,
   uint *indexPathVec,
   uint indexPathVec_d_size,
   LC::B18EdgeData* edgesData,
@@ -1777,7 +1777,7 @@ __global__ void kernel_intersectionOneSimulation(
 // Kernel that executes on the CUDA device
 __global__ void kernel_sampleTraffic(
   int numPeople,
-  LC::B18TrafficPerson *trafficPersonVec,
+  LC::B18TrafficVehicle *trafficPersonVec,
   uint *indexPathVec,
   int indexPathVec_d_size,
   float *accSpeedPerLinePerTimeInterval,
@@ -1805,7 +1805,7 @@ __global__ void kernel_sampleTraffic(
 }
 __global__ void kernel_resetPeople(
   int numPeople,
-  LC::B18TrafficPerson *trafficPersonVec) {
+  LC::B18TrafficVehicle *trafficPersonVec) {
   int p = blockIdx.x * blockDim.x + threadIdx.x;
   if (p < numPeople) {//CUDA check (inside margins)
     trafficPersonVec[p].active = 0;
@@ -1858,15 +1858,15 @@ void copy_task(int i, int j, std::vector<int>& indicesToCopy,int targetLoc){
   std::sort(indicesToCopy.begin(), indicesToCopy.end());
   gpuErrchk(cudaSetDevice(i));
   thrust::device_vector<int> indicesToCopy_d(indicesToCopy.begin(), indicesToCopy.end());
-  thrust::device_vector<LC::B18TrafficPerson> output(indicesToCopy_d.size());
+  thrust::device_vector<LC::B18TrafficVehicle> output(indicesToCopy_d.size());
   // thrust::copy_if(thrust::device, vehicles_vec[i]->begin(), vehicles_vec[i]->end(), thrust::counting_iterator<int>(0), output.begin(), is_in_indices(thrust::raw_pointer_cast(indicesToCopy_d.data()), indicesToCopy_d.size()));
   auto perm_begin = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.begin());
   auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indicesToCopy_d.end());
   thrust::copy(perm_begin, perm_end, output.begin());
   
   gpuErrchk(cudaSetDevice(j));
-  LC::B18TrafficPerson* target_ptr = thrust::raw_pointer_cast(vehicles_vec[j]->data()) + targetLoc;
-  gpuErrchk(cudaMemcpyPeer(target_ptr, j, thrust::raw_pointer_cast(output.data()), i, output.size() * sizeof(LC::B18TrafficPerson)));
+  LC::B18TrafficVehicle* target_ptr = thrust::raw_pointer_cast(vehicles_vec[j]->data()) + targetLoc;
+  gpuErrchk(cudaMemcpyPeer(target_ptr, j, thrust::raw_pointer_cast(output.data()), i, output.size() * sizeof(LC::B18TrafficVehicle)));
 
 }
 }
@@ -1897,7 +1897,7 @@ void remove_task(int i, std::vector<int>& ToRemove) {
         thrust::device_vector<int> indices_from_d(indices_from.begin(),indices_from.end());
         thrust::device_vector<int> indices_to_d(indices_to.begin(),indices_to.end());
         //get last elements to be removed and their target indices
-        thrust::device_vector<LC::B18TrafficPerson> toMove(indices_from_d.size());
+        thrust::device_vector<LC::B18TrafficVehicle> toMove(indices_from_d.size());
         auto perm_begin = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indices_from_d.begin());
         auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indices_from_d.end());
         thrust::copy(perm_begin, perm_end, toMove.begin());
@@ -1970,7 +1970,7 @@ void b18SimulateTrafficCUDA(float currentTime,
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     int numPeople_gpu = vehicles_vec[i]->size();
-    LC::B18TrafficPerson* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
+    LC::B18TrafficVehicle* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
     if(numPeople_gpu>0){
       kernel_trafficSimulation <<<  ceil(numPeople_gpu/ 384.0f), threadsPerBlock>> >
       (i,numPeople_gpu, currentTime, mapToReadShift_n[i],

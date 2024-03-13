@@ -32,7 +32,7 @@ class B18GridPollution {
   int initialized;
 
   void addValueToGrid(float currTime,
-                      std::vector<B18TrafficPerson> &trafficPersonVec,
+                      std::vector<B18TrafficVehicle> &trafficPersonVec,
                       std::vector<uint> &indexPathVec,
                       RoadGraph *simRoadGraph,
                       LCUrbanMain *clientMain,

@@ -28,7 +28,7 @@ typedef DistanceProperty::matrix_type DistanceMatrix;
 typedef DistanceProperty::matrix_map_type DistanceMatrixMap;
 
 // Convert OD pairs to SP graph format
-std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std::vector<B18TrafficPerson> trafficPersonVec, 
+std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std::vector<B18TrafficVehicle> trafficPersonVec, 
 									    const int nagents) {
   bool status = true;
   std::vector<std::array<abm::graph::vertex_t, 2>> od_pairs;
@@ -277,7 +277,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const float currentBatchStartTimeSecs,
   const float currentBatchEndTimeSecs,
   const int reroute_batch_number,
-  std::vector<LC::B18TrafficPerson>& trafficPersonVec) {
+  std::vector<LC::B18TrafficVehicle>& trafficPersonVec) {
 
   if (all_od_pairs_.size() != dep_times.size())
     throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
@@ -336,7 +336,7 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
   const std::vector<personPath>& pathsInVertexes,
   const std::vector<uint> &edgeIdToLaneMapNum,
   const std::shared_ptr<abm::Graph>& graph_,
-  std::vector<B18TrafficPerson>& trafficPersonVec) {
+  std::vector<B18TrafficVehicle>& trafficPersonVec) {
   std::vector<uint> allPathsInEdgesCUDAFormat;
 
   for (const personPath & aPersonPath: pathsInVertexes) {
