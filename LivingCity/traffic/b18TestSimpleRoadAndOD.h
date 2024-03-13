@@ -22,7 +22,7 @@ class B18TestSimpleRoadAndOD {
   /**
   * Generate test: Road+People+OD
   **/
-   static void generateTest(RoadGraph &inRoadGraph, std::vector<B18TrafficVehicle> &trafficPersonVec,
+   static void generateTest(RoadGraph &inRoadGraph, std::vector<B18TrafficVehicle> &trafficVehicleVec,
      float startTimeH, float endTimeH, LCGLWidget3D *glWidget3D);
  private:
 

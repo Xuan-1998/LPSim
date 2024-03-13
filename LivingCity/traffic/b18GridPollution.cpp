@@ -23,7 +23,7 @@ void B18GridPollution::initPollution(LCUrbanMain *_clientMain) {
 }//
 
 void B18GridPollution::addValueToGrid(float currTime,
-                                      std::vector<B18TrafficVehicle> &trafficPersonVec,
+                                      std::vector<B18TrafficVehicle> &trafficVehicleVec,
                                       std::vector<uint> &indexPathVec,
                                       RoadGraph *simRoadGraph,
                                       LCUrbanMain *_clientMain,
@@ -39,19 +39,19 @@ void B18GridPollution::addValueToGrid(float currTime,
   gridValues.resize(gridNumSide * gridNumSide);
   memset(gridValues.data(), 0, sizeof(float) * gridValues.size());//set zero
 
-  if (lastPersonValue.size() != trafficPersonVec.size()) {
-    lastPersonValue.resize(trafficPersonVec.size());
+  if (lastPersonValue.size() != trafficVehicleVec.size()) {
+    lastPersonValue.resize(trafficVehicleVec.size());
     memset(lastPersonValue.data(), 0, sizeof(float) * lastPersonValue.size());
   }
 
   // for each active person add the correspondent grid
-  for (int p = 0; p < trafficPersonVec.size(); p++) {
-    if (trafficPersonVec[p].active != 1) {
+  for (int p = 0; p < trafficVehicleVec.size(); p++) {
+    if (trafficVehicleVec[p].active != 1) {
       continue;
     }
 
     float lastValueCO = lastPersonValue[p];
-    float newValueCO = trafficPersonVec[p].co;
+    float newValueCO = trafficVehicleVec[p].co;
     float coThisCar = newValueCO - lastValueCO;
     lastPersonValue[p] = newValueCO;
     /////////////////////////////////////////////////////////
@@ -59,10 +59,10 @@ void B18GridPollution::addValueToGrid(float currTime,
     int xIndex, yIndex;
     {
       QVector3D p0, p1;
-      float posInLaneM = trafficPersonVec[p].posInLaneM;
-      float lenghtLane = trafficPersonVec[p].length;//meters?
+      float posInLaneM = trafficVehicleVec[p].posInLaneM;
+      float lenghtLane = trafficVehicleVec[p].length;//meters?
       RoadGraph::roadGraphEdgeDesc_BI ei =
-        laneMapNumToEdgeDesc[indexPathVec[trafficPersonVec[p].indexPathCurr]];
+        laneMapNumToEdgeDesc[indexPathVec[trafficVehicleVec[p].indexPathCurr]];
 
       // multi edge
       if (renderMultiEdge == true &&
@@ -97,7 +97,7 @@ void B18GridPollution::addValueToGrid(float currTime,
       QVector3D per = (QVector3D::crossProduct(QVector3D(0, 0, 1.0f),
                        dir).normalized());
       float perShift = -0.5f * roadLaneWidth *
-                       (1 + 2 * trafficPersonVec[p].numOfLaneInEdge);
+                       (1 + 2 * trafficVehicleVec[p].numOfLaneInEdge);
       QVector3D v = p0 + dir * posInLaneM + perShift *
                     per; // center of the back of the car
 
@@ -469,7 +469,7 @@ void B18GridPollution::loadSimSave(QString fileName, LCUrbanMain *_clientMain) {
     newTrafPerVec.resize(10);//// REMOVE line
     // simulate
     printf("simulate\n");
-    clientMain->mGLWidget_3D->cudaTrafficSimulator.trafficPersonVec = newTrafPerVec;
+    clientMain->mGLWidget_3D->cudaTrafficSimulator.trafficVehicleVec = newTrafPerVec;
     int numPasses = clientMain->ui.cudaShortestPathNumPassesSpinBox->value();
     printf("simulate2\n");
     clientMain->mGLWidget_3D->cudaTrafficSimulator.simulateInCPU_MultiPass(

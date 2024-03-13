@@ -37,7 +37,7 @@ class B18TrafficSP {
                                                           const std::shared_ptr<abm::Graph>& graph_,
                                                           const std::vector<std::array<abm::graph::vertex_t, 2>>& od_pairs);
 
-  static std::vector<std::array<abm::graph::vertex_t, 2>> make_od_pairs(std::vector<B18TrafficVehicle> trafficPersonVec,
+  static std::vector<std::array<abm::graph::vertex_t, 2>> make_od_pairs(std::vector<B18TrafficVehicle> B18TrafficVehicle,
                                                                         const int nagents);
 
   static std::vector<std::array<abm::graph::vertex_t, 2>> read_od_pairs_from_file(
@@ -62,7 +62,7 @@ class B18TrafficSP {
     const float currentBatchStartTimeSecs,
     const float currentBatchEndTimeSecs,
     const int reroute_batch_number,
-    std::vector<LC::B18TrafficVehicle>& trafficPersonVec);
+    std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle);
 
   static void initialize_person_to_init_edge(
     std::vector<abm::graph::edge_id_t>& all_paths,
@@ -87,7 +87,7 @@ class B18TrafficSP {
     const std::vector<personPath>& pathsInVertexes,
     const std::vector<uint> &edgeIdToLaneMapNum,
     const std::shared_ptr<abm::Graph>& graph_,
-    std::vector<B18TrafficVehicle>& trafficPersonVec);
+    std::vector<B18TrafficVehicle>& B18TrafficVehicle);
 
   explicit B18TrafficSP(const std::shared_ptr<abm::Graph>& graph) : graph_{graph} {};
  private:
