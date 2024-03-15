@@ -6,6 +6,7 @@ OBJECTS_DIR = $$DESTDIR/obj
 
 unix {
     LIBS += -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl
+    LIBS += -L/usr/local/cuda-11.2/lib64 -lnvToolsExt
 	# -L/Developer/NVIDIA/CUDA-7.5/lib -lcudart -lcublas -lgomp
     INCLUDEPATH += \
       /usr/include/opencv4/ \

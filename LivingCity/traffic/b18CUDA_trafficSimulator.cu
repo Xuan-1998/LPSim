@@ -22,7 +22,7 @@
 #include <iomanip>
 #include <chrono>
 #include <ctime>
-
+#include <nvToolsExt.h>
 #ifndef ushort
 #define ushort uint16_t
 #endif
@@ -385,6 +385,7 @@ void b18InitCUDA_n(
                 if (canAccessPeer) {
                   cudaDeviceEnablePeerAccess(j, 0);
                     printf("Peer2Peer support: %d-%d\n",i,j);
+                    
                 }
             }
         }
@@ -1999,6 +2000,7 @@ void b18SimulateTrafficCUDA(float currentTime,
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   // 1. CHANGE MAP: set map to use and clean the other
   // cudaStream_t streams[ngpus];
+  nvtxRangePushA("computation");
   for(int i = 0; i < ngpus; i++){
     // cudaStreamCreate(&streams[i]);
     cudaSetDevice(i);
@@ -2050,16 +2052,18 @@ void b18SimulateTrafficCUDA(float currentTime,
 
     gpuErrchk(cudaPeekAtLastError());
     }
-    // std::ofstream outFile("gpu_usage_sim_time.txt", std::ios::app);
+    std::ofstream outFile("gpu_usage_sim_time.txt", std::ios::app);
     
-    // auto realTime = std::chrono::system_clock::now();
-    // std::time_t t = std::chrono::system_clock::to_time_t(realTime);
-    // outFile <<currentTime<<","<< std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << std::endl;
-    // outFile.close();
+    auto realTime = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(realTime);
+    outFile <<currentTime<<","<< std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << std::endl;
+    outFile.close();
     for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     gpuErrchk(cudaDeviceSynchronize());
     }
+    nvtxRangePop();
+    nvtxRangePushA("data transfer");
     std::vector<int> currentLoc(ngpus,0);//current target copy beginning index of vehicles_vec
     int commu_times=0;
     int lane_update_size=0;
@@ -2080,7 +2084,8 @@ void b18SimulateTrafficCUDA(float currentTime,
       }
       lane_update_size+=ghostLaneCursor[i]/4;
     }
-  
+    nvtxRangePop();
+    nvtxRangePushA("update lane");
     if(lane_update_size>0){
       std::vector<std::vector<int>> laneToUpdateIndex(ngpus);
     std::vector<std::vector<int>> laneToUpdateValues(ngpus);
@@ -2110,6 +2115,8 @@ void b18SimulateTrafficCUDA(float currentTime,
       std::ofstream outFile("commu_times.txt", std::ios::app);
       outFile << commu_times << "\n";
       outFile.close();
+    nvtxRangePop();
+    nvtxRangePushA("prepare copy");
     // select vehicles to be copied
     std::vector<std::vector<int>> indicesToCopy(ngpus*ngpus);
     std::vector<int> targetLoc(ngpus*ngpus, -1);// target copy beginning index of vehicles_vec, i-j -> i*ngpus+j
@@ -2135,6 +2142,8 @@ void b18SimulateTrafficCUDA(float currentTime,
       cudaSetDevice(i);
       vehicles_vec[i]->resize(currentLoc[i]);   
     }
+    nvtxRangePop();
+    nvtxRangePushA("vehicles copy");
     std::vector<std::thread> copy_threads;
     for (int i = 0; i < ngpus; ++i)
     for (int j = 0; j < ngpus; ++j) {
@@ -2144,6 +2153,8 @@ void b18SimulateTrafficCUDA(float currentTime,
     for (auto& t : copy_threads) {
         t.join();
     }
+    nvtxRangePop();
+    nvtxRangePushA("vehicles delete");
      std::vector<std::thread> threads;
     for (int i = 0; i < ngpus; ++i) {
       if(ToRemove[i].size()>0)
@@ -2154,14 +2165,15 @@ void b18SimulateTrafficCUDA(float currentTime,
     }
     
   }
-
-
+  nvtxRangePop();
+  nvtxRangePushA("data transfer");
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i); 
     gpuErrchk(cudaMemset(copyCursor_d[i], 0, sizeof(int)));
     gpuErrchk(cudaMemset(removeCursor_d[i], 0, sizeof(int)));
     gpuErrchk(cudaMemset(ghostLaneCursor_d[i], 0, sizeof(int)));
   }
+  nvtxRangePop();
 
      
   peopleBench.stopMeasuring();

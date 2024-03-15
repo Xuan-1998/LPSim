@@ -1,5 +1,5 @@
 # ========== OpenCV subimage ==========
-FROM gcr.io/blissful-jet-303616/opencv:v4 AS opencvbuilder
+FROM xuanjiang1998/opencv:v4 AS opencvbuilder
 
 # ========== Pandana subimage ==========
 FROM ubuntu:18.04 AS pandanabuilder
@@ -26,7 +26,7 @@ WORKDIR /usr/include/pandana/src
 RUN make
 
 # ========== MANTA image ==========
-FROM nvidia/cuda:11.2.0-devel-ubuntu18.04 as mantabuilder
+FROM xuanjiang1998/cuda:11.2.0-devel-ubuntu18.04 as mantabuilder
 
 COPY --from=opencvbuilder /usr/include/opencv4/ /usr/include/opencv4/
 
@@ -63,7 +63,9 @@ ENV LD_LIBRARY_PATH="/usr/include/pandana/src:${LD_LIBRARY_PATH}"
 RUN apt install python3-pip -y
 
 ADD . ./
-
+RUN apt install -y gdb \
+    cuda-nsight-systems-11-2 \
+    cuda-nsight-compute-11-2
 RUN pip3 install -r requirements.txt
 
 
