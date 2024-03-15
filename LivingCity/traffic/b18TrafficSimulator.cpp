@@ -21,7 +21,7 @@
 #include <thread>
 #include "accessibility.h"
 #include <math.h>
-
+#include <cuda_profiler_api.h>
 
 #define DEBUG_TRAFFIC 0
 #define DEBUG_SIMULATOR 0
@@ -463,6 +463,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
       for(int i=0;i<ngpus;i++){
         intersections_size_n[i]=intersections_n[i].size();
       }
+      cudaProfilerStart();
       while (currentTime < currentBatchEndTimeSecs) {
         printProgressBar(progress);
         float nextMilestone = currentBatchStartTimeSecs + (progress + 0.1) * (currentBatchEndTimeSecs - currentBatchStartTimeSecs);
@@ -477,6 +478,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
         progress += 0.1;
         // if(currentTime>18030)break;
       }
+      cudaProfilerStop();
       // if(currentTime>18030)break;
       b18GetDataCUDA(trafficPersonVec, edgesData);
       b18GetSampleTrafficCUDA(accSpeedPerLinePerTimeInterval,
