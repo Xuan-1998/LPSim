@@ -46,7 +46,7 @@ struct Demand {
 }  // namespace
 
 void B18TestSimpleRoadAndOD::generateTest(RoadGraph &inRoadGraph,
-    std::vector<B18TrafficPerson> &trafficPersonVec,
+    std::vector<B18TrafficPerson> &trafficVehicleVec,
     float startTimeH, float endTimeH, LCGLWidget3D *glWidget3D) {
   printf(">>loadTestRoadGraph\n");
   printf(">>Remove\n");
@@ -191,21 +191,21 @@ void B18TestSimpleRoadAndOD::generateTest(RoadGraph &inRoadGraph,
   B18TrafficOD b18OD;
 
   for (int dN = 0; dN < demand.size(); dN++) {
-    int cNumPeople = trafficPersonVec.size();
+    int cNumPeople = trafficVehicleVec.size();
     int numP = demand[dN].numP;
-    trafficPersonVec.resize(cNumPeople + numP);
+    trafficVehicleVec.resize(cNumPeople + numP);
     printf("gerate numP %d start %.2f (%.2f gap) vertex %u %u (%u %u)\n", numP,
            demand[dN].startTime, demand[dN].gapBetweenCars, demand[dN].start,
            demand[dN].end, vertex[demand[dN].start], vertex[demand[dN].end]);
 
     for (int p = 0; p < numP; p++) {
       float startTimeH = demand[dN].startTime + p * demand[dN].gapBetweenCars;
-      b18OD.randomPerson(p + cNumPeople, trafficPersonVec[p + cNumPeople],
+      b18OD.randomPerson(p + cNumPeople, trafficVehicleVec[p + cNumPeople],
                          vertex[demand[dN].start], vertex[demand[dN].end], startTimeH);
     }
   }//demand
 
-  printf("<< Test numPeople %d\n", trafficPersonVec.size());
+  printf("<< Test numPeople %d\n", trafficVehicleVec.size());
 
 }//
 
