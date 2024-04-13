@@ -28,18 +28,18 @@ typedef DistanceProperty::matrix_type DistanceMatrix;
 typedef DistanceProperty::matrix_map_type DistanceMatrixMap;
 
 // Convert OD pairs to SP graph format
-std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std::vector<B18TrafficVehicle> B18TrafficVehicle, 
+std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std::vector<B18TrafficPerson> trafficPersonVec, 
 									    const int nagents) {
   bool status = true;
   std::vector<std::array<abm::graph::vertex_t, 2>> od_pairs;
   try {
     abm::graph::vertex_t v1, v2;
     abm::graph::weight_t weight;
-    printf("trafficPersonSize = %d\n", B18TrafficVehicle.size());
-    for (int person = 0; person < B18TrafficVehicle.size(); person++) {
+    printf("trafficPersonSize = %d\n", trafficPersonVec.size());
+    for (int person = 0; person < trafficPersonVec.size(); person++) {
     //for (int person = 0; person < 1; person++) {
-      v1 = B18TrafficVehicle[person].init_intersection;
-      v2 = B18TrafficVehicle[person].end_intersection;
+      v1 = trafficPersonVec[person].init_intersection;
+      v2 = trafficPersonVec[person].end_intersection;
       std::array<abm::graph::vertex_t, 2> od = {v1, v2};
       od_pairs.emplace_back(od);
     }
@@ -74,7 +74,7 @@ std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std
     */
 
   } catch (std::exception& exception) {
-    std::cout << "Looping through B18TrafficVehicle doesn't work " << exception.what() << "\n";
+    std::cout << "Looping through trafficPersonVec doesn't work " << exception.what() << "\n";
     status = false;
   }
   return od_pairs;
@@ -207,30 +207,6 @@ void B18TrafficSP::filterODByTimeRange(
       pathsOrder.push_back(person_id);
     }
   }
-  // create index array for sorting
-  std::vector<size_t> indices(filtered_dep_times_.size());
-  std::iota(indices.begin(), indices.end(), 0); 
-  // sort based on dep_time
-  std::sort(indices.begin(), indices.end(),
-            [&](size_t i, size_t j) -> bool {
-                return filtered_dep_times_[i] < filtered_dep_times_[j];
-            });
-
-  // use index array to sort filtered_od_pairs_sources_, filtered_od_pairs_targets_ and filtered_dep_times_
-  std::vector<abm::graph::vertex_t> sorted_sources, sorted_targets;
-  std::vector<float> sorted_dep_times;
-  std::vector<uint> sortedPathsOrder;
-  for (auto idx : indices) {
-      sorted_sources.push_back(filtered_od_pairs_sources_[idx]);
-      sorted_targets.push_back(filtered_od_pairs_targets_[idx]);
-      sorted_dep_times.push_back(filtered_dep_times_[idx]);
-      sortedPathsOrder.push_back(pathsOrder[idx]);
-  }
-
-  filtered_od_pairs_sources_ = sorted_sources;
-  filtered_od_pairs_targets_ = sorted_targets;
-  filtered_dep_times_ = sorted_dep_times;
-  pathsOrder = sortedPathsOrder;
 }
 
 std::string convertSecondsToTime(const float seconds) {
@@ -277,7 +253,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const float currentBatchStartTimeSecs,
   const float currentBatchEndTimeSecs,
   const int reroute_batch_number,
-  std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle) {
+  std::vector<LC::B18TrafficPerson>& trafficPersonVec) {
 
   if (all_od_pairs_.size() != dep_times.size())
     throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
@@ -309,12 +285,78 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   B18TrafficSP::edgePreprocessingForRouting(edges_routing, edge_weights_routing, street_graph);
 
   Benchmarker routingCH("Routing_CH_batch_" + std::to_string(reroute_batch_number), true);
+  cout<<street_graph->vertices_data_.size()<<","<<endl;
   routingCH.startMeasuring();
   //MTC::accessibility::Accessibility *graph_ch = new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(), edges_routing, edge_weights_routing, false);
    std::unique_ptr<MTC::accessibility::Accessibility> graph_ch(
     new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
     edges_routing, edge_weights_routing, false));
+  std::cout<<"--------------------------------routing start--------------------------------"<<std::endl;
   std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
+  //std::vector<std::vector<abm::graph::edge_id_t> > paths_ch;
+  bool if_save = false;
+  if(if_save){
+    std::ofstream myfile;
+    myfile.open ("temp_routes.csv");
+    for(int i=0;i<paths_ch.size();i++){
+      for(int j=0;j<paths_ch[i].size();j++){
+        //std::cout<<paths_ch[i][j]<<std::endl;
+        long long int idx = paths_ch[i][j];
+        if(j==0) myfile<<to_string(idx);
+        else{
+          myfile<<",";
+          myfile<<to_string(idx);
+          
+        }
+      }
+      myfile<<"\n";
+    }
+    myfile.close();
+    std::cout<<"finish saving routes in calibrated_routes.csv file!!!!!!!!!!!!!!!!!!!!\n";
+  }
+  
+  bool if_change_route = true;
+  if (if_change_route){
+    string csv_name = "routes_k_70.txt";
+    string line,word;
+    fstream file(csv_name,ios::in);
+    int count = 0;
+    if(file.is_open())
+    {
+      
+    std::cout<<"here"<<std::endl;
+    while(getline(file, line))
+        {
+        //if(count==773134) break;
+        vector<abm::graph::edge_id_t> row;
+        stringstream str(line);
+        while(getline(str, word, ',')) {
+            int tem = std::stoi(word);
+            abm::graph::edge_id_t test = tem;
+            row.push_back(test);
+            }
+        paths_ch[count]=row;
+        //paths_ch.push_back(row);
+        count++;
+        //std::cout<<count<<std::endl;
+        } 
+    }
+    else{
+        cout<<"error"<<endl;
+        }
+
+  }
+  
+  //std::cout<<count<<std::endl;
+  std::cout<<paths_ch.size()<<std::endl;
+  for (int j=0;j<1;j++){
+    std::cout<<"trajectory for trip "<<j<<std::endl;
+    for (int i=0;i<paths_ch[j].size();i++) std::cout<<paths_ch[j][i]<<std::endl;
+  }
+  
+  //abm::graph::edge_id_t test = 192085;
+  //std::cout<<test<<std::endl;
+  std::cout<<"--------------------------------routing stop--------------------------------"<<std::endl;
   routingCH.stopAndEndBenchmark();
 
   std::cout << "# of paths = " << paths_ch.size() << std::endl;
@@ -336,22 +378,22 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
   const std::vector<personPath>& pathsInVertexes,
   const std::vector<uint> &edgeIdToLaneMapNum,
   const std::shared_ptr<abm::Graph>& graph_,
-  std::vector<B18TrafficVehicle>& B18TrafficVehicle) {
+  std::vector<B18TrafficPerson>& trafficPersonVec) {
   std::vector<uint> allPathsInEdgesCUDAFormat;
 
   for (const personPath & aPersonPath: pathsInVertexes) {
-    assert(aPersonPath.person_id < B18TrafficVehicle.size());
+    assert(aPersonPath.person_id < trafficPersonVec.size());
     int personPathLength = 0;
 
     // assign current indexPathInit and assert there are no reassignments
-    if (B18TrafficVehicle[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET &&
-          B18TrafficVehicle[aPersonPath.person_id].indexPathInit != allPathsInEdgesCUDAFormat.size()) {
+    if (trafficPersonVec[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET &&
+          trafficPersonVec[aPersonPath.person_id].indexPathInit != allPathsInEdgesCUDAFormat.size()) {
       std::string errorMessage = "Error! person_id " + std::to_string(aPersonPath.person_id)
-      + " has indexPathInit " + std::to_string(B18TrafficVehicle[aPersonPath.person_id].indexPathInit)
+      + " has indexPathInit " + std::to_string(trafficPersonVec[aPersonPath.person_id].indexPathInit)
       + " while we're trying to set it as " + std::to_string(allPathsInEdgesCUDAFormat.size());
       throw std::runtime_error(errorMessage);
     }
-    B18TrafficVehicle[aPersonPath.person_id].indexPathInit = allPathsInEdgesCUDAFormat.size();
+    trafficPersonVec[aPersonPath.person_id].indexPathInit = allPathsInEdgesCUDAFormat.size();
 
     // convert the path from vertexes to edges in CUDA format (laneMapNum)
     for (int j=0; j < aPersonPath.pathInVertexes.size()-1; j++) {
@@ -363,13 +405,13 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
       personPathLength++;
     }
     allPathsInEdgesCUDAFormat.emplace_back(END_OF_PATH);
-    B18TrafficVehicle[aPersonPath.person_id].path_length_cpu = aPersonPath.pathInVertexes.size() - 1; // not including END_OF_PATH
+    trafficPersonVec[aPersonPath.person_id].path_length_cpu = aPersonPath.pathInVertexes.size() - 1; // not including END_OF_PATH
 
     assert(aPersonPath.pathInVertexes.size() > 1 ||
-      allPathsInEdgesCUDAFormat[B18TrafficVehicle[aPersonPath.person_id].indexPathInit] == END_OF_PATH);
+      allPathsInEdgesCUDAFormat[trafficPersonVec[aPersonPath.person_id].indexPathInit] == END_OF_PATH);
     assert(aPersonPath.pathInVertexes.size() > 1 ||
-      B18TrafficVehicle[aPersonPath.person_id].path_length_cpu == 0);
-    assert(B18TrafficVehicle[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET);
+      trafficPersonVec[aPersonPath.person_id].path_length_cpu == 0);
+    assert(trafficPersonVec[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET);
   }
 
   std::cout << "Converted to CUDA format" << std::endl;

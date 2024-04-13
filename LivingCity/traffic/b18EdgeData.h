@@ -30,7 +30,6 @@ namespace LC {
 
 struct B18EdgeData {
   ushort numLines;
-  uint prevInters;
   uint nextInters;
   float length;
   float maxSpeedMperSec;
