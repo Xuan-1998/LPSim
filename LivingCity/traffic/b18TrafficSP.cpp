@@ -317,7 +317,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   std::cout<<"--------------------------------routing start--------------------------------"<<std::endl;
   std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
   
-  bool if_change_route = false;
+  bool if_change_route = true;
   if (if_change_route) {
       std::cout<<"Entered Self-defined Routes"<<std::endl;
       std::string csv_name = "routes_k_70.txt";

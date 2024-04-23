@@ -2580,9 +2580,17 @@ void writePeopleFile(
   if (peopleFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving People file... (size " << trafficVehicleVec.size() << ")" << std::endl;
     QTextStream streamP(&peopleFile);
-    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
+    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,travel_time,path_length_gpu\n";
 
     for (int p = 0; p < trafficVehicleVec.size(); p++) {
+      int n2 = sizeof(trafficVehicleVec[p].travel_time)/sizeof(trafficVehicleVec[p].travel_time[0]);
+      QString str2 = "";
+      for (int i = 0; i < n2; i++) {
+              if (trafficVehicleVec[p].travel_time[i] == -0.5) {
+                break;
+              }
+              str2 += QString::fromStdString(to_string(trafficVehicleVec[p].travel_time[i])) + QString::fromStdString(" ");
+          }
       streamP << trafficVehicleVec[p].id;
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficVehicleVec[p].init_intersection];
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficVehicleVec[p].end_intersection];
@@ -2598,6 +2606,7 @@ void writePeopleFile(
       streamP << "," << trafficVehicleVec[p].active;
       streamP << "," << trafficVehicleVec[p].last_time_simulated;
       streamP << "," << trafficVehicleVec[p].path_length_cpu;
+      streamP << "," << str2; // the travel time we added
       streamP << "," << trafficVehicleVec[p].path_length_gpu;
       streamP << "\n";
     }
