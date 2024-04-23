@@ -314,8 +314,59 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
    std::unique_ptr<MTC::accessibility::Accessibility> graph_ch(
     new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
     edges_routing, edge_weights_routing, false));
+  std::cout<<"--------------------------------routing start--------------------------------"<<std::endl;
   std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
+  
+  bool if_change_route = false;
+  if (if_change_route) {
+      std::cout<<"Entered Self-defined Routes"<<std::endl;
+      std::string csv_name = "routes_k_70.txt";
+      std::fstream file(csv_name, std::ios::in);
+      if (!file.is_open()) {
+          std::cerr << "Failed to open file." << std::endl;
+          throw std::runtime_error("Failed to open file."); // Exit if the file cannot be opened
+      }
+
+      std::string line, word;
+      std::vector<std::vector<abm::graph::edge_id_t>> paths_ch;
+      while (std::getline(file, line)) {
+          if (line.empty()) continue; // Skip empty lines
+
+          std::vector<abm::graph::edge_id_t> row;
+          std::stringstream str(line);
+          while (std::getline(str, word, ',')) {
+              if (word.empty()) continue; // Skip empty words
+
+              try {
+                  int tem = std::stoi(word);
+                  row.push_back(static_cast<abm::graph::edge_id_t>(tem));
+              } catch (const std::invalid_argument& e) {
+                  std::cerr << "Invalid input '" << word << "' encountered." << std::endl;
+                  continue;
+              }
+          }
+
+          paths_ch.push_back(row); // Use push_back to avoid indexing issues
+      }
+
+      // Now, you can safely assign paths_ch to your graph or other structures
+  }
+
+  
+  //std::cout<<count<<std::endl;
+  std::cout<<paths_ch.size()<<std::endl;
+  for (int j=0;j<1;j++){
+    std::cout<<"trajectory for trip "<<j<<std::endl;
+    for (int i=0;i<paths_ch[j].size();i++) std::cout<<paths_ch[j][i]<<std::endl;
+  }
+  
+  //abm::graph::edge_id_t test = 192085;
+  //std::cout<<test<<std::endl;
+
+  std::cout<<"--------------------------------routing stop--------------------------------"<<std::endl;
   routingCH.stopAndEndBenchmark();
+
+
 
   std::cout << "# of paths = " << paths_ch.size() << std::endl;
 

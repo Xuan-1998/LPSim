@@ -1062,6 +1062,30 @@ __global__ void kernel_trafficSimulation(
   // check that the current path index does not exceed the size of the path index vector
   assert(trafficVehicleVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficVehicleVec[p].indexPathCurr] == END_OF_PATH) {
+        float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+
+    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
+    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
+
+    if (trafficVehicleVec[p].window_flag < 300) {
+      
+      if (trafficVehicleVec[p].window_flag == 0) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+//           printf("%f", trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag]);
+          trafficVehicleVec[p].window_flag++;
+      } else {
+          if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+          trafficVehicleVec[p].window_flag++;    
+        }
+      }
+    }
     trafficVehicleVec[p].active = 2; //finished
     return;
   }
@@ -1087,6 +1111,30 @@ __global__ void kernel_trafficSimulation(
     trafficVehicleVec[p].last_time_simulated = currentTime;
     
     if (firstEdge == END_OF_PATH) {
+          float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+
+    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
+    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
+
+    if (trafficVehicleVec[p].window_flag < 300) {
+      
+      if (trafficVehicleVec[p].window_flag == 0) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+//           printf("%f", trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag]);
+          trafficVehicleVec[p].window_flag++;
+      } else {
+          if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+          trafficVehicleVec[p].window_flag++;    
+        }
+      }
+    }
       trafficVehicleVec[p].active = 2;
       return;
     }
@@ -1232,7 +1280,29 @@ __global__ void kernel_trafficSimulation(
   if (currentEdge == trafficVehicleVec[p].nextEdge) {
     trafficVehicleVec[p].end_time_on_prev_edge = currentTime - deltaTime;
     float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
+    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
 
+
+  if (trafficVehicleVec[p].window_flag < 300) {
+      
+      if (trafficVehicleVec[p].window_flag == 0) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+//           printf("%f", trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag]);
+          trafficVehicleVec[p].window_flag++;
+      } else {
+          if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+          trafficVehicleVec[p].window_flag++;    
+        }
+      }
+    }
     // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
     // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
     if(prevEdge_d!=-1){
@@ -1443,6 +1513,30 @@ __global__ void kernel_trafficSimulation(
       trafficVehicleVec[p].LC_initOKLanes = 0xFF;
       trafficVehicleVec[p].LC_endOKLanes = 0xFF;
     } else {
+          float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+
+    // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
+    // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
+
+    if (trafficVehicleVec[p].window_flag < 300) {
+      
+      if (trafficVehicleVec[p].window_flag == 0) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+//           printf("%f", trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag]);
+          trafficVehicleVec[p].window_flag++;
+      } else {
+          if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+          // trafficVehicleVec[p].avg_speed[trafficVehicleVec[p].window_flag] = edgesData[trafficVehicleVec[p].prevEdge].length / elapsed_s;
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+//           trafficVehicleVec[p].end_time_on_prev_edge_array[trafficVehicleVec[p].window_flag] = trafficVehicleVec[p].end_time_on_prev_edge;
+          trafficVehicleVec[p].window_flag++;    
+        }
+      }
+    }
       trafficVehicleVec[p].active == 2;
     }
     trafficVehicleVec[p].indexPathCurr++;
