@@ -45,7 +45,7 @@ void B18CommandLineVersion::runB18Simulation() {
   const bool showBenchmarks = settings.value("SHOW_BENCHMARKS", false).toBool();
   int rerouteIncrementMins = settings.value("REROUTE_INCREMENT", 30).toInt(); //in minutes
   std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "od_demand_5to12.csv").toString().toStdString();
-  std::string partitionsPath = settings.value("PARTITION_FILENAME", "partitions.txt").toString().toStdString();
+  std::string partitionsPath = settings.value("PARTITION_FILENAME").toString().toStdString();
   const bool runUnitTests = settings.value("RUN_UNIT_TESTS", false).toBool();
 
   ClientGeometry cg;
@@ -68,6 +68,9 @@ void B18CommandLineVersion::runB18Simulation() {
     if (!settings.childKeys().contains(QString::fromUtf8(parameter.c_str()))) {
       std::cout << "Argument " << parameter << " is missing from command_line_options. Setting it to its default value." << std::endl;
     }
+  }
+  if (ngpus<0) {
+    throw std::invalid_argument("Invalid NUM_GPUS value.");
   }
   std::cout<<ngpus<<" gpus"<<std::endl;
   if (rerouteIncrementMins < 0){
@@ -124,9 +127,14 @@ void B18CommandLineVersion::runB18Simulation() {
   std::vector<int> partitions;
   const std::string& partitionFileName = networkPathSP + partitionsPath;
   std::ifstream infile(partitionFileName);
-  if (!infile) {
+  if (!infile || partitionsPath=="") {
+    partitions.resize(street_graph->vertex_edges_.size());
+    if(ngpus==1){
+      std::cout<<"NUM_GPUS=1. Ignore partition file"<<std::endl;
+      std::fill(partitions.begin(), partitions.end(), 0);
+    }
+    else{
         std::cerr << "Cannot open partitions file:" << partitionFileName<<" Use default eqaul division"<< std::endl;
-        partitions.resize(street_graph->vertex_edges_.size());
         // default: eqaul division
         for (int i = 0; i < ngpus; ++i) {
         int partitionSize = street_graph->vertex_edges_.size() / ngpus;
@@ -134,6 +142,7 @@ void B18CommandLineVersion::runB18Simulation() {
         int endIndex = (i == ngpus - 1) ? street_graph->vertex_edges_.size() : (i + 1) * partitionSize;
         std::fill(partitions.begin() + startIndex, partitions.begin() + endIndex, i);
         }
+      }
   }
   else {
     std::cout<< partitionFileName<<" as partition file"<<std::endl;
