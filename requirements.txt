@@ -10,6 +10,6 @@ scipy==1.10.0
 scipy==1.10.0
 seaborn==0.11.0
 termcolor==1.1.0
-tqdm==4.48.2
+tqdm==4.66.3
 xlwt==1.3.0
 xlwt==1.3.0
