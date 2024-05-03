@@ -2629,10 +2629,10 @@ void writeRouteFile(int numOfPass,
   if (routeFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving Route file..." << std::endl;
     QTextStream streamR(&routeFile);
-    streamR << "p:route:distance\n";
+    // streamR << "p:route:distance\n";
 
     for (const personPath& aPersonPath: allPathsInVertexes){
-      streamR << aPersonPath.person_id << ":[";
+      // streamR << aPersonPath.person_id << ":[";
       float distance = 0;
       for (int j = 0; j < aPersonPath.pathInVertexes.size()-1; j++){
         auto vertexFrom = aPersonPath.pathInVertexes[j];
@@ -2658,7 +2658,8 @@ void writeRouteFile(int numOfPass,
         distance += edgesData[oneEdgeInGPUFormat].length;
 
       }
-      streamR << "]:" << distance << "\n";
+      // streamR << "]:" << distance << "\n";
+      streamR <<"\n";
     }
     routeFile.close();
   }
