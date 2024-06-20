@@ -28,6 +28,7 @@
 #include <iomanip>
 #include <chrono>
 #include <ctime>
+#include <atomic>
 
 #ifndef ushort
 #define ushort uint16_t
@@ -1031,6 +1032,18 @@ __device__ void getLaneIdToLaneIdInGpuValue(int* keys, int* values,int wholeLane
     }
 }
 
+__device__ unsigned int atomicCASUchar(unsigned char* address, unsigned char old, unsigned char new_val) {
+    unsigned int* base_address = (unsigned int*)((size_t)address & ~3);
+    unsigned int long_old = *base_address;
+    unsigned int shift = ((size_t)address & 3) * 8;
+    unsigned int long_old_replaced = (long_old & ~(0xFFU << shift)) | (old << shift);// replace target byte
+    unsigned int long_new = (long_old & ~(0xFFU << shift)) | (new_val << shift);
+
+    unsigned int long_old_val = atomicCAS(base_address, long_old_replaced, long_new);
+    unsigned char old_byte = (long_old_val >> shift) & 0xFF;
+    return old_byte == old;
+}
+
  // Kernel that executes on the CUDA device
 __global__ void kernel_trafficSimulation(
   int gpuIndex,
@@ -1134,7 +1147,9 @@ __global__ void kernel_trafficSimulation(
       uchar vInMpS = (uchar) (trafficVehicleVec[p].v * 3); //speed in m/s *3 (to keep more precision
       int laneMapPosition2 = mapToWriteShift + kMaxMapWidthM * (firstEdge_d + lN) + b;
       assert(laneMapPosition2 < laneMap_d_size);
-      if(laneMap[laneMapPosition2]!=vInMpS){
+      uchar ifUpdate = atomicCASUchar(&laneMap[laneMapPosition2], -1, vInMpS); // if target position is empty, update vlue;
+      if (ifUpdate){// update successfully
+        placed = true;
         int initPar=vertexIdToPar_d[trafficVehicleVec[p].init_intersection];
         if(initPar!=gpuIndex){// if on ghost edge, copy lane data to init par
           int cursor = atomicAdd(ghostLaneCursor,4);
@@ -1143,12 +1158,18 @@ __global__ void kernel_trafficSimulation(
           ghostLaneBuffer[cursor+2]=firstEdge;// to be mapped to firstEdge_d in another gpu
           ghostLaneBuffer[cursor+3]=vInMpS;// target value
         }
+        break;
       }
-      laneMap[laneMapPosition2] = vInMpS;
-      placed = true;
-      break;
+      else{// conflict, keep waiting
+      printf("not placed: %u \n",laneMap[laneMapPosition2]);
+      }
+      // laneMap[laneMapPosition2] = vInMpS;
+      // placed = true;
+      // break;
+      
     }
     if (!placed) { //not posible to start now
+      
       return;
     }
     trafficVehicleVec[p].v = 0;
@@ -1171,7 +1192,9 @@ __global__ void kernel_trafficSimulation(
     trafficVehicleVec[p].prevEdge = firstEdge;
     return;
   }
-
+  // if(trafficVehicleVec[p].id==0){
+  //   printf("%hu %f %f %f \n",trafficVehicleVec[p].num_steps,trafficVehicleVec[p].v,currentTime,trafficVehicleVec[p].last_time_simulated);
+  // }
   bool ifPassIntersection=false;
   // set up next edge info
   uint indexCurrentEdge = trafficVehicleVec[p].indexPathCurr;
@@ -1281,6 +1304,9 @@ __global__ void kernel_trafficSimulation(
       kMaxMapWidthM *(currentEdge_d +
       (((int) (byteInLine / kMaxMapWidthM)) * edgesData[currentEdge_d].numLines) +
       trafficVehicleVec[p].numOfLaneInEdge) + b % kMaxMapWidthM;
+    // const uint posToSample = mapToReadShift +
+    //   kMaxMapWidthM *(currentEdge_d +
+    //   (ceil(edgesData[currentEdge_d].length / kMaxMapWidthM) * trafficVehicleVec[p].numOfLaneInEdge + trafficVehicleVec[p].numOfLaneInEdge)) + b % kMaxMapWidthM;
     assert(posToSample < laneMap_d_size);
     laneChar = laneMap[posToSample];
 
@@ -1289,6 +1315,7 @@ __global__ void kernel_trafficSimulation(
       s = ((float) (b - byteInLine)); //m
       delta_v = trafficVehicleVec[p].v - (laneChar / 3.0f); //laneChar is in 3*ms (to save space in array)
       found = true;
+      // printf("found1");
       // if(trafficVehicleVec[p].id==33){
       //       printf("%u %u %f \n",posToSample,laneMap[posToSample],currentTime);
       //     }
@@ -1323,6 +1350,7 @@ __global__ void kernel_trafficSimulation(
           s = ((float) (b)); //m
           delta_v = trafficVehicleVec[p].v - (laneChar / 3.0f);  // laneChar is in 3*ms (to save space in array)
           found = true;
+          // printf("found2");
           // if(trafficVehicleVec[p].id==33){
           //   printf("%u %u %f \n",posToSample,laneMap[posToSample],currentTime);
           // }
@@ -1333,7 +1361,7 @@ __global__ void kernel_trafficSimulation(
     
   }
 
-  
+  LC::B18TrafficVehicle trafficVehicle_original=trafficVehicleVec[p];
   float s_star;
   if (found && (delta_v > 0 || (delta_v==0 &&trafficVehicleVec[p].v==0))) { //car in front and slower than us
     // 2.1.2 calculate dv_dt
@@ -1361,7 +1389,7 @@ __global__ void kernel_trafficSimulation(
     dv_dt = 0.0f;
   }
   trafficVehicleVec[p].cum_v += trafficVehicleVec[p].v;
-
+  // ignore temporarily
   if (calculatePollution && ((float(currentTime) == int(currentTime)))) { // enabled and each second (assuming deltaTime 0.5f)
     const float coStep = calculateCOStep(trafficVehicleVec[p].v);
     if (coStep > 0) {
@@ -1398,8 +1426,11 @@ __global__ void kernel_trafficSimulation(
   trafficVehicleVec[p].color = p << 8;
 
   // STOP (check if it is a stop if it can go through)
+  float posInLaneM_previous = trafficVehicleVec[p].posInLaneM;
   trafficVehicleVec[p].posInLaneM = trafficVehicleVec[p].posInLaneM + numMToMove;
 
+  unsigned short LC_stateofLaneChanging_previous = trafficVehicleVec[p].LC_stateofLaneChanging;
+  unsigned short numOfLaneInEdge_previous = trafficVehicleVec[p].numOfLaneInEdge;
   //2.2 close to intersection
   //2.2 check if change intersection
   if (trafficVehicleVec[p].posInLaneM > edgesData[currentEdge_d].length) { //reach intersection
@@ -1414,7 +1445,6 @@ __global__ void kernel_trafficSimulation(
     assert(currentEdge_d < edgesData_d_size);
 
     trafficVehicleVec[p].LC_stateofLaneChanging = 0;
-
     //2.1 check if end
     if (nextEdge != END_OF_PATH) {
       assert(nextEdge_d < edgesData_d_size);
@@ -1431,8 +1461,9 @@ __global__ void kernel_trafficSimulation(
                               posInLineCells % kMaxMapWidthM;  // note the last % should not happen
 
       assert(posToSample < laneMap_d_size);
-      if(laneMap[posToSample]!=vInMpS){
-      // similiar
+
+      uchar ifUpdate = atomicCASUchar(&laneMap[posToSample], -1, vInMpS); // if target position is empty, update value
+      if (ifUpdate){// update successfully
         int prePar=vertexIdToPar_d[edgesData[nextEdge_d].prevInters];
         int nextPar=vertexIdToPar_d[edgesData[nextEdge_d].nextInters];
         assert(prePar==gpuIndex);
@@ -1443,8 +1474,19 @@ __global__ void kernel_trafficSimulation(
           ghostLaneBuffer[cursor+2]=nextEdge;// to be mapped to firstEdge_d in another gpu
           ghostLaneBuffer[cursor+3]=vInMpS;// target value
         }
-    }
-      laneMap[posToSample] = vInMpS;
+      }
+      else{ // backtracking
+      printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, nextEdge_d, currentTime);
+        trafficVehicleVec[p].cum_v -= trafficVehicleVec[p].v;
+        trafficVehicleVec[p].v -= dv_dt * deltaTime;
+        trafficVehicleVec[p].posInLaneM = posInLaneM_previous;
+        trafficVehicleVec[p].dist_traveled -= edgesData[currentEdge_d].length;
+        trafficVehicleVec[p].path_length_gpu--;
+        trafficVehicleVec[p].LC_stateofLaneChanging = LC_stateofLaneChanging_previous;
+        trafficVehicleVec[p].numOfLaneInEdge = numOfLaneInEdge_previous;
+        return;
+      }
+      // laneMap[posToSample] = vInMpS;
 
       trafficVehicleVec[p].LC_initOKLanes = 0xFF;
       trafficVehicleVec[p].LC_endOKLanes = 0xFF;
@@ -1693,8 +1735,10 @@ __global__ void kernel_trafficSimulation(
       trafficVehicleVec[p].numOfLaneInEdge) +
       posInLineCells % kMaxMapWidthM;
     assert(posToSample < laneMap_d_size);
-    if(laneMap[posToSample]!=vInMpS){
-      // when we get here, the car's next intersection must be in current gpu, because we have access to nextEdge here
+
+    uchar ifUpdate = atomicCASUchar(&laneMap[posToSample], -1, vInMpS); // if target position is empty, update value
+      if (ifUpdate){// update successfully
+         // when we get here, the car's next intersection must be in current gpu, because we have access to nextEdge here
         int prePar=vertexIdToPar_d[edgesData[currentEdge_d].prevInters];
         int nextPar=vertexIdToPar_d[edgesData[currentEdge_d].nextInters];
         assert(nextPar==gpuIndex);
@@ -1706,9 +1750,19 @@ __global__ void kernel_trafficSimulation(
           ghostLaneBuffer[cursor+2]=currentEdge;// to be mapped to currentEdge_d in another gpu
           ghostLaneBuffer[cursor+3]=vInMpS;// target value
         }
-    }
-    laneMap[posToSample] = vInMpS;
-    
+      }
+      else{ // backtracking
+        printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, currentEdge_d, currentTime);
+        trafficVehicleVec[p].cum_v -= trafficVehicleVec[p].v;
+        trafficVehicleVec[p].v -= dv_dt * deltaTime;
+        trafficVehicleVec[p].posInLaneM = posInLaneM_previous;
+        trafficVehicleVec[p].dist_traveled -= edgesData[currentEdge_d].length;
+        trafficVehicleVec[p].path_length_gpu--;
+        trafficVehicleVec[p].LC_stateofLaneChanging = LC_stateofLaneChanging_previous;
+        trafficVehicleVec[p].numOfLaneInEdge = numOfLaneInEdge_previous;
+        return;
+      }
+
   }
 
 
@@ -1729,6 +1783,7 @@ __global__ void kernel_trafficSimulation(
     
     }
   }
+  
   
     
 }
@@ -1908,7 +1963,7 @@ void remove_task(int i, std::vector<int>& ToRemove) {
         auto perm_end = thrust::make_permutation_iterator(vehicles_vec[i]->begin(), indices_from_d.end());
         thrust::copy(perm_begin, perm_end, toMove.begin());
         //move
-        thrust::scatter(thrust::device,toMove.begin(), toMove.end(), indices_to_d.begin(), vehicles_vec[i]->begin());
+        thrust::scatter(toMove.begin(), toMove.end(), indices_to_d.begin(), vehicles_vec[i]->begin());
         }
         // resize
         vehicles_vec[i]->resize(vehicles_vec[i]->size() - ToRemove_d.size());

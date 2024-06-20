@@ -128,7 +128,7 @@ void B18CommandLineVersion::runB18Simulation() {
   const std::string& partitionFileName = networkPathSP + partitionsPath;
   std::ifstream infile(partitionFileName);
   if (!infile || partitionsPath=="") {
-    partitions.resize(street_graph->vertex_edges_.size());
+    partitions.resize(street_graph->vertices_.size());
     if(ngpus==1){
       std::cout<<"NUM_GPUS=1. Ignore partition file"<<std::endl;
       std::fill(partitions.begin(), partitions.end(), 0);
