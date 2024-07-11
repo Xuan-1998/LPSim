@@ -1032,15 +1032,31 @@ __device__ void getLaneIdToLaneIdInGpuValue(int* keys, int* values,int wholeLane
     }
 }
 
+/**
+ * Performs an atomic compare-and-swap operation on a single unsigned char.
+ *
+ * Because the CUDA atomicCAS function only supports operations on unsigned ints, this function manipulates the memory 
+ * to perform the equivalent operation on an unsigned char. It does so by aligning the target unsigned char within an 
+ * unsigned int boundary, preparing a masked version of the original unsigned int, and then performing the atomicCAS 
+ * operation on the unsigned int. The specific byte within the unsigned int is targeted for the compare-and-swap based 
+ * on its offset from the aligned address. Since two cars cannot be adjacent to each other, there will only be one car
+ * in an int, so this method is feasible.
+ *
+ * @param address Pointer to the unsigned char to be compared and swapped.
+ * @param old The value to compare against the unsigned char at the specified address.
+ * @param new_val The new value to write to the address if the comparison is successful.
+ *
+ * @return Returns 1 (true) if the replacement was successful, 0 (false) otherwise.
+ */
 __device__ unsigned int atomicCASUchar(unsigned char* address, unsigned char old, unsigned char new_val) {
-    unsigned int* base_address = (unsigned int*)((size_t)address & ~3);
+    unsigned int* base_address = (unsigned int*)((size_t)address & ~3);// 4-byte align
     unsigned int long_old = *base_address;
-    unsigned int shift = ((size_t)address & 3) * 8;
-    unsigned int long_old_replaced = (long_old & ~(0xFFU << shift)) | (old << shift);// replace target byte
-    unsigned int long_new = (long_old & ~(0xFFU << shift)) | (new_val << shift);
+    unsigned int shift = ((size_t)address & 3) * 8; // get offset to base_address, multiply by 8(1 byte = 8 bits)
+    unsigned int long_old_replaced = (long_old & ~(0xFFU << shift)) | (old << shift);//  the target byte of long_old is replaced by old
+    unsigned int long_new = (long_old & ~(0xFFU << shift)) | (new_val << shift);//  the target byte of long_old is replaced by new_val
 
     unsigned int long_old_val = atomicCAS(base_address, long_old_replaced, long_new);
-    unsigned char old_byte = (long_old_val >> shift) & 0xFF;
+    unsigned char old_byte = (long_old_val >> shift) & 0xFF; // Extract the byte that was in the position of the unsigned char from the value returned by atomicCAS to check if it was indeed old.
     return old_byte == old;
 }
 
@@ -1161,7 +1177,7 @@ __global__ void kernel_trafficSimulation(
         break;
       }
       else{// conflict, keep waiting
-      printf("not placed: %u \n",laneMap[laneMapPosition2]);
+      // printf("not placed: %u \n",laneMap[laneMapPosition2]);
       }
       // laneMap[laneMapPosition2] = vInMpS;
       // placed = true;
@@ -1433,7 +1449,56 @@ __global__ void kernel_trafficSimulation(
   unsigned short numOfLaneInEdge_previous = trafficVehicleVec[p].numOfLaneInEdge;
   //2.2 close to intersection
   //2.2 check if change intersection
-  if (trafficVehicleVec[p].posInLaneM > edgesData[currentEdge_d].length) { //reach intersection
+  if (trafficVehicleVec[p].posInLaneM > edgesData[currentEdge_d].length && nextEdge != END_OF_PATH) { //seem to reach intersection
+
+      // find front car in next edge
+      found = false;
+      float s;
+      float delta_v;
+      uchar laneChar;
+      ushort numOfCells = ceil((edgesData[nextEdge_d].length - intersectionClearance)); //intersectionClearance hardcoded to 7.8f - why?
+      ushort nextEdgeLaneToBe = trafficVehicleVec[p].numOfLaneInEdge;
+      if (nextEdgeLaneToBe >= edgesData[nextEdge_d].numLines) {
+        nextEdgeLaneToBe = edgesData[nextEdge_d].numLines - 1; //change line if there are less roads
+      }
+      for (ushort b = 0; (b < numOfCells) && (!found) && (numCellsCheck > 0); b++, numCellsCheck--)  {
+        const uint posNextLane = mapToReadShift + kMaxMapWidthM * (nextEdge_d + nextEdgeLaneToBe) + b; 
+        // ShiftRead + WIDTH * (width number * # lanes + # laneInEdge) + b  TODO(pavan): WHAT IS THIS?
+        assert(posNextLane < laneMap_d_size);
+        laneChar = laneMap[posNextLane];
+        if (laneChar != 0xFF) { // there is a car between the intersection and target position in the next edge
+          s = ((float) (edgesData[currentEdge_d].length - posInLaneM_previous + b)); //m
+          delta_v = trafficVehicleVec[p].v - (laneChar / 3.0f); //laneChar is in 3*ms (to save space in array)
+          found = true;
+          noFirstInLaneBeforeSign = true; 
+          break;
+        }
+      }
+      float s_star;
+      if (found && (delta_v > 0 || (delta_v==0 &&trafficVehicleVec[p].v==0))) { //car in front and slower than us
+        s_star = simParameters.s_0 + max(0.0f,
+          (trafficVehicleVec[p].v * trafficVehicleVec[p].T + (trafficVehicleVec[p].v *
+          delta_v) / (2 * sqrtf(trafficVehicleVec[p].a * trafficVehicleVec[p].b))));
+        thirdTerm = powf(((s_star) / (s)), 2);
+      }
+      float dv_dt = trafficVehicleVec[p].a * (1.0f - std::pow((
+        trafficVehicleVec[p].v / edgesData[nextEdge_d].maxSpeedMperSec), 4) - thirdTerm);
+      numMToMove = max(0.0f, trafficVehicleVec[p].v * deltaTime + 0.5f * (dv_dt) * deltaTime * deltaTime);
+      trafficVehicleVec[p].v += dv_dt * deltaTime; 
+      if (trafficVehicleVec[p].v < 0) {
+        trafficVehicleVec[p].v = 0;
+        dv_dt = 0.0f;
+      }
+      trafficVehicleVec[p].cum_v += trafficVehicleVec[p].v;
+      trafficVehicleVec[p].posInLaneM = posInLaneM_previous + numMToMove;
+      if(trafficVehicleVec[p].posInLaneM < edgesData[currentEdge_d].length){ // not reach intersection
+        ifPassIntersection = false;
+        // printf("%d: found front vehicle on edge %u, slow down [%f]\n",trafficVehicleVec[p].id, nextEdge_d, currentTime);
+        return;
+      }
+  }
+  if (trafficVehicleVec[p].posInLaneM > edgesData[currentEdge_d].length) { //really reach intersection
+
     ifPassIntersection=true;
     numMToMove = trafficVehicleVec[p].posInLaneM - edgesData[currentEdge_d].length;
     trafficVehicleVec[p].posInLaneM = numMToMove;
@@ -1476,7 +1541,7 @@ __global__ void kernel_trafficSimulation(
         }
       }
       else{ // backtracking
-      printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, nextEdge_d, currentTime);
+      // printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, nextEdge_d, currentTime);
         trafficVehicleVec[p].cum_v -= trafficVehicleVec[p].v;
         trafficVehicleVec[p].v -= dv_dt * deltaTime;
         trafficVehicleVec[p].posInLaneM = posInLaneM_previous;
@@ -1752,7 +1817,7 @@ __global__ void kernel_trafficSimulation(
         }
       }
       else{ // backtracking
-        printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, currentEdge_d, currentTime);
+        // printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, currentEdge_d, currentTime);
         trafficVehicleVec[p].cum_v -= trafficVehicleVec[p].v;
         trafficVehicleVec[p].v -= dv_dt * deltaTime;
         trafficVehicleVec[p].posInLaneM = posInLaneM_previous;
