@@ -47,6 +47,8 @@ void B18CommandLineVersion::runB18Simulation() {
   std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "od_demand_5to12.csv").toString().toStdString();
   std::string partitionsPath = settings.value("PARTITION_FILENAME").toString().toStdString();
   const bool runUnitTests = settings.value("RUN_UNIT_TESTS", false).toBool();
+  bool busMode = settings.value("IF_BUS_MODE", false).toBool();
+  std::string busLinesPath = settings.value("BUS_SCHEDULE_FILENAME", "bus_schedules.csv").toString().toStdString();
 
   ClientGeometry cg;
   std::vector<std::string> allParameters = {"GUI", "USE_CPU", "USE_JOHNSON_ROUTING",
@@ -55,7 +57,7 @@ void B18CommandLineVersion::runB18Simulation() {
                                             "LIMIT_NUM_PEOPLE", "NUM_PASSES",
                                             "TIME_STEP", "START_HR", "END_HR",
                                             "SHOW_BENCHMARKS", "REROUTE_INCREMENT",
-                                            "OD_DEMAND_FILENAME","PARTITION_FILENAME", "NUM_GPUS","RUN_UNIT_TESTS"};
+                                            "OD_DEMAND_FILENAME","PARTITION_FILENAME", "NUM_GPUS","RUN_UNIT_TESTS", "IF_BUS_MODE", "BUS_SCHEDULE_FILENAME"};
 
   for (const auto inputedParameter: settings.childKeys()) {
     if (inputedParameter.at(0) != QChar('#') // it's a comment
@@ -169,6 +171,11 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.createB2018People(startSimulationH, endSimulationH, limitNumPeople, addRandomPeople, useSP);
   }
 
+  //read bus line paths
+  if(busMode){
+    const std::vector<std::string> bus_route = B18TrafficSP::readBusLines(busLinesPath);
+    //Todo: add specific functions in b18TrafficSimulator to read bus lines
+  }
   
   if (useCPU) {
     b18TrafficSimulator.simulateInCPU_MultiPass(numOfPasses, startSimulationH, endSimulationH,
@@ -178,7 +185,7 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
-        networkPathSP,partitions);
+        networkPathSP,partitions, busMode, busLinesPath);
   }
 
 }

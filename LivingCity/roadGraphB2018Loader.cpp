@@ -318,10 +318,12 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
   const int numPeopleIndex = headers.indexOf("PERNO");
   const int origIndex = headers.indexOf("origin");
   const int destIndex = headers.indexOf("destination");
+  const int modeIndex = headers.indexOf("mode"); // Added mode index
 
   QSet<uint64_t> noAvailableNodesDemand;
   const bool saveNoAvailableNodesDemand = true;
   totalNumPeople = 0;
+  QSet<int> uniqueModes; // QSet to store unique modes
 
   while (!streamD.atEnd()) {
     line = streamD.readLine();
@@ -346,9 +348,12 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
       }
       continue;
     }
+
     int numPeople = fields[numPeopleIndex].toInt();
+    int mode = fields[modeIndex].toInt(); // Read the mode field
     totalNumPeople += numPeople;
-    demandB2018.push_back(DemandB2018(numPeople, dynIndToInd[start], dynIndToInd[end]));
+    demandB2018.push_back(DemandB2018(numPeople, dynIndToInd[start], dynIndToInd[end], mode)); // Add mode to DemandB2018
+    uniqueModes.insert(mode); // Add mode to uniqueModes set
   }
 
   // Save no available nodes to file.
@@ -362,9 +367,10 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
     << num_vertices(inRoadGraph.myRoadGraph_BI) << " vertices, "
     << num_edges(inRoadGraph.myRoadGraph_BI) << " edges, "
     << demandB2018.size() <<  " pairs of demand and "
-    << totalNumPeople << " people in total." << std::endl;
-
+    << totalNumPeople << " people in total."
+    << " There are " << uniqueModes.size() << " unique modes of transportation." << std::endl; // Output the number of unique modes
 }
+
 
 void RoadGraphB2018::loadABMGraph(
   const std::string& networkPath,

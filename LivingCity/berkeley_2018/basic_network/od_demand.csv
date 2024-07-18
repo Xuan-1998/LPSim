@@ -1,4 +1,3 @@
-SAMPN,PERNO,origin,destination
-10001,1,10,12
-10002,2,12,10
-10002,1,1,2
+,SAMPN,PERNO,origin_osmid,destination_osmid,dep_time,origin,destination
+0,4721,1,4019009287,65295287,36555.8,211662,88718
+1,7934,1,65307354,65352417,33181.4,90072,93737

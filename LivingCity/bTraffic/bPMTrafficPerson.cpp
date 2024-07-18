@@ -213,6 +213,12 @@ void BPMTrafficPerson::randomPerson(int p, BTrafficPeople &people,
     people.T[p] = 2.0f + 3.0f * (((float)qrand()) / RAND_MAX); //time heading 2.0-3s
   }
 
+
+  if (carType == 2) { //bike car
+    people.a[p] = 0.1f + ((float)qrand()) / RAND_MAX;//acceleration .1-1.1m/s2
+    people.b[p] = 0.1f + ((float)qrand()) / RAND_MAX;//break .1-1.1m/s2
+    people.T[p] = 2.0f + 3.0f * (((float)qrand()) / RAND_MAX); //time heading 2.0-3s
+  }
   //people.a[p] *= (deltaTime*deltaTime/cellSize);//to cells/dTdT
   //people.b[p] *= (deltaTime*deltaTime/cellSize);//to cells/dTdT
   //people.T[p] *= deltaTime;// to dT
@@ -500,11 +506,12 @@ void BPMTrafficPerson::generateB2018TrafficPeople(
     int odNumPeople = RoadGraphB2018::demandB2018[d].num_people;
     uint src_vertex = RoadGraphB2018::demandB2018[d].src_vertex;
     uint tgt_vertex = RoadGraphB2018::demandB2018[d].tgt_vertex;
+    int mode = RoadGraphB2018::demandB2018[d].mode; // Get the mode
 
     for (int p = 0; p < odNumPeople; p++) {
       float goToWork = midTime + LC::misctools::genRand(start_time - midTime,
                        end_time - start_time); //6.30-9.30 /// GOOOD ONE
-      int car_type = 0; // all normal cars??
+      int car_type = mode; // Use the mode as car type or handle accordingly
 
       randomPerson(numPeople, people,
                    src_vertex, tgt_vertex, goToWork, car_type);

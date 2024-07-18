@@ -17,8 +17,10 @@ public:
   int num_people;
   int src_vertex;
   int tgt_vertex;
-  DemandB2018(int num_people, int src_vertex, int tgt_vertex): 
-    num_people(num_people), src_vertex(src_vertex), tgt_vertex(tgt_vertex) {}
+  int mode; // Add mode field
+
+  DemandB2018(int num_people, int src_vertex, int tgt_vertex, int mode) 
+    : num_people(num_people), src_vertex(src_vertex), tgt_vertex(tgt_vertex), mode(mode) {}
 };
 
 /**
