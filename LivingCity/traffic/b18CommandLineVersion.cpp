@@ -173,8 +173,42 @@ void B18CommandLineVersion::runB18Simulation() {
 
   //read bus line paths
   if(busMode){
-    const std::vector<std::string> bus_route = B18TrafficSP::readBusLines(busLinesPath);
-    //Todo: add specific functions in b18TrafficSimulator to read bus lines
+    std::ifstream file(busLinesPath);
+    std::string line;std::vector<std::string> trip_id;
+    std::getline(file, line);
+
+    std::vector<std::string> trip_id;
+    std::vector<std::string> block_id;
+    std::vector<std::string> direction_id;
+    std::vector<std::string> shape_id;
+    std::vector<std::string> route_id;
+    std::vector<std::string> route_short_name;
+    std::vector<std::string> departure_time;
+    std::vector<std::string> osmid;
+
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string value;
+
+        // 读取每一列的数据并存储到对应的向量中
+        std::getline(ss, value, ',');
+        trip_id.push_back(value);
+        std::getline(ss, value, ',');
+        block_id.push_back(value);
+        std::getline(ss, value, ',');
+        direction_id.push_back(value);
+        std::getline(ss, value, ',');
+        shape_id.push_back(value);
+        std::getline(ss, value, ',');
+        route_id.push_back(value);
+        std::getline(ss, value, ',');
+        route_short_name.push_back(value);
+        std::getline(ss, value, ',');
+        departure_time.push_back(value);
+        std::getline(ss, value, ',');
+        osmid.push_back(value);
+    }
+    //Todo: put the specific functions in b18TrafficSimulator to read bus lines.
   }
   
   if (useCPU) {
