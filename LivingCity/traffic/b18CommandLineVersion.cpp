@@ -184,7 +184,7 @@ void B18CommandLineVersion::runB18Simulation() {
     std::vector<std::string> route_id;
     std::vector<std::string> route_short_name;
     std::vector<std::string> departure_time;
-    std::vector<std::string> osmid;
+    std::vector<std::string> bus_osmid;
 
     while (std::getline(file, line)) {
         std::stringstream ss(line);
@@ -206,7 +206,7 @@ void B18CommandLineVersion::runB18Simulation() {
         std::getline(ss, value, ',');
         departure_time.push_back(value);
         std::getline(ss, value, ',');
-        osmid.push_back(value);
+        bus_osmid.push_back(value);
     }
     //Todo: put the specific functions in b18TrafficSimulator to read bus lines.
   }

@@ -277,8 +277,22 @@ const std::vector<abm::graph::edge_id_t> B18TrafficSP::loadPrevPathsFromFile(
   return const_paths_SP;
 }
 
+//merge multi path into one path
+std::vector<abm::graph::edge_id_t> B18TrafficSP::mergePaths(
+    const std::vector<std::vector<abm::graph::edge_id_t>>& paths) {
+    
+    std::vector<abm::graph::edge_id_t> mergedPath;
+    
+    for (const auto& path : paths) {
+        mergedPath.insert(mergedPath.end(), path.begin(), path.end());
+    }
+    
+    return mergedPath;
+}
+
 std::vector<personPath> B18TrafficSP::RoutingWrapper (
-  const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs_,
+  const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets
+  //const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs_,
   const std::shared_ptr<abm::Graph>& street_graph,
   const std::vector<float>& dep_times,
   const float currentBatchStartTimeSecs,
@@ -286,53 +300,65 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const int reroute_batch_number,
   std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle) {
 
-  if (all_od_pairs_.size() != dep_times.size())
-    throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
+  for (const auto& all_od_pairs_ : all_od_pairs_sets) {
+      if (all_od_pairs_.size() != dep_times.size())
+        throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
+    }
+
+  //if (all_od_pairs_.size() != dep_times.size())
+  //  throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
   
-  std::vector<abm::graph::vertex_t> filtered_od_pairs_sources_;
-  std::vector<abm::graph::vertex_t> filtered_od_pairs_targets_;
-  std::vector<float> filtered_dep_times_;
-
-  //filter the next set of od pair/departures in the next increment
-  std::vector<uint> pathsOrder;
-  B18TrafficSP::filterODByTimeRange(all_od_pairs_,
-                                    dep_times,
-                                    currentBatchStartTimeSecs,
-                                    currentBatchEndTimeSecs,
-                                    filtered_od_pairs_sources_,
-                                    filtered_od_pairs_targets_,
-                                    filtered_dep_times_,
-                                    pathsOrder);
-  
-  std::cout << "Simulating trips with dep_time between "
-    << convertSecondsToTime(currentBatchStartTimeSecs)
-    << "(" << currentBatchStartTimeSecs / 60 << " in minutes)"
-    << " and " << convertSecondsToTime(currentBatchEndTimeSecs)
-    << "(" << currentBatchEndTimeSecs / 60 << " in minutes)" << std::flush;
-  std::cout << ". Trips in this time range: " << filtered_od_pairs_sources_.size() << "/" << dep_times.size() << std::endl;
-
-  std::vector<std::vector<long>> edges_routing;
-  std::vector<std::vector<double>> edge_weights_routing;
-  B18TrafficSP::edgePreprocessingForRouting(edges_routing, edge_weights_routing, street_graph);
-
-  Benchmarker routingCH("Routing_CH_batch_" + std::to_string(reroute_batch_number), true);
-  routingCH.startMeasuring();
-  //MTC::accessibility::Accessibility *graph_ch = new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(), edges_routing, edge_weights_routing, false);
-   std::unique_ptr<MTC::accessibility::Accessibility> graph_ch(
-    new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
-    edges_routing, edge_weights_routing, false));
-  std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
-  routingCH.stopAndEndBenchmark();
-
-  std::cout << "# of paths = " << paths_ch.size() << std::endl;
-
+  // 初始化存储所有合并后的路径
   std::vector<personPath> currentBatchPaths;
-  currentBatchPaths.reserve(paths_ch.size());
-  for (int i = 0; i < paths_ch.size(); i++){
-    personPath aPersonPath;
-    aPersonPath.person_id = pathsOrder.at(i);
-    aPersonPath.pathInVertexes = paths_ch.at(i);
-    currentBatchPaths.push_back(aPersonPath);
+  
+  for (const auto& all_od_pairs_ : all_od_pairs_sets) {
+    std::vector<abm::graph::vertex_t> filtered_od_pairs_sources_;
+    std::vector<abm::graph::vertex_t> filtered_od_pairs_targets_;
+    std::vector<float> filtered_dep_times_;
+
+    //filter the next set of od pair/departures in the next increment
+    std::vector<uint> pathsOrder;
+    B18TrafficSP::filterODByTimeRange(all_od_pairs_,
+                                      dep_times,
+                                      currentBatchStartTimeSecs,
+                                      currentBatchEndTimeSecs,
+                                      filtered_od_pairs_sources_,
+                                      filtered_od_pairs_targets_,
+                                      filtered_dep_times_,
+                                      pathsOrder);
+    
+    std::cout << "Simulating trips with dep_time between "
+      << convertSecondsToTime(currentBatchStartTimeSecs)
+      << "(" << currentBatchStartTimeSecs / 60 << " in minutes)"
+      << " and " << convertSecondsToTime(currentBatchEndTimeSecs)
+      << "(" << currentBatchEndTimeSecs / 60 << " in minutes)" << std::flush;
+    std::cout << ". Trips in this time range: " << filtered_od_pairs_sources_.size() << "/" << dep_times.size() << std::endl;
+
+    std::vector<std::vector<long>> edges_routing;
+    std::vector<std::vector<double>> edge_weights_routing;
+    B18TrafficSP::edgePreprocessingForRouting(edges_routing, edge_weights_routing, street_graph);
+
+    Benchmarker routingCH("Routing_CH_batch_" + std::to_string(reroute_batch_number), true);
+    routingCH.startMeasuring();
+    //MTC::accessibility::Accessibility *graph_ch = new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(), edges_routing, edge_weights_routing, false);
+    std::unique_ptr<MTC::accessibility::Accessibility> graph_ch(
+      new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
+      edges_routing, edge_weights_routing, false));
+    std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
+    routingCH.stopAndEndBenchmark();
+
+    std::cout << "# of paths = " << paths_ch.size() << std::endl;
+
+    std::vector<abm::graph::edge_id_t> mergedPath = B18TrafficSP::mergePaths(paths_ch);
+
+    
+    currentBatchPaths.reserve(paths_ch.size());
+    for (int i = 0; i < paths_ch.size(); i++){
+      personPath aPersonPath;
+      aPersonPath.person_id = pathsOrder.at(i);
+      aPersonPath.pathInVertexes = mergedPath;
+      currentBatchPaths.push_back(aPersonPath);
+    }
   }
 
   return currentBatchPaths;
