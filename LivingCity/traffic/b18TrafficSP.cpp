@@ -99,6 +99,65 @@ void B18TrafficSP::read_od_pairs_from_structure(
   }
 }
 
+std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> B18TrafficSP::read_od_pairs_from_file(
+  const std::string& filename,
+  const float startSimulationH,
+  const float endSimulationH,
+  const int nagents) {
+  
+  std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> all_od_pairs_sets;
+  csvio::CSVReader<3> in(filename);
+  in.read_header(csvio::ignore_extra_column, "dep_time", "origin", "destination");
+  abm::graph::vertex_t v1, v2;
+  abm::graph::weight_t weight;
+  float dep_time;
+  int count_outside_filter = 0;
+
+  while (in.read_row(dep_time, v1, v2)) {
+    if (dep_time >= startSimulationH * 3600 && dep_time < endSimulationH * 3600) {
+      std::array<abm::graph::vertex_t, 2> od = {v1, v2};
+      
+      // 找到合适的集合
+      bool found = false;
+      for (auto& od_pairs : all_od_pairs_sets) {
+        if (!od_pairs.empty() && od_pairs.back()[1] == v1) {
+          od_pairs.emplace_back(od);
+          found = true;
+          break;
+        }
+      }
+      
+      // 如果没有找到合适的集合，则创建一个新的集合
+      if (!found) {
+        std::vector<std::array<abm::graph::vertex_t, 2>> new_od_pairs = {od};
+        all_od_pairs_sets.push_back(new_od_pairs);
+      }
+      
+      RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2)); // 每个OD对只有一个人
+    } else {
+      count_outside_filter++;
+    }
+  }
+
+  if (count_outside_filter > 0) {
+    std::cout << "WARNING: Filtering " << count_outside_filter << " trips outside the input time range." << std::endl;
+  }
+
+  RoadGraphB2018::totalNumPeople = RoadGraphB2018::demandB2018.size();
+  
+  // 如果指定了 nagents，则对每个OD对集合进行裁剪
+  if (nagents != std::numeric_limits<int>::max()) {
+    for (auto& od_pairs : all_od_pairs_sets) {
+      if (od_pairs.size() > nagents) {
+        od_pairs.resize(nagents);
+      }
+    }
+  }
+
+  return all_od_pairs_sets;
+}
+
+/*
 // Read OD pairs file format
 std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::read_od_pairs_from_file(
   const std::string& filename,
@@ -129,6 +188,7 @@ std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::read_od_pairs_fro
     od_pairs.resize(nagents);
   return od_pairs;
 }
+*/
 
 // Read OD pairs file format
 std::vector<float> B18TrafficSP::read_dep_times(

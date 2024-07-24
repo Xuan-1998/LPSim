@@ -155,13 +155,14 @@ void B18CommandLineVersion::runB18Simulation() {
     infile.close();
   }
   loadODDemandData.startMeasuring();
-  const std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_ = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
+  const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
+  //const std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_ = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
   const std::vector<float> dep_times = B18TrafficSP::read_dep_times(odFileName, startSimulationH, endSimulationH);
   loadODDemandData.stopAndEndBenchmark();
   
   if (useSP) {
 	  //make the graph from edges file and load the OD demand from od file
-	  printf("# of OD pairs = %d\n", all_od_pairs_.size());
+	  printf("# of OD pairs = %d\n", all_od_pairs_sets.size());
     const float startTimeMins = startSimulationH * 60;
     const float endTimeMins = startTimeMins + rerouteIncrementMins;
     std::cout << "startTime: " << startTimeMins << ", endTime: " << endTimeMins << std::endl;
@@ -218,7 +219,7 @@ void B18CommandLineVersion::runB18Simulation() {
 	  //if useSP, convert all_paths to indexPathVec format and run simulation
     b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
-        rerouteIncrementMins, all_od_pairs_, dep_times,
+        rerouteIncrementMins, all_od_pairs_sets, dep_times,
         networkPathSP,partitions, busMode, busLinesPath);
   }
 
