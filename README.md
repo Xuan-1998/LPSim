@@ -316,9 +316,10 @@ This repository and code have been developed and maintained by Xuan Jiang, Jiayi
 
 If this code is used in any shape or form for your project, please cite this paper accordingly:
 
-Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., ... (2023). Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey. *Journal of Air Transportation*, 1-11. Available: [https://arc.aiaa.org/doi/10.2514/1.D0431](https://arc.aiaa.org/doi/10.2514/1.D0431)
+Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., Sengupta, R. (2023). Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey. *Journal of Air Transportation*, 1-11. Available: [https://arc.aiaa.org/doi/10.2514/1.D0431](https://arc.aiaa.org/doi/10.2514/1.D0431)
 
 Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2023). LPSim: Large Scale Multi-GPU Parallel Computing based Regional Scale Traffic Simulation Framework. *arXiv preprint arXiv:2406.08496*. Available: [https://arxiv.org/abs/2406.08496](https://arxiv.org/abs/2406.08496)
+
 
 
 Thank you!
