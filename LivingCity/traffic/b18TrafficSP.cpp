@@ -95,7 +95,8 @@ void B18TrafficSP::read_od_pairs_from_structure(
   for(const auto & od_pair: od_pairs) {
     auto v1 = od_pair[0];
     auto v2 = od_pair[1];
-    RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2));
+    // use 2 currently to represent the buss mode
+    RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2, 2));
   }
 }
 
@@ -133,7 +134,7 @@ std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> B18TrafficSP::read
         all_od_pairs_sets.push_back(new_od_pairs);
       }
       
-      RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2)); // 每个OD对只有一个人
+      RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2, 2)); // 每个OD对只有一个人
     } else {
       count_outside_filter++;
     }
@@ -351,7 +352,7 @@ std::vector<abm::graph::edge_id_t> B18TrafficSP::mergePaths(
 }
 
 std::vector<personPath> B18TrafficSP::RoutingWrapper (
-  const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets
+  const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets,
   //const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs_,
   const std::shared_ptr<abm::Graph>& street_graph,
   const std::vector<float>& dep_times,

@@ -155,7 +155,8 @@ void B18CommandLineVersion::runB18Simulation() {
     infile.close();
   }
   loadODDemandData.startMeasuring();
-  const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
+  const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH, limitNumPeople);
+  //const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
   //const std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_ = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
   const std::vector<float> dep_times = B18TrafficSP::read_dep_times(odFileName, startSimulationH, endSimulationH);
   loadODDemandData.stopAndEndBenchmark();
@@ -178,7 +179,6 @@ void B18CommandLineVersion::runB18Simulation() {
     std::string line;std::vector<std::string> trip_id;
     std::getline(file, line);
 
-    std::vector<std::string> trip_id;
     std::vector<std::string> block_id;
     std::vector<std::string> direction_id;
     std::vector<std::string> shape_id;
@@ -220,7 +220,7 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_sets, dep_times,
-        networkPathSP,partitions, busMode, busLinesPath);
+        networkPathSP,partitions, busMode);
   }
 
 }

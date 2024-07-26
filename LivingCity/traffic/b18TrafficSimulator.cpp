@@ -210,8 +210,8 @@ void savePaths(const std::vector<personPath>& paths, const std::string& filename
 void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, const float startTimeH, const float endTimeH,
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters,
-    const int rerouteIncrementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
-    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, const bool busMode, const std::string) {
+    const int rerouteIncrementMins, const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets, //const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
+    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, const bool busMode) {
   
   std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
   std::vector<uchar> laneMap_n[ngpus];
@@ -419,7 +419,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
       float currentBatchStartTimeSecs = startTimeSecs + increment_index * rerouteIncrementMins * 60;
       float currentBatchEndTimeSecs = startTimeSecs + (increment_index + 1) * rerouteIncrementMins * 60;
 
-      auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs, graph_, dep_times,
+      auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs_sets, graph_, dep_times,
                                             currentBatchStartTimeSecs, currentBatchEndTimeSecs,
                                             (const int) increment_index, trafficVehicleVec);
     
