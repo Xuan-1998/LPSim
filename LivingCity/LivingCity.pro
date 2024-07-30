@@ -181,6 +181,11 @@ unix {
   # Cuda sources
   CUDA_SOURCES += traffic/b18CUDA_trafficSimulator.cu
   # Path to cuda toolkit install
+  exists("/usr/local/cuda-12.3") {
+    CUDA_DIR = /usr/local/cuda-12.3
+    message("Found CUDA 12.3 installation, using CUDA 12.3.")
+  } 
+  else{
   exists("/usr/local/cuda-11.2") {
     CUDA_DIR = /usr/local/cuda-11.2
     message("Found CUDA 11.2 installation, using CUDA 11.2.")
@@ -193,6 +198,7 @@ unix {
       message("CUDA 11.2 or 10.1 not found, defaulting to 9.0 instead.")
     }
   }
+}
   #CUDA_DIR = /usr/local/cuda-11.2
   INCLUDEPATH += $$CUDA_DIR/include
   QMAKE_LIBDIR += $$CUDA_DIR/lib64
@@ -207,8 +213,8 @@ unix {
   # join the includes in a line
   CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
   cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -O2 -arch=$$CUDA_ARCH -c $$NVCCFLAGS $$CUDA_INC $$LIBS ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
-  cuda.dependcy_type = TYPE_C
-  cuda.depend_command = $$CUDA_DIR/bin/nvcc -O2 -M $$CUDA_INC $$NVCCFLAGS      ${QMAKE_FILE_NAME}
+  cuda.dependency_type = TYPE_C
+  cuda.depend_command = $$CUDA_DIR/bin/nvcc -O2 -M $$CUDA_INC $$NVCCFLAGS ${QMAKE_FILE_NAME}  | sed \"s/^.*: //\"
 
   cuda.input = CUDA_SOURCES
   cuda.output = ${OBJECTS_DIR}${QMAKE_FILE_BASE}_cuda.o

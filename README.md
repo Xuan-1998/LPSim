@@ -277,7 +277,7 @@ docker run -it your-dockerhub-username/lpsim:latest /bin/bash
 ## multiple GPUs
 ![One_GPU_VS_Multiple drawio](https://github.com/Xuan-1998/LPSim/assets/58761221/6b9c36c0-488d-47a5-ab9e-d3bf0609bde4)
 
-/usr/local/cuda-11.2/bin/nvcc -m64 -O3 -arch=sm_50 -c --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr -I/usr/include/opencv4/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/usr/include -I/usr/include/pandana/src -I/usr/local/cuda-11.2/include  -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl -L/usr/include/pandana/src -lchrouting -lcudart -lcuda -lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o LivingCity/obj/b18CUDA_trafficSimulator_cuda.o
+/usr/local/cuda-12.3/bin/nvcc -m64 -O2 -arch=sm_80 -c --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr -I/usr/include/opencv4/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/lpsim/LivingCity/glew/include/ -I/usr/include/pandana/src -I/usr/local/cuda-12.3/include  -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl -L/usr/include/pandana/src -lchrouting -lcudart -lcuda -lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o ${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o
 
 ## Running on gcloud
 curl https://raw.githubusercontent.com/GoogleCloudPlatform/compute-gpu-installation/main/linux/install_gpu_driver.py --output install_gpu_driver.py
@@ -316,11 +316,11 @@ This repository and code have been developed and maintained by Xuan Jiang, Jiayi
 
 If this code is used in any shape or form for your project, please cite this paper accordingly:
 
-Jiang, X., Agerup, J. F., & Tang, Y. (2023, May 11). Benchmarking and preparing LPSim for scalability on multiple GPUs. Retrieved from osf.io/ezjrc, Available: [https://osf.io/ezjrc/](https://osf.io/ezjrc/).
+Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., Sengupta, R. (2023). Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey. *Journal of Air Transportation*, 1-11. Available: [https://arc.aiaa.org/doi/10.2514/1.D0431](https://arc.aiaa.org/doi/10.2514/1.D0431)
 
-and 
+Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2023). LPSim: Large Scale Multi-GPU Parallel Computing based Regional Scale Traffic Simulation Framework. *arXiv preprint arXiv:2406.08496*. Available: [https://arxiv.org/abs/2406.08496](https://arxiv.org/abs/2406.08496)
 
-Jiang, X., Tang, Y., Tang, Z., Cao, J., Bulusu, V., Poliziani, C., & Sengupta, R. (2023). Simulating the Integration of Urban Air Mobility into Existing Transportation Systems: A Survey. Available:  [arXiv preprint arXiv:2301.12901.](https://arxiv.org/abs/2301.12901)
+
 
 Thank you!
 

@@ -1,13 +1,19 @@
+
 # ========== OpenCV subimage ==========
 FROM gcr.io/blissful-jet-303616/opencv:v4 AS opencvbuilder
-
+ARG DEBIAN_FRONTEND=noninteractive
 # ========== Pandana subimage ==========
-FROM ubuntu:18.04 AS pandanabuilder
+
+FROM ubuntu:20.04 AS pandanabuilder
+ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/include/
 
 RUN apt update && \
-    apt install -y qtchooser \
+    apt install -y \
+    dialog \
+    apt-utils \
+    qtchooser \
     qt5-default \
     libglew-dev \
     build-essential \
@@ -15,7 +21,7 @@ RUN apt update && \
     mesa-common-dev \
     wget \
     pciutils \
-    git
+    git 
 
 RUN git clone https://github.com/UDST/pandana
 
@@ -26,8 +32,8 @@ WORKDIR /usr/include/pandana/src
 RUN make
 
 # ========== MANTA image ==========
-FROM nvidia/cuda:11.2.0-devel-ubuntu18.04 as mantabuilder
-
+FROM nvidia/cuda:12.3.1-devel-ubuntu20.04 as mantabuilder
+ARG DEBIAN_FRONTEND=noninteractive
 COPY --from=opencvbuilder /usr/include/opencv4/ /usr/include/opencv4/
 
 COPY --from=opencvbuilder /usr/lib/x86_64-linux-gnu/libopencv_core.* /usr/lib/x86_64-linux-gnu/
@@ -52,15 +58,16 @@ RUN wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.t
     tar xf boost_1_59_0.tar.gz -C /usr/local
 
 # CUDA paths
-ENV PATH="/usr/local/cuda-11.2/bin:${PATH}"
-ENV LIBRARY_PATH="/usr/local/cuda-11.2/lib64:${LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="/usr/local/cuda-11.2/lib64:${LD_LIBRARY_PATH}"
+ENV PATH="/usr/local/cuda-12.3.1/bin:${PATH}"
+ENV LIBRARY_PATH="/usr/local/cuda-12.3.1/lib64:${LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/cuda-12.3.1/lib64:${LD_LIBRARY_PATH}"
 
 # Pandana path
 ENV LD_LIBRARY_PATH="/usr/include/pandana/src:${LD_LIBRARY_PATH}"
 
 # Python libraries
-RUN apt install python3-pip -y
+RUN apt update && apt install python3-pip -y
+RUN apt install gdb cuda-nsight-systems-12-3 cuda-nsight-compute-12-3 -y
 
 ADD . ./
 
