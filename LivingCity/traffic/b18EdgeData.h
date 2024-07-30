@@ -10,6 +10,7 @@
 #define LC_B18_EDGE_DATA_H
 
 #include "stdint.h"
+#include "b18GeneralStruct.h"
 
 #ifndef ushort
 #define ushort uint16_t
@@ -40,11 +41,17 @@ struct B18EdgeData {
 };
 
 struct B18IntersectionData {
+  int id; // is it possible to add a GUID
   ushort state;
   ushort stateLine;
   ushort totalInOutEdges;
   uint edge[24];// up to six arms intersection
   float nextEvent;
+  LList passengers;
+  // B18TrafficPerson* persons;
+  // ushort numPersonsWaiting;
+  // might be better to use a dictionary like structure, for different bus lines
+  LList busLines;
 };
 }
 

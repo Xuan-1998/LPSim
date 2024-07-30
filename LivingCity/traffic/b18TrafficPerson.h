@@ -11,7 +11,14 @@
 #ifndef LC_B18_TRAFFIC_PERSON_H
 #define LC_B18_TRAFFIC_PERSON_H
 
+#include "b18GeneralStruct.h"
+
 namespace LC {
+
+const unsigned short maxBusCapacity = 30;
+const unsigned short maxTranferPoints = 5;
+// Do we need to add a waiting time at every bus stop?, 
+const unsigned short busWaitingTime = 10; // calculated from passengers getting in and out of the bus
 
 struct B18TrafficVehicle {
   int id;
@@ -69,6 +76,11 @@ struct B18TrafficVehicle {
   unsigned short LC_endOKLanes;
   unsigned short LC_stateofLaneChanging;
 
+  // vehicle type
+  unsigned short busLine; // 0 if it's auto, 1,2,3,4,5 if it's bus
+  Dict passengers; // a list of persons, key is the intersection id, value is the list of persons to drop off
+  unsigned short num_passengers; // how many persons are there in the bus  
+
   int isInIntersection;
   bool operator==(const B18TrafficVehicle& other) const {
         return id == other.id &&
@@ -113,10 +125,24 @@ struct B18TrafficVehicle {
                isInIntersection == other.isInIntersection;
     }
 };
+
 struct B18TrafficVehicleModify{
   bool ifToCopy;
   bool ifToRemove;
   int gpuIndexToCopy;
+};
+
+// Next bus it should take and the intersection it should drop off
+struct B18TrafficTransferPoint{
+  int intersectionId;
+  unsigned short busLine;
+  B18TrafficTransferPoint* next;
+};
+
+struct B18TrafficPerson{
+  int id;
+  // Manage as a queue, pop the first element every time it has been transfered
+  B18TrafficTransferPoint* possibleBusLines; // buslines: -1 if reached the destination, 0 if auto, 1,2,3,4,5 if bus
 };
 }
 

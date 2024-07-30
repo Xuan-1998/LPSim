@@ -1068,6 +1068,7 @@ __global__ void kernel_trafficSimulation(
   uint mapToReadShift,
   uint mapToWriteShift,
   LC::B18TrafficVehicle *trafficVehicleVec,
+  LC::B18TrafficPerson *trafficPerson,
   uint *indexPathVec,
   uint indexPathVec_d_size,
   LC::B18EdgeData* edgesData,
@@ -1517,9 +1518,92 @@ __global__ void kernel_trafficSimulation(
         trafficVehicleVec[p].numOfLaneInEdge = edgesData[nextEdge_d].numLines - 1; //change line if there are less roads
       }
 
+      /*
+      Below is the logic of multi-mode transfer
+      */
+
+      int passengers_get_off = 0, passengers_get_on = 0;
+      LC::B18IntersectionData intersection = intersections[edgesData[nextEdge_d].nextIntersMapped]; //FIXME: nextInters?
+
+      // Check if the bus stop is going to stop at the intersection
+      bool ifStop = false;
+      LC::Node* intersectionNode = trafficVehicleVec[p].passengers.find(intersection.id);
+
+      if(intersectionNode) ifStop = true; // If there is anyone to get off
+      else if(trafficVehicleVec[p].busLine > 0){ // If it's a bus and it's a stop
+        LC::LNode* node = intersection.busLines.head;
+        while(node){
+          if(node->data == trafficVehicleVec[p].busLine){
+            ifStop = true;
+            break;
+          }
+          node = node->next;
+        }
+      }
+
+      if(ifStop){
+        /*Passengers from bus to the intersection*/
+        // Check if there are passengers to get off at the intersection
+        if(intersectionNode){
+          // Remove passengers from the bus
+          passengers_get_off += trafficVehicleVec[p].passengers.remove(intersection.id);
+          // Add passengers to the intersection
+          LC::LNode* passengers = intersectionNode->values;
+          while(passengers){
+            unsigned short nextBusline = trafficPerson[passengers->data].possibleBusLines->busLine;
+            if(nextBusline < 0){
+              // finish trip
+            }
+            else if(nextBusline == 0){
+              // FIXME: transfter to a new auto, append to the array of trafficVehicleVec
+            }
+            else{
+              // transfer to next bus
+              intersections[edgesData[nextEdge_d].nextIntersMapped].passengers.append(passengers->data);
+              // FIXME: update trafficPerson[passengers->data].possibleBusLines
+            }
+            passengers = passengers->next;
+          }
+        }
+        
+        /*Passengers from intersection to the bus*/
+        LC::LNode* passengers = intersection.passengers.head;
+        LC::LNode* previousPassenger = NULL;
+        LC::LNode* nextPassenger = NULL;
+        while(passengers){
+          LC::B18TrafficTransferPoint* possibleBusLines = trafficPerson[passengers->data].possibleBusLines;
+          while(possibleBusLines){
+            if(possibleBusLines->busLine == trafficVehicleVec[p].busLine){
+              // Add passenger to the bus
+              trafficVehicleVec[p].passengers.append(possibleBusLines->intersectionId, passengers->data);
+              // Remove passenger from the linked list
+              if(previousPassenger == NULL) {
+                intersection.passengers.head = passengers->next;
+              } else {
+                previousPassenger->next = passengers->next;
+              }
+              nextPassenger = passengers->next;
+              delete passengers;
+              passengers_get_on += 1;
+              break;
+            }
+            possibleBusLines = possibleBusLines->next;
+          }
+
+          if(possibleBusLines == NULL) {
+            previousPassenger = passengers;
+            passengers = passengers->next;
+          } else {
+            passengers = nextPassenger;
+          }
+        }
+        // FIXME: Update the departure time of the bus
+      }
+
       //TODO: Test if the following line is doing the conversion wrong
       uchar vInMpS = (uchar) (trafficVehicleVec[p].v * 3); //speed in m/s to fit in uchar
       ushort posInLineCells = (ushort) (trafficVehicleVec[p].posInLaneM);
+
       const uint posToSample = mapToWriteShift + kMaxMapWidthM *
                               (nextEdge_d + (((int) (posInLineCells / kMaxMapWidthM)) *
                               edgesData[nextEdge_d].numLines) + trafficVehicleVec[p].numOfLaneInEdge) +
