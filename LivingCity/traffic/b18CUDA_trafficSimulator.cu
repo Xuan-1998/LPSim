@@ -1642,8 +1642,6 @@ __global__ void kernel_trafficSimulation(
             else{
               // transfer to next bus
               appendL(&(intersections[edgesData[nextEdge_d].nextIntersMapped].passengers), passengers->data);
-              // FIXME: update trafficPerson[passengers->data].possibleBusLines
-              // out: B18TrafficTransferPoint
             }
             passengers = passengers->next;
           }
@@ -1659,6 +1657,9 @@ __global__ void kernel_trafficSimulation(
             if(possibleBusLines->busLine == trafficVehicleVec[p].busLine){
               // Add passenger to the bus
               append(&trafficVehicleVec[p].passengers, possibleBusLines->intersectionId, passengers->data);
+              // FIXME: update trafficPerson[passengers->data].possibleBusLines
+              // out: B18TrafficTransferPoint
+              
               // Remove passenger from the linked list
               if(previousPassenger == NULL) {
                 intersection.passengers = passengers->next;
