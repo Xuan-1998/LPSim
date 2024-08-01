@@ -47,11 +47,8 @@ struct B18IntersectionData {
   ushort totalInOutEdges;
   uint edge[24];// up to six arms intersection
   float nextEvent;
-  LList passengers;
-  // B18TrafficPerson* persons;
-  // ushort numPersonsWaiting;
-  // might be better to use a dictionary like structure, for different bus lines
-  LList busLines;
+  LNode* passengers;
+  LNode* busLines;
 };
 }
 

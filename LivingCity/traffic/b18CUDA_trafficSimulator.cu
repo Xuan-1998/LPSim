@@ -1032,6 +1032,88 @@ __device__ void getLaneIdToLaneIdInGpuValue(int* keys, int* values,int wholeLane
     }
 }
 
+__device__ LC::Node* find(LC::Node* head, int key) {
+  LC::Node* curr = head;
+  while (curr) {
+      if (curr->key == key) return curr;
+      curr = curr->next;
+  }
+  return nullptr;
+}
+
+__device__ void append(LC::Node** head, int key, int value) {
+  LC::Node* node = find(*head, key);
+  if (!node) {
+      node = new LC::Node;
+      node->key = key;
+      node->next = *head;
+      *head = node;
+  }
+  LC::LNode* newNode = new LC::LNode;
+  newNode->data = value;
+  newNode->next = nullptr;
+  if (!node->values) {
+      node->values = newNode;
+  } else {
+      LC::LNode* curr = node->values;
+      while (curr->next) {
+          curr = curr->next;
+      }
+      curr->next = newNode;
+  }
+}
+
+__device__ void insert(LC::Node** head, int key, int* values, int valuesSize) {
+  LC::Node* node = find(*head, key);
+  if (!node) {
+      node = new LC::Node;
+      node->key = key;
+      node->next = *head;
+      *head = node;
+  }
+  node->values = nullptr;
+  for (int i = 0; i < valuesSize; ++i) {
+      append(head, key, values[i]);
+  }
+}
+
+__device__ int remove(LC::Node** head, int key) {
+  LC::Node** pp = head;
+  while (*pp) {
+      if ((*pp)->key == key) {
+          LC::Node* temp = *pp;
+          *pp = (*pp)->next;
+          LC::LNode* curr = temp->values;
+          int count = 0;
+          while (curr) {
+              LC::LNode* next = curr->next;
+              delete curr;
+              curr = next;
+              count++;
+          }
+          delete temp;
+          return count;
+      }
+      pp = &(*pp)->next;
+  }
+  return 0;
+}
+
+__device__ void appendL(LC::LNode** head, int val) {
+  LC::LNode* new_node = new LC::LNode();
+  new_node->data = val;
+  new_node->next = NULL;
+  if(*head == NULL) {
+      *head = new_node;
+  } else {
+      LC::LNode* temp = *head;
+      while(temp->next != NULL) {
+          temp = temp->next;
+      }
+      temp->next = new_node;
+  }
+}
+
 /**
  * Performs an atomic compare-and-swap operation on a single unsigned char.
  *
@@ -1523,15 +1605,15 @@ __global__ void kernel_trafficSimulation(
       */
 
       int passengers_get_off = 0, passengers_get_on = 0;
-      LC::B18IntersectionData intersection = intersections[edgesData[nextEdge_d].nextIntersMapped]; //FIXME: nextInters?
+      LC::B18IntersectionData intersection = intersections[edgesData[nextEdge_d].nextIntersMapped]; //nextInters
 
       // Check if the bus stop is going to stop at the intersection
       bool ifStop = false;
-      LC::Node* intersectionNode = trafficVehicleVec[p].passengers.find(intersection.id);
+      LC::Node* intersectionNode = find(trafficVehicleVec[p].passengers, intersection.id);
 
       if(intersectionNode) ifStop = true; // If there is anyone to get off
       else if(trafficVehicleVec[p].busLine > 0){ // If it's a bus and it's a stop
-        LC::LNode* node = intersection.busLines.head;
+        LC::LNode* node = intersection.busLines;
         while(node){
           if(node->data == trafficVehicleVec[p].busLine){
             ifStop = true;
@@ -1546,28 +1628,29 @@ __global__ void kernel_trafficSimulation(
         // Check if there are passengers to get off at the intersection
         if(intersectionNode){
           // Remove passengers from the bus
-          passengers_get_off += trafficVehicleVec[p].passengers.remove(intersection.id);
+          passengers_get_off += remove(&(trafficVehicleVec[p].passengers), intersection.id);
           // Add passengers to the intersection
           LC::LNode* passengers = intersectionNode->values;
           while(passengers){
             unsigned short nextBusline = trafficPerson[passengers->data].possibleBusLines->busLine;
             if(nextBusline < 0){
-              // finish trip
+              // finish trip, do nothing
             }
             else if(nextBusline == 0){
               // FIXME: transfter to a new auto, append to the array of trafficVehicleVec
             }
             else{
               // transfer to next bus
-              intersections[edgesData[nextEdge_d].nextIntersMapped].passengers.append(passengers->data);
+              appendL(&(intersections[edgesData[nextEdge_d].nextIntersMapped].passengers), passengers->data);
               // FIXME: update trafficPerson[passengers->data].possibleBusLines
+              // out: B18TrafficTransferPoint
             }
             passengers = passengers->next;
           }
         }
         
         /*Passengers from intersection to the bus*/
-        LC::LNode* passengers = intersection.passengers.head;
+        LC::LNode* passengers = intersection.passengers;
         LC::LNode* previousPassenger = NULL;
         LC::LNode* nextPassenger = NULL;
         while(passengers){
@@ -1575,10 +1658,10 @@ __global__ void kernel_trafficSimulation(
           while(possibleBusLines){
             if(possibleBusLines->busLine == trafficVehicleVec[p].busLine){
               // Add passenger to the bus
-              trafficVehicleVec[p].passengers.append(possibleBusLines->intersectionId, passengers->data);
+              append(&trafficVehicleVec[p].passengers, possibleBusLines->intersectionId, passengers->data);
               // Remove passenger from the linked list
               if(previousPassenger == NULL) {
-                intersection.passengers.head = passengers->next;
+                intersection.passengers = passengers->next;
               } else {
                 previousPassenger->next = passengers->next;
               }
@@ -1597,7 +1680,7 @@ __global__ void kernel_trafficSimulation(
             passengers = nextPassenger;
           }
         }
-        // FIXME: Update the departure time of the bus
+        trafficVehicleVec[p].time_departure += LC::busWaitingTime * (passengers_get_off + passengers_get_on);
       }
 
       //TODO: Test if the following line is doing the conversion wrong
@@ -2181,10 +2264,11 @@ void b18SimulateTrafficCUDA(float currentTime,
     cudaSetDevice(i);
     int numPeople_gpu = vehicles_vec[i]->size();
     LC::B18TrafficVehicle* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
+    LC::B18TrafficPerson* person_ptr = NULL;
     if(numPeople_gpu>0){
       kernel_trafficSimulation <<<  ceil(numPeople_gpu/ 384.0f), threadsPerBlock>> >
       (i,numPeople_gpu, currentTime, mapToReadShift_n[i],
-      mapToWriteShift_n[i],vehicles_ptr, indexPathVec_d[i], indexPathVec_d_size,
+      mapToWriteShift_n[i],vehicles_ptr, NULL, indexPathVec_d[i], indexPathVec_d_size,
       edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i], laneIdMapper_d[i],
       intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,
       vertexIdToPar_d[i],vehicleToCopy_d[i],vehicleToRemove_d[i],copyCursor_d[i],removeCursor_d[i],ghostLaneBuffer_d[i],ghostLaneCursor_d[i]);

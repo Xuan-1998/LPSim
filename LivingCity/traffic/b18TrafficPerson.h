@@ -78,7 +78,7 @@ struct B18TrafficVehicle {
 
   // vehicle type
   unsigned short busLine; // 0 if it's auto, 1,2,3,4,5 if it's bus
-  Dict passengers; // a list of persons, key is the intersection id, value is the list of persons to drop off
+  Node* passengers; // a list of persons, key is the intersection id, value is the list of persons to drop off
   unsigned short num_passengers; // how many persons are there in the bus  
 
   int isInIntersection;

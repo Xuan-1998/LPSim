@@ -86,47 +86,47 @@ class Dict {
             return 0;
         }
 
-        void print() {
-            Node* curr = head;
-            while (curr) {
-                std::cout << "Key: " << curr->key << " Values: ";
-                LNode* valueCurr = curr->values;
-                while (valueCurr) {
-                    std::cout << valueCurr->data << " ";
-                    valueCurr = valueCurr->next;
-                }
-                std::cout << std::endl;
-                curr = curr->next;
-            }
-        }
+        // void print() {
+        //     Node* curr = head;
+        //     while (curr) {
+        //         std::cout << "Key: " << curr->key << " Values: ";
+        //         LNode* valueCurr = curr->values;
+        //         while (valueCurr) {
+        //             std::cout << valueCurr->data << " ";
+        //             valueCurr = valueCurr->next;
+        //         }
+        //         std::cout << std::endl;
+        //         curr = curr->next;
+        //     }
+        // }
 };
 
 class LList {
     public: LNode* head; 
     LList() { 
-        head = NULL;
+        head = nullptr;
     }
     void append(int val) { 
         LNode* new_node = new LNode(); 
         new_node->data = val; 
-        new_node->next = NULL;
-        if(head == NULL) { 
+        new_node->next = nullptr;
+        if(head == nullptr) { 
             head = new_node; 
         } 
         else { 
             LNode* temp = head; 
-            while(temp->next != NULL) { 
+            while(temp->next != nullptr) { 
                 temp = temp->next; 
             } temp->next = new_node; 
         } 
     } 
-    void print() { 
-        LNode* temp = head; 
-        while(temp != NULL) { 
-            std::cout << temp->data << " "; 
-            temp = temp->next; 
-        } std::cout << std::endl; 
-    }
+    // void print() { 
+    //     LNode* temp = head; 
+    //     while(temp != nullptr) { 
+    //         std::cout << temp->data << " "; 
+    //         temp = temp->next; 
+    //     } std::cout << std::endl; 
+    // }
 };
 }
 #endif // LC_B18_GENERAL_STRUCT_H
