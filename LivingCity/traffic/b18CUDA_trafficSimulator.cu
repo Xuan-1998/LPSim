@@ -1114,6 +1114,62 @@ __device__ void appendL(LC::LNode** head, int val) {
   }
 }
 
+/*Add transfer function to simulate people change from a bus to another bus*/
+__device__ void transferToNewVehicle(
+  int personId, 
+  int currentIntersectionId,
+  LC::B18TrafficVehicle* trafficVehicleVec,
+  LC::B18TrafficPerson* trafficPerson,
+  uint32_t* copyCursor,
+  uint* vehicleToCopy,
+  int* vertexIdToPar_d,
+  int gpuIndex) {
+
+
+    // create new vehicle(bus)
+    LC::B18TrafficVehicle newVehicle;
+    newVehicle.busLine = 0;
+    newVehicle.passengers = nullptr;
+    newVehicle.time_departure = 0;
+    newVehicle.numOfLaneInEdge = 0;
+    newVehicle.currentEdge = currentIntersectionId;
+    newVehicle.init_intersection = currentIntersectionId;
+    newVehicle.end_intersection = currentIntersectionId;
+
+    // add people to new vehicle
+    append(&(newVehicle.passengers), currentIntersectionId, personId);
+
+    // find possibleBusLines for people and update
+    LC::B18TrafficTransferPoint* transferPoint = trafficPerson[personId].possibleBusLines;
+    while (transferPoint) {
+        if (transferPoint->intersectionId == currentIntersectionId) {
+            LC::B18TrafficTransferPoint* temp = transferPoint;
+            transferPoint = transferPoint->next;
+            delete temp;
+            trafficPerson[personId].possibleBusLines = transferPoint;
+        } else {
+            transferPoint = transferPoint->next;
+        }
+    }
+
+    // find gpu for vehicle
+    for (int i = 0; ; ++i) {
+        if (trafficVehicleVec[i].active == 0) {  //when available
+            int targetPartition = vertexIdToPar_d[currentIntersectionId];
+            if (targetPartition == gpuIndex) {
+                trafficVehicleVec[i] = newVehicle;
+            } else {
+                int cursor = atomicAdd(copyCursor, 2);
+                vehicleToCopy[cursor] = i;
+                vehicleToCopy[cursor + 1] = targetPartition;
+                trafficVehicleVec[i] = newVehicle;
+            }
+            break;
+        }
+    }
+}
+
+
 /**
  * Performs an atomic compare-and-swap operation on a single unsigned char.
  *
@@ -1172,6 +1228,14 @@ __global__ void kernel_trafficSimulation(
   uint* ghostLaneCursor
   )
   {
+
+  __shared__ int numTrafficVehicles;
+    
+    if (threadIdx.x == 0) {
+        numTrafficVehicles = 0; //initalize the number of vehicle
+    }
+    __syncthreads();
+
   int p = blockIdx.x * blockDim.x + threadIdx.x;
   if (p >= numPeople) return; //CUDA check (inside margins)
   assert( numPeople > p);
@@ -1638,6 +1702,16 @@ __global__ void kernel_trafficSimulation(
             }
             else if(nextBusline == 0){
               // FIXME: transfter to a new auto, append to the array of trafficVehicleVec
+              transferToNewVehicle(
+                    passengers->data, // personId
+                    intersection.id,  // currentIntersectionId
+                    trafficVehicleVec,
+                    trafficPerson,
+                    copyCursor,
+                    vehicleToCopy,
+                    vertexIdToPar_d,
+                    gpuIndex
+                );
             }
             else{
               // transfer to next bus
@@ -1659,6 +1733,9 @@ __global__ void kernel_trafficSimulation(
               append(&trafficVehicleVec[p].passengers, possibleBusLines->intersectionId, passengers->data);
               // FIXME: update trafficPerson[passengers->data].possibleBusLines
               // out: B18TrafficTransferPoint
+              LC::B18TrafficTransferPoint* temp = trafficPerson[passengers->data].possibleBusLines;
+              trafficPerson[passengers->data].possibleBusLines = trafficPerson[passengers->data].possibleBusLines->next;
+              delete temp;
               
               // Remove passenger from the linked list
               if(previousPassenger == NULL) {
