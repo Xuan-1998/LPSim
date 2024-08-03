@@ -174,24 +174,40 @@ void B18CommandLineVersion::runB18Simulation() {
   }
 
   //read bus line paths
-  std::vector<std::vector<int>> busRoutes;
-  if (busMode) {
-    std::ifstream busFile(busLinesPath);
-    std::string line;
+    std::vector<std::vector<int>> busRoutes;
+    std::vector<std::string> busDepartureTimes;
+    std::vector<int> busRouteIds;
 
-    while (std::getline(busFile, line)) {
-      std::stringstream ss(line);
-      std::string token;
-      std::vector<int> route;
+    if(busMode) {
+        std::ifstream file(busLinesPath);
+        std::string line;
 
-      while (std::getline(ss, token, ',')) {
-        route.push_back(std::stoi(token));
-      }
+        while (std::getline(file, line)) {
+            std::stringstream ss(line);
+            std::string value;
+            std::vector<int> stops;
 
-      busRoutes.push_back(route);
+            std::getline(ss, value, ','); // Skip trip_id
+            std::getline(ss, value, ','); // Skip block_id
+            std::getline(ss, value, ','); // Skip direction_id
+            std::getline(ss, value, ','); // Skip shape_id
+            std::getline(ss, value, ','); // Read route_id
+            busRouteIds.push_back(std::stoi(value));
+            std::getline(ss, value, ','); // Skip route_short_name
+            std::getline(ss, value, ','); // Read departure_time
+            busDepartureTimes.push_back(value);
+            std::getline(ss, value, ','); // Read bus_stopid
+
+            // Remove square brackets and split by comma
+            value = value.substr(1, value.size() - 2);
+            std::stringstream stopStream(value);
+            std::string stop;
+            while (std::getline(stopStream, stop, ',')) {
+                stops.push_back(std::stoi(stop));
+            }
+            busRoutes.push_back(stops);
+        }
     }
-    busFile.close();
-  }
   
   if (useCPU) {
     b18TrafficSimulator.simulateInCPU_MultiPass(numOfPasses, startSimulationH, endSimulationH,
@@ -201,7 +217,7 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_sets, dep_times,
-        networkPathSP,partitions, busMode, busRoutes);
+        networkPathSP,partitions, busMode, busRoutes, busDepartureTimes, busRouteIds);
   }
 
 }

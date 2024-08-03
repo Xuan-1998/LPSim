@@ -211,7 +211,11 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters,
     const int rerouteIncrementMins, const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets, //const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
-    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, const bool busMode, const std::vector<std::vector<int>>& busRoutes) {
+    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, 
+    const bool busMode, 
+    const std::vector<std::vector<int>>& busRoutes,
+    const std::vector<std::string>& busDepartureTimes,
+    const std::vector<int>& busRouteIds) {
   
   std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
   std::vector<uchar> laneMap_n[ngpus];
