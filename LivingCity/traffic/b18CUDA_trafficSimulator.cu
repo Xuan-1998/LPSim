@@ -1116,8 +1116,9 @@ __device__ void appendL(LC::LNode** head, int val) {
 }
 
 /*Add transfer function to simulate people change from a bus to another bus*/
+// FIXME: Review and fix this function
 __device__ void transferToNewVehicle(
-  int personId, 
+  int personId,
   int currentIntersectionId,
   LC::B18TrafficVehicle* trafficVehicleVec,
   LC::B18TrafficPerson* trafficPerson,
@@ -1141,33 +1142,33 @@ __device__ void transferToNewVehicle(
     append(&(newVehicle.passengers), currentIntersectionId, personId);
 
     // find possibleBusLines for people and update
-    LC::B18TrafficTransferPoint* transferPoint = trafficPerson[personId].possibleBusLines;
-    while (transferPoint) {
-        if (transferPoint->intersectionId == currentIntersectionId) {
-            LC::B18TrafficTransferPoint* temp = transferPoint;
-            transferPoint = transferPoint->next;
-            delete temp;
-            trafficPerson[personId].possibleBusLines = transferPoint;
-        } else {
-            transferPoint = transferPoint->next;
-        }
-    }
+    // LC::B18TrafficTransferPoint* transferPoint = trafficPerson[personId].possibleBusLines;
+    // while (transferPoint) {
+    //     if (transferPoint->intersectionId == currentIntersectionId) {
+    //         LC::B18TrafficTransferPoint* temp = transferPoint;
+    //         transferPoint = transferPoint->next;
+    //         delete temp;
+    //         trafficPerson[personId].possibleBusLines = transferPoint;
+    //     } else {
+    //         transferPoint = transferPoint->next;
+    //     }
+    // }
 
-    // find gpu for vehicle
-    for (int i = 0; ; ++i) {
-        if (trafficVehicleVec[i].active == 0) {  //when available
-            int targetPartition = vertexIdToPar_d[currentIntersectionId];
-            if (targetPartition == gpuIndex) {
-                trafficVehicleVec[i] = newVehicle;
-            } else {
-                int cursor = atomicAdd(copyCursor, 2);
-                vehicleToCopy[cursor] = i;
-                vehicleToCopy[cursor + 1] = targetPartition;
-                trafficVehicleVec[i] = newVehicle;
-            }
-            break;
-        }
-    }
+    // // find gpu for vehicle
+    // for (int i = 0; ; ++i) {
+    //     if (trafficVehicleVec[i].active == 0) {  //when available
+    //         int targetPartition = vertexIdToPar_d[currentIntersectionId];
+    //         if (targetPartition == gpuIndex) {
+    //             trafficVehicleVec[i] = newVehicle;
+    //         } else {
+    //             int cursor = atomicAdd(copyCursor, 2);
+    //             vehicleToCopy[cursor] = i;
+    //             vehicleToCopy[cursor + 1] = targetPartition;
+    //             trafficVehicleVec[i] = newVehicle;
+    //         }
+    //         break;
+    //     }
+    // }
 }
 
 
@@ -1696,7 +1697,7 @@ __global__ void kernel_trafficSimulation(
           LC::LNode* passengers = intersectionNode->values;
           while(passengers){
             LC::Node* possibleBusLinesNode = find(trafficPerson[passengers->data].transferPoints, intersection.id);
-            LC::LNode* possibleBusLines = possibleBusLines->values;
+            LC::LNode* possibleBusLines = possibleBusLinesNode->values;
             if(possibleBusLines->data < 0){
               // finish trip
               LC::LNode* temp = passengers;
@@ -1725,7 +1726,7 @@ __global__ void kernel_trafficSimulation(
           // Remove passengers from the bus
           passengers_get_off += remove(&(trafficVehicleVec[p].passengers), intersection.id);
         }
-        
+
         /*Passengers from intersection to the bus*/
         LC::LNode* passengers = intersection.passengers;
         LC::LNode* previousPassenger = NULL;
@@ -1736,7 +1737,7 @@ __global__ void kernel_trafficSimulation(
           while(possibleBusLines){
             if(possibleBusLines->data == trafficVehicleVec[p].busLine){
               // Add passenger to the bus
-              append(&trafficVehicleVec[p].passengers, possibleBusLines->intersectionId, passengers->data);
+              append(&trafficVehicleVec[p].passengers, transferPoints->key, passengers->data);
               // Remove the transfer point from the passenger
               remove(&trafficPerson[passengers->data].transferPoints, intersection.id);
               // Remove passenger from the linked list
