@@ -102,30 +102,30 @@ class Dict {
 };
 
 class LList {
-    public: LNode* head; 
-    LList() { 
+    public: LNode* head;
+    LList() {
         head = nullptr;
     }
-    void append(int val) { 
-        LNode* new_node = new LNode(); 
-        new_node->data = val; 
+    void append(int val) {
+        LNode* new_node = new LNode();
+        new_node->data = val;
         new_node->next = nullptr;
-        if(head == nullptr) { 
-            head = new_node; 
-        } 
-        else { 
-            LNode* temp = head; 
-            while(temp->next != nullptr) { 
-                temp = temp->next; 
-            } temp->next = new_node; 
-        } 
-    } 
-    // void print() { 
-    //     LNode* temp = head; 
-    //     while(temp != nullptr) { 
-    //         std::cout << temp->data << " "; 
-    //         temp = temp->next; 
-    //     } std::cout << std::endl; 
+        if(head == nullptr) {
+            head = new_node;
+        }
+        else {
+            LNode* temp = head;
+            while(temp->next != nullptr) {
+                temp = temp->next;
+            } temp->next = new_node;
+        }
+    }
+    // void print() {
+    //     LNode* temp = head;
+    //     while(temp != nullptr) {
+    //         std::cout << temp->data << " ";
+    //         temp = temp->next;
+    //     } std::cout << std::endl;
     // }
 };
 }

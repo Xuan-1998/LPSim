@@ -41,7 +41,7 @@ struct B18EdgeData {
 };
 
 struct B18IntersectionData {
-  int id; // is it possible to add a GUID
+  int id;
   ushort state;
   ushort stateLine;
   ushort totalInOutEdges;

@@ -1692,16 +1692,18 @@ __global__ void kernel_trafficSimulation(
         /*Passengers from bus to the intersection*/
         // Check if there are passengers to get off at the intersection
         if(intersectionNode){
-          // Remove passengers from the bus
-          passengers_get_off += remove(&(trafficVehicleVec[p].passengers), intersection.id);
           // Add passengers to the intersection
           LC::LNode* passengers = intersectionNode->values;
           while(passengers){
-            unsigned short nextBusline = trafficPerson[passengers->data].possibleBusLines->busLine;
-            if(nextBusline < 0){
-              // finish trip, do nothing
+            LC::Node* possibleBusLinesNode = find(trafficPerson[passengers->data].transferPoints, intersection.id);
+            LC::LNode* possibleBusLines = possibleBusLines->values;
+            if(possibleBusLines->data < 0){
+              // finish trip
+              LC::LNode* temp = passengers;
+              passengers = passengers->next;
+              delete temp;
             }
-            else if(nextBusline == 0){
+            else if(possibleBusLines->data == 0){
               // FIXME: transfter to a new auto, append to the array of trafficVehicleVec
               transferToNewVehicle(
                     passengers->data, // personId
@@ -1720,6 +1722,8 @@ __global__ void kernel_trafficSimulation(
             }
             passengers = passengers->next;
           }
+          // Remove passengers from the bus
+          passengers_get_off += remove(&(trafficVehicleVec[p].passengers), intersection.id);
         }
         
         /*Passengers from intersection to the bus*/
@@ -1727,17 +1731,14 @@ __global__ void kernel_trafficSimulation(
         LC::LNode* previousPassenger = NULL;
         LC::LNode* nextPassenger = NULL;
         while(passengers){
-          LC::B18TrafficTransferPoint* possibleBusLines = trafficPerson[passengers->data].possibleBusLines;
+          LC::Node* transferPoints = trafficPerson[passengers->data].transferPoints;
+          LC::LNode* possibleBusLines = find(transferPoints, intersection.id)->values;
           while(possibleBusLines){
-            if(possibleBusLines->busLine == trafficVehicleVec[p].busLine){
+            if(possibleBusLines->data == trafficVehicleVec[p].busLine){
               // Add passenger to the bus
               append(&trafficVehicleVec[p].passengers, possibleBusLines->intersectionId, passengers->data);
-              // FIXME: update trafficPerson[passengers->data].possibleBusLines
-              // out: B18TrafficTransferPoint
-              LC::B18TrafficTransferPoint* temp = trafficPerson[passengers->data].possibleBusLines;
-              trafficPerson[passengers->data].possibleBusLines = trafficPerson[passengers->data].possibleBusLines->next;
-              delete temp;
-              
+              // Remove the transfer point from the passenger
+              remove(&trafficPerson[passengers->data].transferPoints, intersection.id);
               // Remove passenger from the linked list
               if(previousPassenger == NULL) {
                 intersection.passengers = passengers->next;
