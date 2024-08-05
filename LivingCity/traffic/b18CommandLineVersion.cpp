@@ -175,7 +175,7 @@ void B18CommandLineVersion::runB18Simulation() {
 
   //read bus line paths
     std::vector<std::vector<int>> busRoutes;
-    std::vector<std::string> busDepartureTimes;
+    std::vector<int> busDepartureTimes;
     std::vector<int> busRouteIds;
 
     if(busMode) {
@@ -195,7 +195,7 @@ void B18CommandLineVersion::runB18Simulation() {
             busRouteIds.push_back(std::stoi(value));
             std::getline(ss, value, ','); // Skip route_short_name
             std::getline(ss, value, ','); // Read departure_time
-            busDepartureTimes.push_back(value);
+            busDepartureTimes.push_back(std::stoi(value));
             std::getline(ss, value, ','); // Read bus_stopid
 
             // Remove square brackets and split by comma

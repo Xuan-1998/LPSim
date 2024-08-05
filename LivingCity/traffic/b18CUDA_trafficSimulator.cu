@@ -122,7 +122,8 @@ LC::B18IntersectionData **id;
 // std::map<int,std::vector<LC::B18TrafficVehicle> >personToCopy;
 // std::map<int,std::vector<int> >personToRemove;//eg: 1->{1,3,5},2->{9},3->{} (gpuIndex->personList)
 
-
+__host__ __device__ void append(LC::Node** head, int key, int value);
+__host__ __device__ void appendL(LC::LNode** head, int val);
 
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
@@ -132,7 +133,8 @@ void b18InitCUDA_n(
   const std::vector<int>& vertexIdToPar,
   int edges_num,
   std::map<uint, uint>laneIdToLaneIdInGpu[],
-  std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, 
+  std::vector<LC::B18TrafficVehicle>& trafficVehicleVec,
+  std::vector<LC::B18TrafficPerson>& trafficPersonVec,
   std::vector<uint> indexPathVec_n[], 
   std::vector<LC::B18EdgeData> edgesData_n[], 
   std::vector<uchar> laneMap_n[], 
@@ -297,6 +299,26 @@ void b18InitCUDA_n(
       // gpuErrchk(cudaMemPrefetchAsync(trafficLights_d, sizeT, 1, streams[1]));
 
   }
+
+// init person waiting for bus and transfer points
+  for (LC::B18TrafficPerson &person : trafficPersonVec) {
+    LC::Node* transferPoint = person.transferPoints;
+    while (transferPoint != nullptr) {
+      int intersectionId = transferPoint->key;
+      int targetPartition = vertexIdToPar[intersectionId];
+      appendL(&intersections_n[targetPartition][intersectionId].passengers, person.id);
+      
+      LC::LNode* line = transferPoint->values;
+      while (line != nullptr) {
+        append(&person.transferPoints, transferPoint->key, line->data);
+        line = line->next;
+      }
+
+      transferPoint = transferPoint->next;
+    }
+  }
+
+
   {// ghost data structure
       // size_t sizeI = edges_num * sizeof(bool);
       if (firstInitialization){
@@ -1033,7 +1055,7 @@ __device__ void getLaneIdToLaneIdInGpuValue(int* keys, int* values,int wholeLane
     }
 }
 
-__device__ LC::Node* find(LC::Node* head, int key) {
+__host__ __device__ LC::Node* find(LC::Node* head, int key) {
   LC::Node* curr = head;
   while (curr) {
       if (curr->key == key) return curr;
@@ -1042,7 +1064,7 @@ __device__ LC::Node* find(LC::Node* head, int key) {
   return nullptr;
 }
 
-__device__ void append(LC::Node** head, int key, int value) {
+__host__ __device__ void append(LC::Node** head, int key, int value) {
   LC::Node* node = find(*head, key);
   if (!node) {
       node = new LC::Node;
@@ -1064,7 +1086,7 @@ __device__ void append(LC::Node** head, int key, int value) {
   }
 }
 
-__device__ void insert(LC::Node** head, int key, int* values, int valuesSize) {
+__host__ __device__ void insert(LC::Node** head, int key, int* values, int valuesSize) {
   LC::Node* node = find(*head, key);
   if (!node) {
       node = new LC::Node;
@@ -1078,7 +1100,7 @@ __device__ void insert(LC::Node** head, int key, int* values, int valuesSize) {
   }
 }
 
-__device__ int remove(LC::Node** head, int key) {
+__host__ __device__ int remove(LC::Node** head, int key) {
   LC::Node** pp = head;
   while (*pp) {
       if ((*pp)->key == key) {
@@ -1100,7 +1122,7 @@ __device__ int remove(LC::Node** head, int key) {
   return 0;
 }
 
-__device__ void appendL(LC::LNode** head, int val) {
+__host__ __device__ void appendL(LC::LNode** head, int val) {
   LC::LNode* new_node = new LC::LNode();
   new_node->data = val;
   new_node->next = NULL;
