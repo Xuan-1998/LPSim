@@ -214,7 +214,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, 
     const bool busMode, 
     const std::vector<std::vector<int>>& busRoutes,
-    const std::vector<std::string>& busDepartureTimes,
+    const std::vector<int>& busDepartureTimes,
     const std::vector<int>& busRouteIds) {
   
   std::vector<uint> edgeIdToLaneMapNum_n[ngpus];

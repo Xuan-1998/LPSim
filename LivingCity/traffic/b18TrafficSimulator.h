@@ -83,7 +83,7 @@ class B18TrafficSimulator {
     //const std::vector<std::array<abm::graph::vertex_t, 2>>& all_od_pairs,
     const std::vector<float>& dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, const bool busMode, 
     const std::vector<std::vector<int>>& busRoutes,
-    const std::vector<std::string>& busDepartureTimes,
+    const std::vector<int>& busDepartureTimes,
     const std::vector<int>& busRouteIds);
 
   // Lanes
