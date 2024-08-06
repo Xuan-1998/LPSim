@@ -175,39 +175,94 @@ void B18CommandLineVersion::runB18Simulation() {
 
   //read bus line paths
     std::vector<std::vector<int>> busRoutes;
-    std::vector<std::string> busDepartureTimes;
+    std::vector<int> busDepartureTimes;
     std::vector<int> busRouteIds;
 
-    if(busMode) {
-        std::ifstream file(busLinesPath);
-        std::string line;
+  if (busMode) {
+      const std::string& BusFileName = networkPathSP + busLinesPath;
+      std::cout << BusFileName << " as bus file" << std::endl;
+      std::ifstream file(BusFileName);
+      std::string line;
 
-        while (std::getline(file, line)) {
-            std::stringstream ss(line);
-            std::string value;
-            std::vector<int> stops;
+      if (!file.is_open()) {
+          std::cerr << "Failed to open file: " << busLinesPath << std::endl;
+      } else {
+          std::cout << "Successfully opened file: " << busLinesPath << std::endl;
+      }
+      bool isFirstLine = true;
+      while (std::getline(file, line)) {
 
-            std::getline(ss, value, ','); // Skip trip_id
-            std::getline(ss, value, ','); // Skip block_id
-            std::getline(ss, value, ','); // Skip direction_id
-            std::getline(ss, value, ','); // Skip shape_id
-            std::getline(ss, value, ','); // Read route_id
-            busRouteIds.push_back(std::stoi(value));
-            std::getline(ss, value, ','); // Skip route_short_name
-            std::getline(ss, value, ','); // Read departure_time
-            busDepartureTimes.push_back(value);
-            std::getline(ss, value, ','); // Read bus_stopid
-
-            // Remove square brackets and split by comma
-            value = value.substr(1, value.size() - 2);
-            std::stringstream stopStream(value);
-            std::string stop;
-            while (std::getline(stopStream, stop, ',')) {
-                stops.push_back(std::stoi(stop));
-            }
-            busRoutes.push_back(stops);
+        if (isFirstLine) {
+            isFirstLine = false;
+            continue; // Skip the header line
         }
-    }
+
+          std::stringstream ss(line);
+          std::string value;
+          std::vector<int> stops;
+
+          std::getline(ss, value, ','); // Skip trip_id
+          std::getline(ss, value, ','); // Skip block_id
+          std::getline(ss, value, ','); // Skip direction_id
+          std::getline(ss, value, ','); // Skip shape_id
+
+          std::getline(ss, value, ','); // Read route_id
+          try {
+              busRouteIds.push_back(std::stoi(value));
+          } catch (const std::invalid_argument& e) {
+              std::cerr << "Invalid route_id: " << value << " in line: " << line << std::endl;
+              continue;
+          }
+
+          std::getline(ss, value, ','); // Skip route_short_name
+
+          std::getline(ss, value, ','); // Read departure_time
+          try {
+              busDepartureTimes.push_back(std::stoi(value));
+          } catch (const std::invalid_argument& e) {
+              std::cerr << "Invalid departure_time: " << value << " in line: " << line << std::endl;
+              continue;
+          }
+
+          std::getline(ss, value); // Read bus_stop_osmid
+
+          // Extract the content within double quotes and remove square brackets
+          size_t start = value.find('"');
+          size_t end = value.find_last_of('"');
+          if (start != std::string::npos && end != std::string::npos && end > start) {
+              std::string stops_str = value.substr(start + 1, end - start - 1);
+              //std::cout << "Extracted stops_str: " << stops_str << std::endl; // Debug: Print extracted stops_str
+
+              // Remove square brackets
+              stops_str.erase(std::remove(stops_str.begin(), stops_str.end(), '['), stops_str.end());
+              stops_str.erase(std::remove(stops_str.begin(), stops_str.end(), ']'), stops_str.end());
+
+              std::stringstream stopStream(stops_str);
+              std::string stop;
+
+              while (std::getline(stopStream, stop, ',')) {
+                  // Remove leading and trailing spaces
+                  stop.erase(0, stop.find_first_not_of(' '));
+                  stop.erase(stop.find_last_not_of(' ') + 1);
+                  //std::cout << "Parsed stop: " << stop << std::endl; // Debug: Print each parsed stop
+                  try {
+                      stops.push_back(std::stoll(stop));
+                  } catch (const std::invalid_argument& e) {
+                      std::cerr << "Invalid stop_id: " << stop << " in line: " << line << std::endl;
+                  }
+              }
+          } else {
+              std::cerr << "Invalid bus_stop_osmid: " << value << " in line: " << line << std::endl;
+          }
+          busRoutes.push_back(stops);
+      }
+
+      //std::cout << "Bus Departure Times:" << std::endl;
+      //for (const auto& time : busDepartureTimes) {
+      //    std::cout << time << std::endl;
+      //}
+  }
+
   
   if (useCPU) {
     b18TrafficSimulator.simulateInCPU_MultiPass(numOfPasses, startSimulationH, endSimulationH,
