@@ -233,10 +233,14 @@ void b18InitCUDA_n(
       vehicles_vec[i] = new thrust::device_vector<LC::B18TrafficVehicle>(size_gpu_part[i]/sizeof(LC::B18TrafficVehicle));
       thrust::copy(trafficVehicleVec_d_gpus[i], trafficVehicleVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficVehicle), vehicles_vec[i]->begin());
     }
-    
-    
-      
   }
+
+  // Initialize trafficPersonVec
+  size_t size_traffic_person = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  LC::B18TrafficPerson* trafficPerson_d;
+  gpuErrchk(cudaMalloc((void**)&trafficPerson_d, size_traffic_person));
+  gpuErrchk(cudaMemcpy(trafficPerson_d, trafficPersonVec.data(), size_traffic_person, cudaMemcpyHostToDevice));
+
   { 
     for(int i = 0; i < ngpus; i++){
       gpuErrchk(cudaSetDevice(i));
@@ -421,6 +425,7 @@ void b18InitCUDA_n(
     }   
 
   }
+
   for(int i = 0; i < ngpus; i++){
     cudaSetDevice(i);
     gpuErrchk(cudaStreamSynchronize(streams[i]));
