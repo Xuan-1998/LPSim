@@ -59,8 +59,8 @@ class B18TrafficSP {
     const std::vector<std::vector<abm::graph::edge_id_t>>& paths);
 
   static std::vector<personPath> RoutingWrapper (
-    const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>>& all_od_pairs_sets,
-    //const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs_,
+    //const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>>& all_od_pairs_sets,
+    const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs_,
     const std::shared_ptr<abm::Graph>& street_graph,
     const std::vector<float>& dep_times,
     const float currentBatchStartTimeSecs,
