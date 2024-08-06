@@ -100,28 +100,30 @@ void B18TrafficSP::read_od_pairs_from_structure(
   }
 }
 
-std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> B18TrafficSP::read_od_pairs_from_file(
+std::vector<std::vector<ODPairsWithMode>> B18TrafficSP::read_od_pairs_from_file(
   const std::string& filename,
   const float startSimulationH,
   const float endSimulationH,
   const int nagents) {
   
-  std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> all_od_pairs_sets;
-  csvio::CSVReader<3> in(filename);
-  in.read_header(csvio::ignore_extra_column, "dep_time", "origin", "destination");
+  std::vector<std::vector<ODPairsWithMode>> all_od_pairs_sets;
+  csvio::CSVReader<4> in(filename);
+  in.read_header(csvio::ignore_extra_column, "dep_time", "origin", "destination", "travel_mode");
   abm::graph::vertex_t v1, v2;
   abm::graph::weight_t weight;
   float dep_time;
+  int travel_mode;
   int count_outside_filter = 0;
 
-  while (in.read_row(dep_time, v1, v2)) {
+  while (in.read_row(dep_time, v1, v2, travel_mode)) {
     if (dep_time >= startSimulationH * 3600 && dep_time < endSimulationH * 3600) { 
-      std::array<abm::graph::vertex_t, 2> od = {v1, v2};
+      //std::array<abm::graph::vertex_t, 2> od = {v1, v2};
+      ODPairsWithMode od = {{v1, v2}, travel_mode};
       
       // 找到合适的集合
       bool found = false;
       for (auto& od_pairs : all_od_pairs_sets) {
-        if (!od_pairs.empty() && od_pairs.back()[1] == v1) {
+        if (!od_pairs.empty() && od_pairs.back().od_pair[1] == v1) {
           od_pairs.emplace_back(od);
           found = true;
           break;
@@ -130,7 +132,7 @@ std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> B18TrafficSP::read
       
       // 如果没有找到合适的集合，则创建一个新的集合
       if (!found) {
-        std::vector<std::array<abm::graph::vertex_t, 2>> new_od_pairs = {od};
+        std::vector<ODPairsWithMode> new_od_pairs = {od};
         all_od_pairs_sets.push_back(new_od_pairs);
       }
       

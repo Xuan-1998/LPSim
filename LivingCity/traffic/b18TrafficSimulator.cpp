@@ -211,7 +211,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters, const int rerouteIncrementMins,
     // const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets, 
-    const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs_,
+    const std::vector<ODPairsWithMode> & all_od_pairs_,
     const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar, 
     const bool busMode, 
     const std::vector<std::vector<int>>& busRoutes,
@@ -424,7 +424,14 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
       float currentBatchStartTimeSecs = startTimeSecs + increment_index * rerouteIncrementMins * 60;
       float currentBatchEndTimeSecs = startTimeSecs + (increment_index + 1) * rerouteIncrementMins * 60;
 
-      auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs_, graph_, dep_times,
+      //Todo: need to extract travel mode as well
+      std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode;
+      all_od_pairs_without_mode.reserve(all_od_pairs_.size());
+      for (const auto& od_pair_with_mode : all_od_pairs_) {
+          all_od_pairs_without_mode.push_back(od_pair_with_mode.od_pair);
+      }
+
+      auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs_without_mode, graph_, dep_times,
                                             currentBatchStartTimeSecs, currentBatchEndTimeSecs,
                                             (const int) increment_index, trafficVehicleVec);
     

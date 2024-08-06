@@ -155,18 +155,18 @@ void B18CommandLineVersion::runB18Simulation() {
     infile.close();
   }
   loadODDemandData.startMeasuring();
-  const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH, limitNumPeople);
+  const std::vector<std::vector<ODPairsWithMode>> all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH, limitNumPeople);
   //const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
   //const std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_ = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
   const std::vector<float> dep_times = B18TrafficSP::read_dep_times(odFileName, startSimulationH, endSimulationH);
   loadODDemandData.stopAndEndBenchmark();
   
-  std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_;
-  for (const auto& od_pairs_set : all_od_pairs_sets) {
-    for (const auto& od_pair : od_pairs_set) {
-      all_od_pairs_.push_back(od_pair);
+  std::vector<ODPairsWithMode> all_od_pairs_;
+    for (const auto& od_pairs_set : all_od_pairs_sets) {
+        all_od_pairs_.insert(all_od_pairs_.end(), od_pairs_set.begin(), od_pairs_set.end());
     }
-  }
+
+    printf("# of OD pairs = %d\n", all_od_pairs_.size());
   
   if (useSP) {
 	  //make the graph from edges file and load the OD demand from od file

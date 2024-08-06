@@ -30,6 +30,12 @@
 #include "sp/mpi_wrapper.h"
 
 namespace LC {
+
+struct ODPairsWithMode {
+    std::array<abm::graph::vertex_t, 2> od_pair;
+    int travel_mode;
+};
+
 class B18TrafficSP {
  public:	 
   static std::vector<abm::graph::vertex_t> compute_routes(int mpi_rank,
@@ -40,7 +46,7 @@ class B18TrafficSP {
   static std::vector<std::array<abm::graph::vertex_t, 2>> make_od_pairs(std::vector<B18TrafficVehicle> B18TrafficVehicle,
                                                                         const int nagents);
 
-  static std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> read_od_pairs_from_file(
+  static std::vector<std::vector<ODPairsWithMode>> read_od_pairs_from_file(
     const std::string& filename,
     const float startSimulationH, const float endSimulationH,
     const int nagents = std::numeric_limits<int>::max());
