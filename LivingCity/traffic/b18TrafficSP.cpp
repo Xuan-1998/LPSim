@@ -155,6 +155,14 @@ std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> B18TrafficSP::read
     }
   }
 
+  //for (size_t i = 0; i < all_od_pairs_sets.size(); ++i) {
+  //  const auto& od_pairs = all_od_pairs_sets[i];
+  //  std::cout << "OD pairs set " << i << " size: " << od_pairs.size() << std::endl;
+  //  for (const auto& od : od_pairs) {
+  //    std::cout << "OD pair: [" << od[0] << ", " << od[1] << "]" << std::endl;
+  //  }
+  //}
+
   return all_od_pairs_sets;
 }
 
@@ -211,6 +219,13 @@ std::vector<float> B18TrafficSP::read_dep_times(
   if (count_outside_filter > 0) {
     std::cout << "WARNING: Filtering " << count_outside_filter << " trips outside the input time range." << std::endl;
   }
+
+  //std::cout << "Departure times:" << std::endl;
+  for (const auto& dt : dep_time_vec) {
+    std::cout << dt << " ";
+  }
+  std::cout << std::endl;
+
   return dep_time_vec;
 }
 
@@ -361,7 +376,11 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const int reroute_batch_number,
   std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle) {
 
+  std::cout << "all_od_pairs_sets size: " << all_od_pairs_sets.size() << std::endl;
+  std::cout << "dep_times size: " << dep_times.size() << std::endl;
+
   for (const auto& all_od_pairs_ : all_od_pairs_sets) {
+      std::cout << "Current all_od_pairs_ size: " << all_od_pairs_.size() << std::endl;
       if (all_od_pairs_.size() != dep_times.size())
         throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
     }
