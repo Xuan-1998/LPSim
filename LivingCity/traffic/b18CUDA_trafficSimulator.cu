@@ -1116,59 +1116,45 @@ __device__ void appendL(LC::LNode** head, int val) {
 }
 
 /*Add transfer function to simulate people change from a bus to another bus*/
-// FIXME: Review and fix this function
 __device__ void transferToNewVehicle(
   int personId,
   int currentIntersectionId,
+  int currentEdge,
   LC::B18TrafficVehicle* trafficVehicleVec,
   LC::B18TrafficPerson* trafficPerson,
   uint32_t* copyCursor,
   uint* vehicleToCopy,
   int* vertexIdToPar_d,
   int gpuIndex) {
-
-
     // create new vehicle(bus)
     LC::B18TrafficVehicle newVehicle;
     newVehicle.busLine = 0;
     newVehicle.passengers = nullptr;
     newVehicle.time_departure = 0;
     newVehicle.numOfLaneInEdge = 0;
-    newVehicle.currentEdge = currentIntersectionId;
+    newVehicle.currentEdge = currentEdge;
     newVehicle.init_intersection = currentIntersectionId;
-    newVehicle.end_intersection = currentIntersectionId;
+    newVehicle.end_intersection = trafficPerson[personId].transferPoints->key;
 
+    // Get the next intersection to transfer to, it should be the next intersection in the path
     // add people to new vehicle
-    append(&(newVehicle.passengers), currentIntersectionId, personId);
+    append(&(newVehicle.passengers), trafficPerson[personId].transferPoints->key, personId);
 
-    // find possibleBusLines for people and update
-    // LC::B18TrafficTransferPoint* transferPoint = trafficPerson[personId].possibleBusLines;
-    // while (transferPoint) {
-    //     if (transferPoint->intersectionId == currentIntersectionId) {
-    //         LC::B18TrafficTransferPoint* temp = transferPoint;
-    //         transferPoint = transferPoint->next;
-    //         delete temp;
-    //         trafficPerson[personId].possibleBusLines = transferPoint;
-    //     } else {
-    //         transferPoint = transferPoint->next;
-    //     }
-    // }
-
-    // // find gpu for vehicle
-    // for (int i = 0; ; ++i) {
-    //     if (trafficVehicleVec[i].active == 0) {  //when available
-    //         int targetPartition = vertexIdToPar_d[currentIntersectionId];
-    //         if (targetPartition == gpuIndex) {
-    //             trafficVehicleVec[i] = newVehicle;
-    //         } else {
-    //             int cursor = atomicAdd(copyCursor, 2);
-    //             vehicleToCopy[cursor] = i;
-    //             vehicleToCopy[cursor + 1] = targetPartition;
-    //             trafficVehicleVec[i] = newVehicle;
-    //         }
-    //         break;
-    //     }
-    // }
+    // find gpu for vehicle
+    for (int i = 0; ; ++i) {
+        if (trafficVehicleVec[i].active == 0) {  //when available
+            int targetPartition = vertexIdToPar_d[currentIntersectionId];
+            if (targetPartition == gpuIndex) {
+                trafficVehicleVec[i] = newVehicle;
+            } else {
+                int cursor = atomicAdd(copyCursor, 2);
+                vehicleToCopy[cursor] = i;
+                vehicleToCopy[cursor + 1] = targetPartition;
+                trafficVehicleVec[i] = newVehicle;
+            }
+            break;
+        }
+    }
 }
 
 
@@ -1709,6 +1695,7 @@ __global__ void kernel_trafficSimulation(
               transferToNewVehicle(
                     passengers->data, // personId
                     intersection.id,  // currentIntersectionId
+                    currentEdge,
                     trafficVehicleVec,
                     trafficPerson,
                     copyCursor,
