@@ -11,6 +11,7 @@
 
 #include "b18TrafficPerson.h"
 #include "b18EdgeData.h"
+#include "b18TrafficSP.h"
 #include <vector>
 
 
@@ -27,7 +28,7 @@ extern void b18InitCUDA_n(const int ngpus, bool fistInitialization, // crate buf
                         float startTimeH, float endTimeH,
                         std::vector<float>& accSpeedPerLinePerTimeInterval,
                         std::vector<float>& numVehPerLinePerTimeInterval,
-                        float deltaTime);
+                        float deltaTime, std::vector<int> all_modes ,std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode);
                         
 extern void b18InitCUDA(bool fistInitialization, // crate buffers
                         std::vector<LC::B18TrafficVehicle> &trafficVehicleVec,
