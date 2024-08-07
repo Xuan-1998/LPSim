@@ -28,8 +28,10 @@ extern void b18InitCUDA_n(const int ngpus, bool fistInitialization, // crate buf
                         float startTimeH, float endTimeH,
                         std::vector<float>& accSpeedPerLinePerTimeInterval,
                         std::vector<float>& numVehPerLinePerTimeInterval,
-                        float deltaTime, std::vector<int> all_modes ,std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode);
-                        
+                        float deltaTime, std::vector<int> all_modes ,std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode,
+                        const std::vector<std::vector<int>>& busRoutes,
+                        const std::vector<int>& busRouteIds);
+
 extern void b18InitCUDA(bool fistInitialization, // crate buffers
                         std::vector<LC::B18TrafficVehicle> &trafficVehicleVec,
                         std::vector<uint> &indexPathVec,

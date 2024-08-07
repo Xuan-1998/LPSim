@@ -230,7 +230,12 @@ void b18InitCUDA_n(
     person.transferPoints = nullptr;
 
     if (all_modes[i] != 0) { // If travel mode is not auto
-      person.transferPoints = findBuses(all_od_pairs_without_mode[i], all_modes[i]);
+      person.transferPoints = findBuses(
+        busRoutes,
+        busRouteIds,
+        all_od_pairs_without_mode[i][0],
+        all_od_pairs_without_mode[i][1]
+      );
     }
 
     newTrafficPersonVec.push_back(person);
