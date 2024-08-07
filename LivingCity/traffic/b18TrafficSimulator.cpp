@@ -204,6 +204,24 @@ void savePaths(const std::vector<personPath>& paths, const std::string& filename
         file << personPathToString(path) << "\n";
     }
 }
+std::vector<int> findBuses(
+    const std::vector<std::vector<int>>& busRoutes,
+    const std::vector<int>& busRouteIds,
+    int startStop,
+    int endStop)
+{
+    std::vector<int> result;
+
+    for (size_t i = 0; i < busRoutes.size(); ++i) {
+        const std::vector<int>& route = busRoutes[i];
+        if (std::find(route.begin(), route.end(), startStop) != route.end() &&
+            std::find(route.begin(), route.end(), endStop) != route.end()) {
+            result.push_back(busRouteIds[i]);
+        }
+    }
+
+    return result;
+}
 //////////////////////////////////////////////////
 // GPU
 //////////////////////////////////////////////////
