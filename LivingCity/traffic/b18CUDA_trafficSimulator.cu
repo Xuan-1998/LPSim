@@ -177,7 +177,8 @@ void b18InitCUDA_n(
   std::vector<float>& numVehPerLinePerTimeInterval,
   float deltaTime, std::vector<int> all_modes, std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode,
   const std::vector<std::vector<int>>& busRoutes,
-  const std::vector<int>& busRouteIds) {
+  const std::vector<int>& busRouteIds,
+  const std::vector<int>& busDepartureTimes) {
   ngpus = num_gpus;
   int maxGpus = 0;
   cudaGetDeviceCount(&maxGpus);
@@ -224,6 +225,7 @@ void b18InitCUDA_n(
   // Initialize people and vehicles
   std::vector<LC::B18TrafficPerson> newTrafficPersonVec;
   std::vector<LC::B18TrafficVehicle> newTrafficVehicleVec;
+  int vehicleId = 0;
   for (size_t i = 0; i < all_od_pairs_without_mode.size(); ++i) {
     // FIXME: Multiple segments of the trip should be added to the same person, in transferPoints
     LC::B18TrafficPerson person;
@@ -258,6 +260,22 @@ void b18InitCUDA_n(
   }
 
   // FIXME: Add buses to the vehicles vector according to the bus routes and bus route ids
+  for (size_t i = 0; i < busRoutes.size(); ++i) {
+      const std::vector<int>& route = busRoutes[i];
+      int busRouteId = busRouteIds[i];
+      int departureTime = busDepartureTimes[i];
+
+      for (size_t j = 0; j < route.size() - 1; ++j) {
+          LC::B18TrafficVehicle bus;
+          bus.id = vehicleId++;
+          bus.init_intersection = route[j];
+          bus.end_intersection = route[j + 1];
+          bus.busLine = busRouteId;
+          bus.time_departure = departureTime;
+
+          newTrafficVehicleVec.push_back(bus);
+      }
+  }
 
   trafficPersonVec = newTrafficPersonVec;
   trafficVehicleVec = newTrafficVehicleVec;
