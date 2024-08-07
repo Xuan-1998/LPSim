@@ -124,6 +124,11 @@ LC::B18IntersectionData **id;
 
 __host__ __device__ void append(LC::Node** head, int key, int value);
 __host__ __device__ void appendL(LC::LNode** head, int val);
+LC::Node* findBuses(const std::array<abm::graph::vertex_t, 2>& od_pair, int mode) {
+  // 返回一个链表，链表中的每个节点表示一个公交线路和其终点
+  LC::Node* head = nullptr;
+  return head;
+}
 
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
@@ -186,6 +191,42 @@ void b18InitCUDA_n(
   for(int i = 0; i < ngpus; i++){
       cudaStreamCreate( &streams[i]);
   }
+
+  // Initialize people and vehicles
+  std::vector<LC::B18TrafficPerson> newTrafficPersonVec;
+  std::vector<LC::B18TrafficVehicle> newTrafficVehicleVec;
+  for (size_t i = 0; i < all_od_pairs_without_mode.size(); ++i) {
+    LC::B18TrafficPerson person;
+    person.id = i;
+    person.transferPoints = nullptr;
+
+    if (all_modes[i] != 0) { // If travel mode is not auto
+      person.transferPoints = findBuses(all_od_pairs_without_mode[i], all_modes[i]);
+    }
+
+    newTrafficPersonVec.push_back(person);
+
+    LC::B18TrafficVehicle vehicle;
+    vehicle.id = i;
+    vehicle.init_intersection = all_od_pairs_without_mode[i][0];
+    vehicle.end_intersection = all_od_pairs_without_mode[i][1];
+    vehicle.busLine = all_modes[i]; // Assign travel mode to busLine
+    newTrafficVehicleVec.push_back(vehicle);
+  }
+  trafficPersonVec = newTrafficPersonVec;
+  trafficVehicleVec = newTrafficVehicleVec;
+
+  size_t size_traffic_person = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  LC::B18TrafficPerson* trafficPerson_d;
+  gpuErrchk(cudaMalloc((void**)&trafficPerson_d, size_traffic_person));
+  gpuErrchk(cudaMemcpy(trafficPerson_d, trafficPersonVec.data(), size_traffic_person, cudaMemcpyHostToDevice));
+
+  // Allocate and copy trafficVehicleVec to GPU
+  size_t size_traffic_vehicle = trafficVehicleVec.size() * sizeof(LC::B18TrafficVehicle);
+  LC::B18TrafficVehicle* trafficVehicle_d;
+  gpuErrchk(cudaMalloc((void**)&trafficVehicle_d, size_traffic_vehicle));
+  gpuErrchk(cudaMemcpy(trafficVehicle_d, trafficVehicleVec.data(), size_traffic_vehicle, cudaMemcpyHostToDevice));
+
   //printf(">>b18InitCUDA firstInitialization %s\n", (firstInitialization?"INIT":"ALREADY INIT"));
   //printMemoryUsage();
   const uint numStepsPerSample = 30.0f / deltaTime; //each min
@@ -234,12 +275,6 @@ void b18InitCUDA_n(
       thrust::copy(trafficVehicleVec_d_gpus[i], trafficVehicleVec_d_gpus[i] + size_gpu_part[i]/sizeof(LC::B18TrafficVehicle), vehicles_vec[i]->begin());
     }
   }
-
-  // Initialize trafficPersonVec
-  size_t size_traffic_person = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
-  LC::B18TrafficPerson* trafficPerson_d;
-  gpuErrchk(cudaMalloc((void**)&trafficPerson_d, size_traffic_person));
-  gpuErrchk(cudaMemcpy(trafficPerson_d, trafficPersonVec.data(), size_traffic_person, cudaMemcpyHostToDevice));
 
   { 
     for(int i = 0; i < ngpus; i++){
@@ -2313,7 +2348,8 @@ void b18SimulateTrafficCUDA(float currentTime,
   float deltaTime,
   const parameters simParameters,
   int numBlocks,
-  int threadsPerBlock) {
+  int threadsPerBlock,
+  LC::B18TrafficPerson* trafficPerson_d) {
   intersectionBench.startMeasuring();
   const uint numStepsTogether = 12; //change also in density (10 per hour)
   // 1. CHANGE MAP: set map to use and clean the other
@@ -2359,11 +2395,11 @@ void b18SimulateTrafficCUDA(float currentTime,
     cudaSetDevice(i);
     int numPeople_gpu = vehicles_vec[i]->size();
     LC::B18TrafficVehicle* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
-    LC::B18TrafficPerson* person_ptr = NULL;
+    LC::B18TrafficPerson* person_ptr = trafficPerson_d;
     if(numPeople_gpu>0){
       kernel_trafficSimulation <<<  ceil(numPeople_gpu/ 384.0f), threadsPerBlock>> >
       (i,numPeople_gpu, currentTime, mapToReadShift_n[i],
-      mapToWriteShift_n[i],vehicles_ptr, NULL, indexPathVec_d[i], indexPathVec_d_size,
+      mapToWriteShift_n[i],vehicles_ptr, person_ptr, indexPathVec_d[i], indexPathVec_d_size,
       edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i], laneIdMapper_d[i],
       intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,
       vertexIdToPar_d[i],vehicleToCopy_d[i],vehicleToRemove_d[i],copyCursor_d[i],removeCursor_d[i],ghostLaneBuffer_d[i],ghostLaneCursor_d[i]);

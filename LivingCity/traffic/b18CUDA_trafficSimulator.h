@@ -54,7 +54,7 @@ extern void b18FinishCUDA(void); // free memory
 extern void b18ResetPeopleLanesCUDA(uint numPeople); // reset people to inactive
 extern void b18SimulateTrafficCUDA(float currentTime, uint numPeople,
                                    uint numIntersections_n[], float deltaTime, const parameters simParameters,
-                                   int numBlocks, int threadsPerBlock);
+                                   int numBlocks, int threadsPerBlock, LC::B18TrafficPerson* trafficPerson_d);
 
 #endif // B18_TRAFFIC_SIMULATION_H
 

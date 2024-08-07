@@ -11,6 +11,8 @@
 #include <assert.h>
 
 #include "src/benchmarker.h"
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 
 #include "../global.h"
 #ifdef B18_RUN_WITH_GUI
@@ -35,6 +37,18 @@
 
 #ifdef __linux__
 #include <unistd.h>
+
+// Define the gpuErrchk macro
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
 
 void printPercentageMemoryUsed() {
   // TODO
@@ -401,6 +415,13 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
 
     float currentTime = 23.99f * 3600.0f;
 
+    // 初始化 trafficPerson_d
+    size_t size_traffic_person = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+    LC::B18TrafficPerson* trafficPerson_d;
+    gpuErrchk(cudaMalloc((void**)&trafficPerson_d, size_traffic_person));
+    gpuErrchk(cudaMemcpy(trafficPerson_d, trafficPersonVec.data(), size_traffic_person, cudaMemcpyHostToDevice));
+
+
     for (int p = 0; p < trafficVehicleVec.size(); p++) {
       if (currentTime > trafficVehicleVec[p].time_departure) {
         currentTime = trafficVehicleVec[p].time_departure;
@@ -509,7 +530,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
         while(currentTime < nextMilestone) {
           
           b18SimulateTrafficCUDA(currentTime, trafficVehicleVec.size(),
-                              intersections_size_n, deltaTime, simParameters, numBlocks, threadsPerBlock);
+                              intersections_size_n, deltaTime, simParameters, numBlocks, threadsPerBlock, trafficPerson_d);
            
           currentTime += deltaTime;
           // if(currentTime>18030)break;
