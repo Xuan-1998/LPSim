@@ -124,9 +124,36 @@ LC::B18IntersectionData **id;
 
 __host__ __device__ void append(LC::Node** head, int key, int value);
 __host__ __device__ void appendL(LC::LNode** head, int val);
-LC::Node* findBuses(const std::array<abm::graph::vertex_t, 2>& od_pair, int mode) {
-  // 返回一个链表，链表中的每个节点表示一个公交线路和其终点
+
+LC::Node* findBuses(const std::vector<std::vector<int>>& busRoutes,
+                    const std::vector<int>& busRouteIds,
+                    const int startStop,
+                    const int endStop) {
   LC::Node* head = nullptr;
+  LC::LNode* current = nullptr;
+
+  for (int i = 0; i < busRoutes.size(); i++) {
+    auto& route = busRoutes[i];
+    auto itStart = std::find(route.begin(), route.end(), startStop);
+    auto itEnd = std::find(route.begin(), route.end(), endStop);
+
+    if (itStart != route.end() && itEnd != route.end() && itStart < itEnd) {
+      if (head == nullptr) {
+        head = new LC::Node();
+        head->key = endStop;
+        head->values = new LC::LNode();
+        head->values->data = busRouteIds[i];
+        head->values->next = nullptr;
+        current = head->values;
+      } else if (current != nullptr) {
+        current->next = new LC::LNode();
+        current = current->next;
+        current->data = busRouteIds[i];
+        current->next = nullptr;
+      }
+    }
+  }
+
   return head;
 }
 
@@ -148,7 +175,9 @@ void b18InitCUDA_n(
   float startTimeH, float endTimeH,
   std::vector<float>& accSpeedPerLinePerTimeInterval,
   std::vector<float>& numVehPerLinePerTimeInterval,
-  float deltaTime, std::vector<int> all_modes, std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode) {
+  float deltaTime, std::vector<int> all_modes, std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode,
+  const std::vector<std::vector<int>>& busRoutes,
+  const std::vector<int>& busRouteIds) {
   ngpus = num_gpus;
   int maxGpus = 0;
   cudaGetDeviceCount(&maxGpus);
