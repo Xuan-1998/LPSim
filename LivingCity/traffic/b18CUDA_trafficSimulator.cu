@@ -225,6 +225,7 @@ void b18InitCUDA_n(
   std::vector<LC::B18TrafficPerson> newTrafficPersonVec;
   std::vector<LC::B18TrafficVehicle> newTrafficVehicleVec;
   for (size_t i = 0; i < all_od_pairs_without_mode.size(); ++i) {
+    // FIXME: Multiple segments of the trip should be added to the same person, in transferPoints
     LC::B18TrafficPerson person;
     person.id = i;
     person.transferPoints = nullptr;
@@ -237,16 +238,27 @@ void b18InitCUDA_n(
         all_od_pairs_without_mode[i][1]
       );
     }
+    else {
+      person.transferPoints = new LC::Node();
+      person.transferPoints->key = all_od_pairs_without_mode[i][1];
+      person.transferPoints->values = new LC::LNode();
+      person.transferPoints->values->data = 0;
+
+      // New auto object
+      LC::B18TrafficVehicle vehicle;
+      vehicle.id = i;
+      vehicle.init_intersection = all_od_pairs_without_mode[i][0];
+      vehicle.end_intersection = all_od_pairs_without_mode[i][1];
+      vehicle.busLine = all_modes[i]; // Assign travel mode to busLine
+      // FIXME: Initialize other vehicle properties, like departure time, etc.
+      newTrafficVehicleVec.push_back(vehicle);
+    }
 
     newTrafficPersonVec.push_back(person);
-
-    LC::B18TrafficVehicle vehicle;
-    vehicle.id = i;
-    vehicle.init_intersection = all_od_pairs_without_mode[i][0];
-    vehicle.end_intersection = all_od_pairs_without_mode[i][1];
-    vehicle.busLine = all_modes[i]; // Assign travel mode to busLine
-    newTrafficVehicleVec.push_back(vehicle);
   }
+
+  // FIXME: Add buses to the vehicles vector according to the bus routes and bus route ids
+
   trafficPersonVec = newTrafficPersonVec;
   trafficVehicleVec = newTrafficVehicleVec;
 
