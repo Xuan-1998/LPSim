@@ -1842,8 +1842,6 @@ __global__ void kernel_trafficSimulation(
 
         /*Passengers from intersection to the bus*/
         LC::LNode* passengers = intersection.passengers;
-        LC::LNode* previousPassenger = NULL;
-        LC::LNode* nextPassenger = NULL;
         while(passengers){
           LC::Node* transferPoints = trafficPerson[passengers->data].transferPoints;
           LC::LNode* possibleBusLines = find(transferPoints, intersection.id)->values;
@@ -1854,12 +1852,7 @@ __global__ void kernel_trafficSimulation(
               // Remove the transfer point from the passenger
               remove(&trafficPerson[passengers->data].transferPoints, intersection.id);
               // Remove passenger from the linked list
-              if(previousPassenger == NULL) {
-                intersection.passengers = passengers->next;
-              } else {
-                previousPassenger->next = passengers->next;
-              }
-              nextPassenger = passengers->next;
+              intersection.passengers = passengers->next;
               delete passengers;
               passengers_get_on += 1;
               break;
@@ -1868,11 +1861,8 @@ __global__ void kernel_trafficSimulation(
           }
 
           if(possibleBusLines == NULL) {
-            previousPassenger = passengers;
             passengers = passengers->next;
-          } else {
-            passengers = nextPassenger;
-          }
+          } 
         }
         trafficVehicleVec[p].time_departure += LC::busWaitingTime * (passengers_get_off + passengers_get_on);
       }
