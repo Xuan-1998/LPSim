@@ -1855,6 +1855,8 @@ __global__ void kernel_trafficSimulation(
               intersection.passengers = passengers->next;
               delete passengers;
               passengers_get_on += 1;
+              //wait for test this line
+              LC::LNode* passengers = intersection.passengers;
               break;
             }
             possibleBusLines = possibleBusLines->next;
