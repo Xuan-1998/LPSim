@@ -20,7 +20,7 @@
 #include "../LC_UrbanMain.h"
 #endif
 #include <thread>
-
+#include <fstream>
 #include "b18TrafficDijkstra.h"
 #include "b18TrafficJohnson.h"
 #include "b18TrafficSP.h"
@@ -594,11 +594,22 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     float totalNumSteps = 0;
     float totalCO = 0;
 
-    for (int p = 0; p < trafficVehicleVec.size(); p++) {
-      totalNumSteps += trafficVehicleVec[p].num_steps;
-      totalCO += trafficVehicleVec[p].co;
+    std::ofstream outFile("output_time_diff.csv", std::ios::app);
+    if (!outFile.is_open()) {
+        std::cerr << "Failed to open output file!" << std::endl;
+        return;
     }
 
+    for (int p = 0; p < trafficVehicleVec.size(); p++) {
+      float time_diff = currentTime - trafficVehicleVec[p].time_departure;
+      totalNumSteps += trafficVehicleVec[p].num_steps;
+      totalCO += trafficVehicleVec[p].co;
+      if (trafficVehicleVec[p].active == 2) {
+        outFile << trafficVehicleVec[p].id << "," << time_diff << "," << trafficVehicleVec[p].num_steps << "," << trafficVehicleVec[p].co << "\n";
+      }
+    }
+    outFile.close();
+    
     avgTravelTime = (totalNumSteps * deltaTime) / (trafficVehicleVec.size() * 60.0f); //in min
     printf("Total num steps %.1f Avg %.2f min Avg CO %.2f\nSimulation time = %d ms\n",
             totalNumSteps, avgTravelTime, totalCO / trafficVehicleVec.size(),

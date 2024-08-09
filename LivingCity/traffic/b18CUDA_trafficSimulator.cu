@@ -19,6 +19,7 @@
 #include "b18TrafficPerson.h"
 #include "b18EdgeData.h"
 #include <vector>
+#include <fstream>
 #include <iostream>
 #include <cstring>
 #include <map>
