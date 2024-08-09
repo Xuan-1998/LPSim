@@ -178,7 +178,8 @@ void b18InitCUDA_n(
   float deltaTime, std::vector<int> all_modes, std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode,
   const std::vector<std::vector<int>>& busRoutes,
   const std::vector<int>& busRouteIds,
-  const std::vector<int>& busDepartureTimes) {
+  const std::vector<int>& busDepartureTimes,
+  const std::vector<std::vector<int>> busRoutings) {
   ngpus = num_gpus;
   int maxGpus = 0;
   cudaGetDeviceCount(&maxGpus);
@@ -264,6 +265,7 @@ void b18InitCUDA_n(
       const std::vector<int>& route = busRoutes[i];
       int busRouteId = busRouteIds[i];
       int departureTime = busDepartureTimes[i];
+      const std::vector<int> Routing = busRoutings[i];
 
       for (size_t j = 0; j < route.size() - 1; ++j) {
           LC::B18TrafficVehicle bus;
@@ -1252,7 +1254,7 @@ __device__ void transferToNewVehicle(
   uint* vehicleToCopy,
   int* vertexIdToPar_d,
   int gpuIndex) {
-    // create new vehicle(bus)
+    // create new vehicle
     LC::B18TrafficVehicle newVehicle;
     newVehicle.busLine = 0;
     newVehicle.passengers = nullptr;

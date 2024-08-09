@@ -184,6 +184,7 @@ void B18CommandLineVersion::runB18Simulation() {
     std::vector<std::vector<int>> busRoutes;
     std::vector<int> busDepartureTimes;
     std::vector<int> busRouteIds;
+    std::vector<std::vector<int>> busRoutings;
 
   if (busMode) {
       const std::string& BusFileName = networkPathSP + busLinesPath;
@@ -262,6 +263,31 @@ void B18CommandLineVersion::runB18Simulation() {
               std::cerr << "Invalid bus_stop_osmid: " << value << " in line: " << line << std::endl;
           }
           busRoutes.push_back(stops);
+
+          std::getline(ss, value);
+          std::vector<int> routing;
+          start = value.find('"');
+          end = value.find_last_of('"');
+          if (start != std::string::npos && end != std::string::npos && end > start) {
+              std::string routing_str = value.substr(start + 1, end - start - 1);
+
+              std::stringstream routingStream(routing_str);
+              std::string route;
+              while (std::getline(routingStream, route, ',')) {
+                // Remove leading and trailing spaces
+                route.erase(0, route.find_first_not_of(' '));
+                route.erase(route.find_last_not_of(' ') + 1);
+
+                try {
+                    routing.push_back(std::stoll(route));
+                } catch (const std::invalid_argument& e) {
+                    std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
+                }
+            }
+        } else {
+            std::cerr << "Invalid routing: " << value << " in line: " << line << std::endl;
+        }
+        busRoutings.push_back(routing);
       }
 
       //std::cout << "Bus Departure Times:" << std::endl;
@@ -279,7 +305,7 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
-        networkPathSP,partitions, busMode, busRoutes, busDepartureTimes, busRouteIds);
+        networkPathSP,partitions, busMode, busRoutes, busRouteIds, busDepartureTimes, busRoutings);
   }
 
 }

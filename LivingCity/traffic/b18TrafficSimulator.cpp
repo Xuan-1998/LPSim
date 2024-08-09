@@ -248,7 +248,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     const bool busMode, 
     const std::vector<std::vector<int>>& busRoutes,
     const std::vector<int>& busDepartureTimes,
-    const std::vector<int>& busRouteIds) {
+    const std::vector<int>& busRouteIds, std::vector<std::vector<int>> busRoutings) {
   
   std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
   std::vector<uchar> laneMap_n[ngpus];
@@ -406,7 +406,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
 
     b18InitCUDA_n(ngpus, firstInitialization, vertexIdToPar, graph_->max_edge_id_,laneIdToLaneIdInGpu, trafficVehicleVec, trafficPersonVec, indexPathVec_n, edgesData_n,
         laneMap_n, trafficLights_n, intersections_n, startTimeH, endTimeH,
-        accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime, all_modes, all_od_pairs_without_mode, busRoutes, busRouteIds, busDepartureTimes);
+        accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime, all_modes, all_od_pairs_without_mode, busRoutes, busRouteIds, busDepartureTimes, busRoutings);
 
     initCudaBench.stopAndEndBenchmark();
 
