@@ -158,6 +158,25 @@ LC::Node* findBuses(const std::vector<std::vector<int>>& busRoutes,
   return head;
 }
 
+void randomVehicle(int index, B18TrafficVehicle &vehicle, uint init_intersection, uint end_intersection, float time_departure) {
+  vehicle.id = index;
+  vehicle.init_intersection = init_intersection;
+  vehicle.end_intersection = end_intersection;
+  vehicle.time_departure = time_departure;
+
+  vehicle.a = 0.557040909258405;
+  vehicle.b = 2.9020578588167;
+  vehicle.T = 0.5433027817144876;
+  vehicle.v = 0;
+  vehicle.num_steps = 0;
+  vehicle.co = 0;
+  vehicle.active = 0;
+  vehicle.numOfLaneInEdge = 0;
+  vehicle.color = p << 8;
+  vehicle.LC_stateofLaneChanging = 0;
+  vehicle.indexPathInit = 0;
+}
+
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
 void b18InitCUDA_n(
@@ -250,18 +269,15 @@ void b18InitCUDA_n(
 
       // New auto object
       LC::B18TrafficVehicle vehicle;
-      vehicle.id = i;
-      vehicle.init_intersection = all_od_pairs_without_mode[i][0];
-      vehicle.end_intersection = all_od_pairs_without_mode[i][1];
-      vehicle.busLine = all_modes[i]; // Assign travel mode to busLine
-      // FIXME: Initialize other vehicle properties, like departure time, etc.
+      // TODO: Confirm the departure time.
+      randomVehicle(i, vehicle, all_od_pairs_without_mode[i][0], all_od_pairs_without_mode[i][1], 0);
+      vehicle.busLine = 0; // Assign travel mode to busLine
       newTrafficVehicleVec.push_back(vehicle);
     }
 
     newTrafficPersonVec.push_back(person);
   }
 
-  // FIXME: Add buses to the vehicles vector according to the bus routes and bus route ids
   for (size_t i = 0; i < busRoutes.size(); ++i) {
       const std::vector<int>& route = busRoutes[i];
       int busRouteId = busRouteIds[i];
@@ -270,12 +286,9 @@ void b18InitCUDA_n(
 
       for (size_t j = 0; j < route.size() - 1; ++j) {
           LC::B18TrafficVehicle bus;
-          bus.id = vehicleId++;
-          bus.init_intersection = route[j];
-          bus.end_intersection = route[j + 1];
+          randomVehicle(vehicleId++, bus, route[j], route[j + 1], departureTime);
+          // TODO: Confirm bus routing logic
           bus.busLine = busRouteId;
-          bus.time_departure = departureTime;
-
           newTrafficVehicleVec.push_back(bus);
       }
   }
