@@ -403,6 +403,11 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
         all_od_pairs_without_mode.push_back(od_pair_with_mode.od_pair);
         all_modes.push_back(od_pair_with_mode.travel_mode);
     }
+    for (size_t i = 0; i < all_od_pairs_without_mode.size(); ++i) {
+        std::cout << "OD Pair " << i << ": ";
+        std::cout << "[" << all_od_pairs_without_mode[i][0] << ", " << all_od_pairs_without_mode[i][1] << "]";
+        std::cout << " with mode: " << all_modes[i] << std::endl;
+    }
 
     b18InitCUDA_n(ngpus, firstInitialization, vertexIdToPar, graph_->max_edge_id_,laneIdToLaneIdInGpu, trafficVehicleVec, trafficPersonVec, indexPathVec_n, edgesData_n,
         laneMap_n, trafficLights_n, intersections_n, startTimeH, endTimeH,

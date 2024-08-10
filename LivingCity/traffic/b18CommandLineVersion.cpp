@@ -269,13 +269,13 @@ void B18CommandLineVersion::runB18Simulation() {
               route.erase(0, route.find_first_not_of(' '));
               route.erase(route.find_last_not_of(' ') + 1);
               if (route.empty() || !std::all_of(route.begin(), route.end(), ::isdigit)) {
-                  std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
+                  //std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
                   continue;
               }
               try {
                   routing.push_back(std::stoll(route));
               } catch (const std::invalid_argument& e) {
-                  std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
+                  //std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
               }
           }
           busRoutings.push_back(routing);
