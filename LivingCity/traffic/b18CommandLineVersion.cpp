@@ -207,7 +207,6 @@ void B18CommandLineVersion::runB18Simulation() {
 
           std::stringstream ss(line);
           std::string value;
-          std::vector<int> stops;
 
           std::getline(ss, value, ','); // Skip trip_id
           std::getline(ss, value, ','); // Skip block_id
@@ -232,70 +231,74 @@ void B18CommandLineVersion::runB18Simulation() {
               continue;
           }
 
-          std::getline(ss, value); // Read bus_stop_osmid
+          std::getline(ss, value, '"'); // 跳过第一个引号前的内容
+          std::getline(ss, value, '"'); // 读取引号之间的内容
+          std::vector<int> stops;
 
-          // Extract the content within double quotes and remove square brackets
-          size_t start = value.find('"');
-          size_t end = value.find_last_of('"');
-          if (start != std::string::npos && end != std::string::npos && end > start) {
-              std::string stops_str = value.substr(start + 1, end - start - 1);
-              //std::cout << "Extracted stops_str: " << stops_str << std::endl; // Debug: Print extracted stops_str
+          // 处理引号和方括号
+          value.erase(std::remove(value.begin(), value.end(), '['), value.end());
+          value.erase(std::remove(value.begin(), value.end(), ']'), value.end());
 
-              // Remove square brackets
-              stops_str.erase(std::remove(stops_str.begin(), stops_str.end(), '['), stops_str.end());
-              stops_str.erase(std::remove(stops_str.begin(), stops_str.end(), ']'), stops_str.end());
-
-              std::stringstream stopStream(stops_str);
-              std::string stop;
-
-              while (std::getline(stopStream, stop, ',')) {
-                  // Remove leading and trailing spaces
-                  stop.erase(0, stop.find_first_not_of(' '));
-                  stop.erase(stop.find_last_not_of(' ') + 1);
-                  //std::cout << "Parsed stop: " << stop << std::endl; // Debug: Print each parsed stop
-                  try {
-                      stops.push_back(std::stoll(stop));
-                  } catch (const std::invalid_argument& e) {
-                      std::cerr << "Invalid stop_id: " << stop << " in line: " << line << std::endl;
-                  }
+          std::stringstream stopStream(value);
+          std::string stop;
+          while (std::getline(stopStream, stop, ',')) {
+              // 去除空格并解析
+              stop.erase(0, stop.find_first_not_of(' '));
+              stop.erase(stop.find_last_not_of(' ') + 1);
+              try {
+                  stops.push_back(std::stoll(stop));
+              } catch (const std::invalid_argument& e) {
+                  std::cerr << "Invalid stop_id: " << stop << " in line: " << line << std::endl;
               }
-          } else {
-              std::cerr << "Invalid bus_stop_osmid: " << value << " in line: " << line << std::endl;
           }
           busRoutes.push_back(stops);
 
+          // 读取 routing 字段（也包含在引号内）
           std::getline(ss, value);
           std::vector<int> routing;
-          start = value.find('"');
-          end = value.find_last_of('"');
-          if (start != std::string::npos && end != std::string::npos && end > start) {
-              std::string routing_str = value.substr(start + 1, end - start - 1);
 
-              std::stringstream routingStream(routing_str);
-              std::string route;
-              while (std::getline(routingStream, route, ',')) {
-                // Remove leading and trailing spaces
-                route.erase(0, route.find_first_not_of(' '));
-                route.erase(route.find_last_not_of(' ') + 1);
+          // 处理引号和方括号
+          value.erase(std::remove(value.begin(), value.end(), '"'), value.end());
+          value.erase(std::remove(value.begin(), value.end(), '['), value.end());
+          value.erase(std::remove(value.begin(), value.end(), ']'), value.end());
 
-                try {
-                    routing.push_back(std::stoll(route));
-                } catch (const std::invalid_argument& e) {
-                    std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
-                }
-            }
-        } else {
-            std::cerr << "Invalid routing: " << value << " in line: " << line << std::endl;
-        }
-        busRoutings.push_back(routing);
+          std::stringstream routingStream(value);
+          std::string route;
+          while (std::getline(routingStream, route, ',')) {
+              // 去除空格并解析
+              route.erase(0, route.find_first_not_of(' '));
+              route.erase(route.find_last_not_of(' ') + 1);
+              if (route.empty() || !std::all_of(route.begin(), route.end(), ::isdigit)) {
+                  std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
+                  continue;
+              }
+              try {
+                  routing.push_back(std::stoll(route));
+              } catch (const std::invalid_argument& e) {
+                  std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
+              }
+          }
+          busRoutings.push_back(routing);
       }
 
-      //std::cout << "Bus Departure Times:" << std::endl;
-      //for (const auto& time : busDepartureTimes) {
-      //    std::cout << time << std::endl;
-      //}
+
   }
 
+for (size_t i = 0; i < busRoutes.size(); ++i) {
+    std::cout << "Bus Route ID: " << busRouteIds[i] << std::endl;
+    std::cout << "Departure Time: " << busDepartureTimes[i] << std::endl;
+    std::cout << "Stops: ";
+    for (const auto& stop : busRoutes[i]) {
+        std::cout << stop << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Routing: ";
+    for (const auto& route : busRoutings[i]) {
+        std::cout << route << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "--------------------------------" << std::endl;
+}
   
   if (useCPU) {
     b18TrafficSimulator.simulateInCPU_MultiPass(numOfPasses, startSimulationH, endSimulationH,
