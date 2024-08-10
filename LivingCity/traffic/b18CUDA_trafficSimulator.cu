@@ -158,7 +158,7 @@ LC::Node* findBuses(const std::vector<std::vector<int>>& busRoutes,
   return head;
 }
 
-void randomVehicle(int index, B18TrafficVehicle &vehicle, uint init_intersection, uint end_intersection, float time_departure) {
+void randomVehicle(int index, LC::B18TrafficVehicle &vehicle, uint init_intersection, uint end_intersection, float time_departure) {
   vehicle.id = index;
   vehicle.init_intersection = init_intersection;
   vehicle.end_intersection = end_intersection;
@@ -172,7 +172,7 @@ void randomVehicle(int index, B18TrafficVehicle &vehicle, uint init_intersection
   vehicle.co = 0;
   vehicle.active = 0;
   vehicle.numOfLaneInEdge = 0;
-  vehicle.color = p << 8;
+  vehicle.color = index << 8;
   vehicle.LC_stateofLaneChanging = 0;
   vehicle.indexPathInit = 0;
 }
