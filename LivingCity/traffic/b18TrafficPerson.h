@@ -135,6 +135,7 @@ struct B18TrafficVehicleModify{
 struct B18TrafficPerson{
   int id;
   Node* transferPoints; //should take which bus line and drop at which intersection
+  float time_departure;
 };
 }
 

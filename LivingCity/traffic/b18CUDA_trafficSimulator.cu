@@ -125,6 +125,7 @@ LC::B18IntersectionData **id;
 
 __host__ __device__ void append(LC::Node** head, int key, int value);
 __host__ __device__ void appendL(LC::LNode** head, int val);
+__host__ __device__ void removeL(LC::LNode **head, int value);
 
 LC::Node* findBuses(const std::vector<std::vector<int>>& busRoutes,
                     const std::vector<int>& busRouteIds,
@@ -199,7 +200,7 @@ void b18InitCUDA_n(
   const std::vector<std::vector<int>>& busRoutes,
   const std::vector<int>& busRouteIds,
   const std::vector<int>& busDepartureTimes,
-  const std::vector<std::vector<int>> busRoutings) {
+  const std::vector<std::vector<int>> busRoutings, const std::vector<float>& dep_times) {
   ngpus = num_gpus;
   int maxGpus = 0;
   cudaGetDeviceCount(&maxGpus);
@@ -260,6 +261,7 @@ void b18InitCUDA_n(
         all_od_pairs_without_mode[i][0],
         all_od_pairs_without_mode[i][1]
       );
+      person.time_departure = dep_times[i];
     }
     else {
       person.transferPoints = new LC::Node();
@@ -270,6 +272,7 @@ void b18InitCUDA_n(
       // New auto object
       LC::B18TrafficVehicle vehicle;
       // TODO: Confirm the departure time.
+      vehicle.time_departure = dep_times[i];
       randomVehicle(i, vehicle, all_od_pairs_without_mode[i][0], all_od_pairs_without_mode[i][1], 0);
       vehicle.busLine = 0; // Assign travel mode to busLine
       newTrafficVehicleVec.push_back(vehicle);
@@ -1242,9 +1245,9 @@ __host__ __device__ int remove(LC::Node** head, int key) {
   return 0;
 }
 
-void removeL(LNode **head, int value) {
-  LNode* temp = *head;
-  LNode* prev = NULL;
+__host__ __device__ void removeL(LC::LNode **head, int value) {
+  LC::LNode* temp = *head;
+  LC::LNode* prev = NULL;
 
   if (temp != NULL && temp->data == value) {
       *head = temp->next;
@@ -1879,31 +1882,35 @@ __global__ void kernel_trafficSimulation(
         /*Passengers from intersection to the bus*/
         LC::LNode* passengers = intersection.passengers;
         while(passengers){
-          LC::Node* transferPoints = trafficPerson[passengers->data].transferPoints;
-          // Assume that the transferpoints are in order
-          LC::LNode* possibleBusLines = transferPoints->values;
-          while(possibleBusLines){
-            if(possibleBusLines->data == trafficVehicleVec[p].busLine){
-                // Add passenger to the bus
-                append(&trafficVehicleVec.passengers, transferPoints->key, passengers->data);
-                // Remove the transfer point from the passenger
-                remove(&trafficPerson[passengers->data].transferPoints, transferPoints->key);
-                // Remove passenger from the linked list
-                LNode* temp = passengers->next;
-                removeL(&intersection.passengers, passengers->data);
-                passengers = temp;
-                break;
-            }
-            possibleBusLines = possibleBusLines->next;
-          }
+          if (currentTime >= trafficVehicleVec[p].time_departure){
+              LC::Node* transferPoints = trafficPerson[passengers->data].transferPoints;
+              // Assume that the transferpoints are in order
+              LC::LNode* possibleBusLines = transferPoints->values;
+              while(possibleBusLines){
+                if(possibleBusLines->data == trafficVehicleVec[p].busLine){
+                    // Add passenger to the bus
+                    append(&(trafficVehicleVec->passengers), transferPoints->key, passengers->data);
+                    // Remove the transfer point from the passenger
+                    remove(&trafficPerson[passengers->data].transferPoints, transferPoints->key);
+                    // Remove passenger from the linked list
+                    LC::LNode* temp = passengers->next;
+                    removeL(&intersection.passengers, passengers->data);
+                    passengers = temp;
+                    break;
+                }
+                possibleBusLines = possibleBusLines->next;
+              }
 
-          if(possibleBusLines == NULL)
-          {
-            passengers = passengers->next;
+              if(possibleBusLines == NULL)
+              {
+                passengers = passengers->next;
+              }
+          }else{
+            break;
           }
         }
-        trafficVehicleVec[p].time_departure += LC::busWaitingTime * (passengers_get_off + passengers_get_on);
       }
+trafficVehicleVec[p].time_departure += LC::busWaitingTime * (passengers_get_off + passengers_get_on);
 
       //TODO: Test if the following line is doing the conversion wrong
       uchar vInMpS = (uchar) (trafficVehicleVec[p].v * 3); //speed in m/s to fit in uchar
