@@ -425,18 +425,15 @@ void b18InitCUDA_n(
 // init person waiting for bus and transfer points
   for (LC::B18TrafficPerson &person : trafficPersonVec) {
     LC::Node* transferPoint = person.transferPoints;
-    while (transferPoint != nullptr) {
+    if (transferPoint != nullptr) {
       int intersectionId = transferPoint->key;
       int targetPartition = vertexIdToPar[intersectionId];
-      appendL(&intersections_n[targetPartition][intersectionId].passengers, person.id);
+      
       
       LC::LNode* line = transferPoint->values;
-      while (line != nullptr) {
-        append(&person.transferPoints, transferPoint->key, line->data);
-        line = line->next;
+      if (line != nullptr && line->data > 0) {
+        appendL(&intersections_n[targetPartition][intersectionId].passengers, person.id);
       }
-
-      transferPoint = transferPoint->next;
     }
   }
 
