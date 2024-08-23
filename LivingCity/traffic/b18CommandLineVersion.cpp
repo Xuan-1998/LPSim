@@ -299,7 +299,7 @@ for (size_t i = 0; i < busRoutes.size(); ++i) {
     std::cout << std::endl;
     std::cout << "--------------------------------" << std::endl;
 }
-  
+
   if (useCPU) {
     b18TrafficSimulator.simulateInCPU_MultiPass(numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting);

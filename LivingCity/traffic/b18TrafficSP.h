@@ -97,7 +97,9 @@ class B18TrafficSP {
     const std::vector<personPath>& pathsInVertexes,
     const std::vector<uint> &edgeIdToLaneMapNum,
     const std::shared_ptr<abm::Graph>& graph_,
-    std::vector<B18TrafficVehicle>& B18TrafficVehicle);
+    std::vector<B18TrafficVehicle>& B18TrafficVehicle,
+    const std::vector<int>& all_modes,
+    const std::vector<std::vector<int>>& busRoutings);
 
   explicit B18TrafficSP(const std::shared_ptr<abm::Graph>& graph) : graph_{graph} {};
  private:

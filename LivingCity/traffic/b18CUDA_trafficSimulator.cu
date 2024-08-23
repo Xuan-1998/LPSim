@@ -429,7 +429,6 @@ void b18InitCUDA_n(
       int intersectionId = transferPoint->key;
       int targetPartition = vertexIdToPar[intersectionId];
       
-      
       LC::LNode* line = transferPoint->values;
       if (line != nullptr && line->data > 0) {
         appendL(&intersections_n[targetPartition][intersectionId].passengers, person.id);
@@ -1879,6 +1878,7 @@ __global__ void kernel_trafficSimulation(
         /*Passengers from intersection to the bus*/
         LC::LNode* passengers = intersection.passengers;
         while(passengers){
+          //TODO: change vechicle time to person time waiting & init D node in b18_init_CUDA
           if (currentTime >= trafficVehicleVec[p].time_departure){
               LC::Node* transferPoints = trafficPerson[passengers->data].transferPoints;
               // Assume that the transferpoints are in order

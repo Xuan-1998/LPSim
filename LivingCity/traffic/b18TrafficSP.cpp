@@ -157,6 +157,16 @@ std::vector<std::vector<ODPairsWithMode>> B18TrafficSP::read_od_pairs_from_file(
     }
   }
 
+  std::cout << "Printing all OD pairs with modes:" << std::endl;
+  for (size_t i = 0; i < all_od_pairs_sets.size(); ++i) {
+    std::cout << "OD Set " << i + 1 << ":" << std::endl;
+    for (size_t j = 0; j < all_od_pairs_sets[i].size(); ++j) {
+      std::cout << "  OD Pair " << j + 1 << ": Origin: " << all_od_pairs_sets[i][j].od_pair[0]
+                << ", Destination: " << all_od_pairs_sets[i][j].od_pair[1]
+                << ", Mode: " << all_od_pairs_sets[i][j].travel_mode << std::endl;
+    }
+  }
+
   //for (size_t i = 0; i < all_od_pairs_sets.size(); ++i) {
   //  const auto& od_pairs = all_od_pairs_sets[i];
   //  std::cout << "OD pairs set " << i << " size: " << od_pairs.size() << std::endl;
@@ -451,7 +461,9 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
   const std::vector<personPath>& pathsInVertexes,
   const std::vector<uint> &edgeIdToLaneMapNum,
   const std::shared_ptr<abm::Graph>& graph_,
-  std::vector<B18TrafficVehicle>& B18TrafficVehicle) {
+  std::vector<B18TrafficVehicle>& B18TrafficVehicle,  
+  const std::vector<int>& all_modes,
+  const std::vector<std::vector<int>>& busRoutings) {
   std::vector<uint> allPathsInEdgesCUDAFormat;
 
   for (const personPath & aPersonPath: pathsInVertexes) {
@@ -468,6 +480,28 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
     }
     B18TrafficVehicle[aPersonPath.person_id].indexPathInit = allPathsInEdgesCUDAFormat.size();
 
+    // 如果 mode 是 1，则使用公交路线
+    if (all_modes[aPersonPath.person_id] == 1) {
+        // 假设 busRoutings[aPersonPath.person_id] 是对应的公交路线
+        const std::vector<int>& busRoute = busRoutings[aPersonPath.person_id];
+        for (const auto& edgeInBusRoute : busRoute) {
+            assert(edgeInBusRoute < edgeIdToLaneMapNum.size());
+            allPathsInEdgesCUDAFormat.emplace_back(edgeIdToLaneMapNum[edgeInBusRoute]);
+            personPathLength++;
+        }
+    } else {
+        // 如果是正常模式，按原样处理
+        for (int j = 0; j < aPersonPath.pathInVertexes.size() - 1; j++) {
+            auto vertexFrom = aPersonPath.pathInVertexes[j];
+            auto vertexTo = aPersonPath.pathInVertexes[j + 1];
+            auto oneEdgeInCPUFormat = graph_->edge_ids_[vertexFrom][vertexTo];
+            assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
+            allPathsInEdgesCUDAFormat.emplace_back(edgeIdToLaneMapNum[oneEdgeInCPUFormat]);
+            personPathLength++;
+        }
+    }
+
+    /*
     // convert the path from vertexes to edges in CUDA format (laneMapNum)
     for (int j=0; j < aPersonPath.pathInVertexes.size()-1; j++) {
       auto vertexFrom = aPersonPath.pathInVertexes[j];
@@ -477,6 +511,8 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
       allPathsInEdgesCUDAFormat.emplace_back(edgeIdToLaneMapNum[oneEdgeInCPUFormat]);
       personPathLength++;
     }
+    */
+
     allPathsInEdgesCUDAFormat.emplace_back(END_OF_PATH);
     B18TrafficVehicle[aPersonPath.person_id].path_length_cpu = aPersonPath.pathInVertexes.size() - 1; // not including END_OF_PATH
 

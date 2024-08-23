@@ -486,7 +486,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
       allPathsInVertexes.insert(std::end(allPathsInVertexes), std::begin(currentBatchPathsInVertexes), std::end(currentBatchPathsInVertexes));
 
       allPathsInEdgesCUDAFormat = B18TrafficSP::convertPathsToCUDAFormat(
-          allPathsInVertexes, edgeIdToLaneMapNum, graph_, trafficVehicleVec);
+          allPathsInVertexes, edgeIdToLaneMapNum, graph_, trafficVehicleVec, all_modes,busRoutings);
 //    std::cout << "For person 61507, indexPathInit is " << trafficVehicleVec[61507].indexPathInit<<" allPathsInEdgesCUDAFormat[]="<<allPathsInEdgesCUDAFormat[trafficVehicleVec[61507].indexPathInit]<<std::endl;
 //    QFile indexPathInitFile("indexPathInit01.csv");
 //    if (indexPathInitFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
