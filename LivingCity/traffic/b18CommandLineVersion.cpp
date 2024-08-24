@@ -47,6 +47,8 @@ void B18CommandLineVersion::runB18Simulation() {
   std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "od_demand_5to12.csv").toString().toStdString();
   std::string partitionsPath = settings.value("PARTITION_FILENAME").toString().toStdString();
   const bool runUnitTests = settings.value("RUN_UNIT_TESTS", false).toBool();
+  bool busMode = settings.value("IF_BUS_MODE", false).toBool();
+  std::string busLinesPath = settings.value("BUS_SCHEDULE_FILENAME", "bus_schedules.csv").toString().toStdString();
 
   ClientGeometry cg;
   std::vector<std::string> allParameters = {"GUI", "USE_CPU", "USE_JOHNSON_ROUTING",
@@ -55,7 +57,7 @@ void B18CommandLineVersion::runB18Simulation() {
                                             "LIMIT_NUM_PEOPLE", "NUM_PASSES",
                                             "TIME_STEP", "START_HR", "END_HR",
                                             "SHOW_BENCHMARKS", "REROUTE_INCREMENT",
-                                            "OD_DEMAND_FILENAME","PARTITION_FILENAME", "NUM_GPUS","RUN_UNIT_TESTS"};
+                                            "OD_DEMAND_FILENAME","PARTITION_FILENAME", "NUM_GPUS","RUN_UNIT_TESTS", "IF_BUS_MODE", "BUS_SCHEDULE_FILENAME"};
 
   for (const auto inputedParameter: settings.childKeys()) {
     if (inputedParameter.at(0) != QChar('#') // it's a comment
@@ -153,9 +155,18 @@ void B18CommandLineVersion::runB18Simulation() {
     infile.close();
   }
   loadODDemandData.startMeasuring();
-  const std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_ = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
+  const std::vector<std::vector<ODPairsWithMode>> all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH, limitNumPeople);
+  //const std::vector<std::vector<std::array<abm::graph::vertex_t, 2>>> & all_od_pairs_sets = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
+  //const std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_ = B18TrafficSP::read_od_pairs_from_file(odFileName, startSimulationH, endSimulationH);
   const std::vector<float> dep_times = B18TrafficSP::read_dep_times(odFileName, startSimulationH, endSimulationH);
   loadODDemandData.stopAndEndBenchmark();
+  
+  std::vector<ODPairsWithMode> all_od_pairs_;
+    for (const auto& od_pairs_set : all_od_pairs_sets) {
+        all_od_pairs_.insert(all_od_pairs_.end(), od_pairs_set.begin(), od_pairs_set.end());
+    }
+
+    printf("# of OD pairs = %d\n", all_od_pairs_.size());
   
   if (useSP) {
 	  //make the graph from edges file and load the OD demand from od file
@@ -169,7 +180,126 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.createB2018People(startSimulationH, endSimulationH, limitNumPeople, addRandomPeople, useSP);
   }
 
-  
+  //read bus line paths
+    std::vector<std::vector<int>> busRoutes;
+    std::vector<int> busDepartureTimes;
+    std::vector<int> busTripIds;
+    std::vector<std::vector<int>> busRoutings;
+
+  if (busMode) {
+      const std::string& BusFileName = networkPathSP + busLinesPath;
+      std::cout << BusFileName << " as bus file" << std::endl;
+      std::ifstream file(BusFileName);
+      std::string line;
+
+      if (!file.is_open()) {
+          std::cerr << "Failed to open file: " << busLinesPath << std::endl;
+      } else {
+          std::cout << "Successfully opened file: " << busLinesPath << std::endl;
+      }
+      bool isFirstLine = true;
+      while (std::getline(file, line)) {
+
+        if (isFirstLine) {
+            isFirstLine = false;
+            continue; // Skip the header line
+        }
+
+          std::stringstream ss(line);
+          std::string value;
+
+          std::getline(ss, value, ','); // Skip trip_id
+          std::getline(ss, value, ','); // Skip block_id
+          std::getline(ss, value, ','); // Skip direction_id
+          std::getline(ss, value, ','); // Skip shape_id
+          std::getline(ss, value, ','); // Skip route_id
+          std::getline(ss, value, ','); // Skip route_short_name
+
+          std::getline(ss, value, ','); // Read departure_time
+          try {
+              busDepartureTimes.push_back(std::stoi(value));
+          } catch (const std::invalid_argument& e) {
+              std::cerr << "Invalid departure_time: " << value << " in line: " << line << std::endl;
+              continue;
+          }
+
+          std::getline(ss, value, '"'); // 跳过第一个引号前的内容
+          std::getline(ss, value, '"'); // 读取引号之间的内容
+          std::vector<int> stops;
+
+          // 处理引号和方括号
+          value.erase(std::remove(value.begin(), value.end(), '['), value.end());
+          value.erase(std::remove(value.begin(), value.end(), ']'), value.end());
+
+          std::stringstream stopStream(value);
+          std::string stop;
+          while (std::getline(stopStream, stop, ',')) {
+              // 去除空格并解析
+              stop.erase(0, stop.find_first_not_of(' '));
+              stop.erase(stop.find_last_not_of(' ') + 1);
+              try {
+                  stops.push_back(std::stoll(stop));
+              } catch (const std::invalid_argument& e) {
+                  std::cerr << "Invalid stop_id: " << stop << " in line: " << line << std::endl;
+              }
+          }
+          busRoutes.push_back(stops);
+
+          std::getline(ss, value, '"'); // 跳过 routing 前的引号
+          std::getline(ss, value, '"'); // 读取 routing 字段
+          value.erase(std::remove(value.begin(), value.end(), '['), value.end());
+          value.erase(std::remove(value.begin(), value.end(), ']'), value.end());
+
+          std::vector<int> routing;
+          std::stringstream routingStream(value);
+          std::string route;
+          while (std::getline(routingStream, route, ',')) {
+              route.erase(0, route.find_first_not_of(' '));
+              route.erase(route.find_last_not_of(' ') + 1);
+              if (!route.empty()) {
+                  try {
+                      routing.push_back(std::stoi(route));
+                  } catch (const std::invalid_argument& e) {
+                      std::cerr << "Invalid routing_id: " << route << " in line: " << line << std::endl;
+                  }
+              }
+          }
+          busRoutings.push_back(routing);
+
+          // 读取 trip_id 字段
+          std::getline(ss, value, ','); // 跳过逗号
+          std::getline(ss, value); // Read trip_id
+          try {
+              busTripIds.push_back(std::stoi(value));  // Store trip_id
+          } catch (const std::invalid_argument& e) {
+              std::cerr << "Invalid trip_id: " << value << " in line: " << line << std::endl;
+          }
+
+          // 添加调试信息
+          std::cout << "Routing: ";
+          for (const auto& r : routing) {
+              std::cout << r << " ";
+          }
+          std::cout << "\nTrip ID: " << busTripIds.back() << std::endl;
+        }
+  }
+
+for (size_t i = 0; i < busRoutes.size(); ++i) {
+    std::cout << "Bus Trip ID: " << busTripIds[i] << std::endl;
+    std::cout << "Departure Time: " << busDepartureTimes[i] << std::endl;
+    std::cout << "Stops: ";
+    for (const auto& stop : busRoutes[i]) {
+        std::cout << stop << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Routing: ";
+    for (const auto& route : busRoutings[i]) {
+        std::cout << route << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "--------------------------------" << std::endl;
+}
+
   if (useCPU) {
     b18TrafficSimulator.simulateInCPU_MultiPass(numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting);
@@ -178,8 +308,7 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(ngpus, numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
-        networkPathSP,partitions);
+        networkPathSP, partitions, busMode, busRoutes, busTripIds, busDepartureTimes, busRoutings);
   }
-
 }
 }  // LC

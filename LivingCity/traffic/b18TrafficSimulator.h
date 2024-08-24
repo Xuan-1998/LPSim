@@ -8,7 +8,7 @@
 // #define ngpus 2
 // const int ngpus = 2;
 #include "../misctools/misctools.h"
-
+#include "b18TrafficSP.h"
 #include "b18TrafficOD.h"
 #include "b18TrafficLaneMap.h"
 
@@ -79,8 +79,10 @@ class B18TrafficSimulator {
   void simulateInGPU(const int ngpus, const int numOfPasses, const float startTimeH, const float endTimeH,
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters, const int rerouteIncrementMins,
-    const std::vector<std::array<abm::graph::vertex_t, 2>>& all_od_pairs,
-    const std::vector<float>& dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar);
+    //const std::vector<std::array<abm::graph::vertex_t, 2>>& all_od_pairs,
+    const std::vector<ODPairsWithMode> & all_od_pairs_,
+    const std::vector<float>& dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar,    
+    const bool busMode, const std::vector<std::vector<int>>& busRoutes, const std::vector<int>& busDepartureTimes, const std::vector<int>& busTripIds, std::vector<std::vector<int>> busRoutings);
 
   // Lanes
   std::vector<uint> edgeIdToLaneMapNum;

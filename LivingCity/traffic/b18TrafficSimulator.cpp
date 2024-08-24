@@ -209,9 +209,15 @@ void savePaths(const std::vector<personPath>& paths, const std::string& filename
 //////////////////////////////////////////////////
 void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, const float startTimeH, const float endTimeH,
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
-    const parameters & simParameters,
-    const int rerouteIncrementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
-    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar) {
+    const parameters & simParameters, const int rerouteIncrementMins,
+    //const int rerouteIncrementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
+    const std::vector<ODPairsWithMode> & all_od_pairs_,
+    const std::vector<float> & dep_times, const std::string & networkPathSP, const std::vector<int>& vertexIdToPar,
+    const bool busMode, 
+    const std::vector<std::vector<int>>& busRoutes,
+    const std::vector<int>& busDepartureTimes,
+    const std::vector<int>& busTripIds, 
+    std::vector<std::vector<int>> busRoutings) {
   
   std::vector<uint> edgeIdToLaneMapNum_n[ngpus];
   std::vector<uchar> laneMap_n[ngpus];
@@ -353,6 +359,20 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
     //     cudaStreamCreate( &streams[i]);
     // }
 
+    std::vector<int> all_modes;
+    std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode;
+    all_modes.reserve(all_od_pairs_.size());
+    all_od_pairs_without_mode.reserve(all_od_pairs_.size());
+    for (const auto& od_pair_with_mode : all_od_pairs_) {
+        all_od_pairs_without_mode.push_back(od_pair_with_mode.od_pair);
+        all_modes.push_back(od_pair_with_mode.travel_mode);
+    }
+    for (size_t i = 0; i < all_od_pairs_without_mode.size(); ++i) {
+        std::cout << "OD Pair " << i << ": ";
+        std::cout << "[" << all_od_pairs_without_mode[i][0] << ", " << all_od_pairs_without_mode[i][1] << "]";
+        std::cout << " with mode: " << all_modes[i] << std::endl;
+    }
+
     // b18InitCUDA(firstInitialization, trafficVehicleVec, indexPathVec, edgesData,
     //     laneMap, trafficLights, intersections, startTimeH, endTimeH,
     //     accSpeedPerLinePerTimeInterval, numVehPerLinePerTimeInterval, deltaTime);
@@ -419,7 +439,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
       float currentBatchStartTimeSecs = startTimeSecs + increment_index * rerouteIncrementMins * 60;
       float currentBatchEndTimeSecs = startTimeSecs + (increment_index + 1) * rerouteIncrementMins * 60;
 
-      auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs, graph_, dep_times,
+      auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs_without_mode, graph_, dep_times,
                                             currentBatchStartTimeSecs, currentBatchEndTimeSecs,
                                             (const int) increment_index, trafficVehicleVec);
     
