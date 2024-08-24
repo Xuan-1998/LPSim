@@ -482,12 +482,38 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
 
     // 如果 mode 是 1，则使用公交路线
     if (all_modes[aPersonPath.person_id] == 1) {
-        // 假设 busRoutings[aPersonPath.person_id] 是对应的公交路线
-        const std::vector<int>& busRoute = busRoutings[aPersonPath.person_id];
-        for (const auto& edgeInBusRoute : busRoute) {
-            assert(edgeInBusRoute < edgeIdToLaneMapNum.size());
-            allPathsInEdgesCUDAFormat.emplace_back(edgeIdToLaneMapNum[edgeInBusRoute]);
-            personPathLength++;
+        // 如果 mode 是公交模式，我们需要查找公交路线片段
+        const auto& pathInVertexes = aPersonPath.pathInVertexes;
+        assert(pathInVertexes.size() >= 2);
+
+        abm::graph::vertex_t startVertex = pathInVertexes[0];
+        abm::graph::vertex_t endVertex = pathInVertexes[pathInVertexes.size() - 1];
+
+        // 找到匹配的公交路线
+        const std::vector<int>* selectedBusRoute = nullptr;
+        for (const auto& busRoute : busRoutings) {
+            // 查找公交路线中的起点和终点
+            auto startIt = std::find(busRoute.begin(), busRoute.end(), startVertex);
+            auto endIt = std::find(busRoute.begin(), busRoute.end(), endVertex);
+
+            // 确保起点和终点都存在，且起点在终点之前
+            if (startIt != busRoute.end() && endIt != busRoute.end() && startIt < endIt) {
+                selectedBusRoute = &busRoute;
+                break;
+            }
+        }
+
+        if (selectedBusRoute) {
+            for (auto it = std::find(selectedBusRoute->begin(), selectedBusRoute->end(), startVertex);
+                 it != std::find(selectedBusRoute->begin(), selectedBusRoute->end(), endVertex) + 1;
+                 ++it) {
+                auto oneEdgeInCPUFormat = graph_->edge_ids_[*it][*(it + 1)];
+                assert(oneEdgeInCPUFormat < edgeIdToLaneMapNum.size());
+                allPathsInEdgesCUDAFormat.emplace_back(edgeIdToLaneMapNum[oneEdgeInCPUFormat]);
+                personPathLength++;
+            }
+        } else {
+            std::cerr << "Error: No matching bus route found for person " << aPersonPath.person_id << std::endl;
         }
     } else {
         // 如果是正常模式，按原样处理
