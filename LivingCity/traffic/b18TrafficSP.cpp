@@ -347,6 +347,16 @@ const std::vector<abm::graph::edge_id_t> B18TrafficSP::loadPrevPathsFromFile(
   return const_paths_SP;
 }
 
+std::vector<abm::graph::edge_id_t> B18TrafficSP::mergePaths(
+    const std::vector<std::vector<abm::graph::edge_id_t>>& paths) {
+    
+    std::vector<abm::graph::edge_id_t> mergedPath;
+    for (const auto& path : paths) {
+        mergedPath.insert(mergedPath.end(), path.begin(), path.end());
+    }
+    return mergedPath;
+}
+
 std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs_,
   const std::shared_ptr<abm::Graph>& street_graph,
@@ -355,6 +365,8 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const float currentBatchEndTimeSecs,
   const int reroute_batch_number,
   std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle) {
+
+  std::vector<personPath> currentBatchPaths;
 
   if (all_od_pairs_.size() != dep_times.size())
     throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
@@ -395,8 +407,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   routingCH.stopAndEndBenchmark();
 
   std::cout << "# of paths = " << paths_ch.size() << std::endl;
-
-  std::vector<personPath> currentBatchPaths;
+  std::vector<abm::graph::edge_id_t> mergedPath = B18TrafficSP::mergePaths(paths_ch);
   currentBatchPaths.reserve(paths_ch.size());
   for (int i = 0; i < paths_ch.size(); i++){
     personPath aPersonPath;
