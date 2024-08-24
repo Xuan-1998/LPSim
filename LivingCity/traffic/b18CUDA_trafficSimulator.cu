@@ -121,6 +121,40 @@ uchar **trafficLights_d  = nullptr;
 // std::map<int,std::vector<LC::B18TrafficVehicle> >personToCopy;
 // std::map<int,std::vector<int> >personToRemove;//eg: 1->{1,3,5},2->{9},3->{} (gpuIndex->personList)
 
+__host__ __device__ void append(LC::Node** head, int key, int value);
+__host__ __device__ void appendL(LC::LNode** head, int val);
+__host__ __device__ void removeL(LC::LNode **head, int value);
+
+LC::Node* findBuses(const std::vector<std::vector<int>>& busRoutes,
+                    const std::vector<int>& busTripIds,
+                    const int startStop,
+                    const int endStop) {
+  LC::Node* head = nullptr;
+  LC::LNode* current = nullptr;
+
+  for (int i = 0; i < busRoutes.size(); i++) {
+    auto& route = busRoutes[i];
+    auto itStart = std::find(route.begin(), route.end(), startStop);
+    auto itEnd = std::find(route.begin(), route.end(), endStop);
+
+    if (itStart != route.end() && itEnd != route.end() && itStart < itEnd) {
+      if (head == nullptr) {
+        head = new LC::Node();
+        head->key = endStop;
+        head->values = new LC::LNode();
+        head->values->data = busTripIds[i];
+        head->values->next = nullptr;
+        current = head->values;
+      } else if (current != nullptr) {
+        current->next = new LC::LNode();
+        current = current->next;
+        current->data = busTripIds[i];
+        current->next = nullptr;
+      }
+    }
+  }
+  return head;
+}
 
 
 float* accSpeedPerLinePerTimeInterval_d;
@@ -132,6 +166,7 @@ void b18InitCUDA_n(
   int edges_num,
   std::map<uint, uint>laneIdToLaneIdInGpu[],
   std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, 
+  std::vector<LC::B18TrafficPerson>& trafficPersonVec,
   std::vector<uint> indexPathVec_n[], 
   std::vector<LC::B18EdgeData> edgesData_n[], 
   std::vector<uchar> laneMap_n[], 
@@ -140,7 +175,12 @@ void b18InitCUDA_n(
   float startTimeH, float endTimeH,
   std::vector<float>& accSpeedPerLinePerTimeInterval,
   std::vector<float>& numVehPerLinePerTimeInterval,
-  float deltaTime) {
+  float deltaTime, 
+  std::vector<int> all_modes, std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode,
+  const std::vector<std::vector<int>>& busRoutes,
+  const std::vector<int>& busTripIds,
+  const std::vector<int>& busDepartureTimes,
+  const std::vector<std::vector<int>> busRoutings, const std::vector<float>& dep_times) {
   ngpus = num_gpus;
   int maxGpus = 0;
   cudaGetDeviceCount(&maxGpus);
@@ -183,6 +223,72 @@ void b18InitCUDA_n(
   for(int i = 0; i < ngpus; i++){
       cudaStreamCreate( &streams[i]);
   }
+
+  // Initialize people and vehicles
+  std::vector<LC::B18TrafficPerson> newTrafficPersonVec;
+  std::vector<LC::B18TrafficVehicle> newTrafficVehicleVec;
+  int vehicleId = 0;
+  for (size_t i = 0; i < all_od_pairs_without_mode.size(); ++i) {
+    // FIXME: Multiple segments of the trip should be added to the same person, in transferPoints
+    LC::B18TrafficPerson person;
+    person.id = i;
+    person.transferPoints = nullptr;
+
+    if (all_modes[i] != 0) { // If travel mode is not auto
+      person.transferPoints = findBuses(
+        busRoutes,
+        busTripIds,
+        all_od_pairs_without_mode[i][0],
+        all_od_pairs_without_mode[i][1]
+      );
+      person.time_departure = dep_times[i];
+    }
+    else {
+      person.transferPoints = new LC::Node();
+      person.transferPoints->key = all_od_pairs_without_mode[i][1];
+      person.transferPoints->values = new LC::LNode();
+      person.transferPoints->values->data = 0;
+
+      // New auto object
+      LC::B18TrafficVehicle vehicle;
+      // TODO: Confirm the departure time.
+      vehicle.time_departure = dep_times[i];
+      vehicle.busLine = 0; // Assign travel mode to busLine
+      newTrafficVehicleVec.push_back(vehicle);
+    }
+
+    newTrafficPersonVec.push_back(person);
+  }
+
+  for (size_t i = 0; i < busRoutes.size(); ++i) {
+      const std::vector<int>& route = busRoutes[i];
+      int busTripId = busTripIds[i];
+      int departureTime = busDepartureTimes[i];
+      const std::vector<int> Routing = busRoutings[i];
+
+      for (size_t j = 0; j < route.size() - 1; ++j) {
+          LC::B18TrafficVehicle bus;
+          // TODO: Confirm bus routing logic
+          bus.busLine = busTripId;
+          newTrafficVehicleVec.push_back(bus);
+      }
+  }
+
+  trafficPersonVec = newTrafficPersonVec;
+  trafficVehicleVec = newTrafficVehicleVec;  
+
+
+  size_t size_traffic_person = trafficPersonVec.size() * sizeof(LC::B18TrafficPerson);
+  LC::B18TrafficPerson* trafficPerson_d;
+  gpuErrchk(cudaMalloc((void**)&trafficPerson_d, size_traffic_person));
+  gpuErrchk(cudaMemcpy(trafficPerson_d, trafficPersonVec.data(), size_traffic_person, cudaMemcpyHostToDevice));
+
+  // Allocate and copy trafficVehicleVec to GPU
+  size_t size_traffic_vehicle = trafficVehicleVec.size() * sizeof(LC::B18TrafficVehicle);
+  LC::B18TrafficVehicle* trafficVehicle_d;
+  gpuErrchk(cudaMalloc((void**)&trafficVehicle_d, size_traffic_vehicle));
+  gpuErrchk(cudaMemcpy(trafficVehicle_d, trafficVehicleVec.data(), size_traffic_vehicle, cudaMemcpyHostToDevice));
+
   //printf(">>b18InitCUDA firstInitialization %s\n", (firstInitialization?"INIT":"ALREADY INIT"));
   //printMemoryUsage();
   const uint numStepsPerSample = 30.0f / deltaTime; //each min
@@ -1031,6 +1137,110 @@ __device__ void getLaneIdToLaneIdInGpuValue(int* keys, int* values,int wholeLane
         }
     }
 }
+
+
+__host__ __device__ LC::Node* find(LC::Node* head, int key) {
+  LC::Node* curr = head;
+  while (curr) {
+      if (curr->key == key) return curr;
+      curr = curr->next;
+  }
+  return nullptr;
+}
+
+__host__ __device__ void append(LC::Node** head, int key, int value) {
+  LC::Node* node = find(*head, key);
+  if (!node) {
+      node = new LC::Node;
+      node->key = key;
+      node->next = *head;
+      *head = node;
+  }
+  LC::LNode* newNode = new LC::LNode;
+  newNode->data = value;
+  newNode->next = nullptr;
+  if (!node->values) {
+      node->values = newNode;
+  } else {
+      LC::LNode* curr = node->values;
+      while (curr->next) {
+          curr = curr->next;
+      }
+      curr->next = newNode;
+  }
+}
+
+__host__ __device__ void insert(LC::Node** head, int key, int* values, int valuesSize) {
+  LC::Node* node = find(*head, key);
+  if (!node) {
+      node = new LC::Node;
+      node->key = key;
+      node->next = *head;
+      *head = node;
+  }
+  node->values = nullptr;
+  for (int i = 0; i < valuesSize; ++i) {
+      append(head, key, values[i]);
+  }
+}
+
+__host__ __device__ int remove(LC::Node** head, int key) {
+  LC::Node** pp = head;
+  while (*pp) {
+      if ((*pp)->key == key) {
+          LC::Node* temp = *pp;
+          *pp = (*pp)->next;
+          LC::LNode* curr = temp->values;
+          int count = 0;
+          while (curr) {
+              LC::LNode* next = curr->next;
+              delete curr;
+              curr = next;
+              count++;
+          }
+          delete temp;
+          return count;
+      }
+      pp = &(*pp)->next;
+  }
+  return 0;
+}
+
+__host__ __device__ void removeL(LC::LNode **head, int value) {
+  LC::LNode* temp = *head;
+  LC::LNode* prev = NULL;
+
+  if (temp != NULL && temp->data == value) {
+      *head = temp->next;
+      delete temp;
+      return;
+  }
+
+  while (temp != NULL && temp->data != value) {
+      prev = temp;
+      temp = temp->next;
+  }
+
+  if (temp == NULL) return;
+  prev->next = temp->next;
+  delete temp;
+}
+
+__host__ __device__ void appendL(LC::LNode** head, int val) {
+  LC::LNode* new_node = new LC::LNode();
+  new_node->data = val;
+  new_node->next = NULL;
+  if(*head == NULL) {
+      *head = new_node;
+  } else {
+      LC::LNode* temp = *head;
+      while(temp->next != NULL) {
+          temp = temp->next;
+      }
+      temp->next = new_node;
+  }
+}
+
 
 /**
  * Performs an atomic compare-and-swap operation on a single unsigned char.

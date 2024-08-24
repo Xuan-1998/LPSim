@@ -19,6 +19,7 @@ extern void b18InitCUDA_n(const int ngpus, bool fistInitialization, // crate buf
                         int edges_num,
                         std::map<uint, uint> laneIdToLaneIdInGpu[],
                         std::vector<LC::B18TrafficVehicle> &trafficVehicleVec,
+                        std::vector<LC::B18TrafficPerson>& trafficPersonVec,
                         std::vector<uint> indexPathVec_n[],
                         std::vector<LC::B18EdgeData> edgesData_n[], std::vector<uchar> laneMap_n[],
                         std::vector<uchar> trafficLights_n[],
@@ -26,7 +27,12 @@ extern void b18InitCUDA_n(const int ngpus, bool fistInitialization, // crate buf
                         float startTimeH, float endTimeH,
                         std::vector<float>& accSpeedPerLinePerTimeInterval,
                         std::vector<float>& numVehPerLinePerTimeInterval,
-                        float deltaTime);
+                        float deltaTime, 
+                        std::vector<int> all_modes, std::vector<std::array<abm::graph::vertex_t, 2>> all_od_pairs_without_mode,
+                        const std::vector<std::vector<int>>& busRoutes,
+                        const std::vector<int>& busRouteIds,
+                        const std::vector<int>& busDepartureTimes,
+                        const std::vector<std::vector<int>> busRoutings, const std::vector<float>& dep_times);
                         
 extern void b18InitCUDA(bool fistInitialization, // crate buffers
                         std::vector<LC::B18TrafficVehicle> &trafficVehicleVec,

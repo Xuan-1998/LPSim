@@ -11,6 +11,8 @@
 #ifndef LC_B18_TRAFFIC_PERSON_H
 #define LC_B18_TRAFFIC_PERSON_H
 
+#include "b18GeneralStruct.h"
+
 namespace LC {
 
 struct B18TrafficVehicle {
@@ -69,6 +71,10 @@ struct B18TrafficVehicle {
   unsigned short LC_endOKLanes;
   unsigned short LC_stateofLaneChanging;
 
+  // vehicle type
+  unsigned short busLine; // 0 if it's auto, 1,2,3,4,5 if it's bus
+  Node* passengers; // a list of persons, key is the intersection id, value is the list of persons to drop off
+
   int isInIntersection;
   bool operator==(const B18TrafficVehicle& other) const {
         return id == other.id &&
@@ -118,6 +124,12 @@ struct B18TrafficVehicleModify{
   bool ifToRemove;
   int gpuIndexToCopy;
 };
-}
 
+struct B18TrafficPerson{
+  int id;
+  Node* transferPoints; //should take which bus line and drop at which intersection
+  float time_departure;
+};
+
+}
 #endif  // LC_B18_TRAFFIC_PERSON_H
