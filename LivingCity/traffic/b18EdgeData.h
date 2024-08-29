@@ -47,7 +47,7 @@ struct B18IntersectionData {
   ushort totalInOutEdges;
   uint edge[24];// up to six arms intersection
   float nextEvent;
-  LNode* passengers;
+  DNode* passengers;
   LNode* busLines;
 };
 }

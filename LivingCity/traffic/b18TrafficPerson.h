@@ -78,9 +78,6 @@ struct B18TrafficVehicle {
   unsigned short busLine; // 0 if it's auto, 1,2,3,4,5 if it's bus
   Node* passengers; // a list of persons, key is the intersection id, value is the list of persons to drop off
 
-  //save travel time
-  float time_diff;
-
   int isInIntersection;
   bool operator==(const B18TrafficVehicle& other) const {
         return id == other.id &&
@@ -135,7 +132,7 @@ struct B18TrafficVehicleModify{
 struct B18TrafficPerson{
   int id;
   Node* transferPoints; //should take which bus line and drop at which intersection
-  float time_departure;
+  int num_step;
 };
 }
 

@@ -14,6 +14,12 @@ struct Node {
     Node* next;
 };
 
+struct DNode {
+    int id;
+    int data;
+    DNode* next;
+};
+
 class Dict {
     Node* head;
     public:

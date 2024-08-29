@@ -1276,6 +1276,49 @@ __host__ __device__ void appendL(LC::LNode** head, int val) {
   }
 }
 
+__host__ __device__ void removeD(DNode** head, int id) {
+  DNode* temp = *head;
+  DNode* prev = NULL;
+
+  // If head node itself holds the id to be deleted
+  if (temp != NULL && temp->id == id) {
+      *head = temp->next;  // Change head
+      delete temp;          // Free old head
+      return;
+  }
+
+  // Search for the id to be deleted
+  while (temp != NULL && temp->id != id) {
+      prev = temp;
+      temp = temp->next;
+  }
+
+  // If id was not present in list
+  if (temp == NULL) return;
+
+  // Unlink the node from linked list
+  prev->next = temp->next;
+
+  delete temp;  // Free memory
+}
+
+__host__ __device__ void appendD(DNode** head, int id, int val) {
+  DNode* new_node = new DNode();
+  new_node->id = id;
+  new_node->data = val;
+  new_node->next = NULL;
+
+  if (*head == NULL) {
+      *head = new_node;
+  } else {
+      DNode* temp = *head;
+      while (temp->next != NULL) {
+          temp = temp->next;
+      }
+      temp->next = new_node;
+  }
+}
+
 /*Add transfer function to simulate people change from a bus to another bus*/
 __device__ void transferToNewVehicle(
   int personId,
@@ -1867,7 +1910,7 @@ __global__ void kernel_trafficSimulation(
             }
             else{
               // transfer to next bus
-              appendL(&(intersections[edgesData[nextEdge_d].nextIntersMapped].passengers), passengers->data);
+              appendD(&(intersections[edgesData[nextEdge_d].nextIntersMapped].passengers), passengers->data, 0);
             }
             passengers = passengers->next;
           }
@@ -1876,10 +1919,10 @@ __global__ void kernel_trafficSimulation(
         }
 
         /*Passengers from intersection to the bus*/
-        LC::LNode* passengers = intersection.passengers;
+        LC::DNode* passengers = intersection.passengers;
         while(passengers){
           //TODO: change vechicle time to person time waiting & init D node in b18_init_CUDA
-          if (currentTime >= trafficVehicleVec[p].time_departure){
+          if (currentTime >= passengers.data){
               LC::Node* transferPoints = trafficPerson[passengers->data].transferPoints;
               // Assume that the transferpoints are in order
               LC::LNode* possibleBusLines = transferPoints->values;
@@ -1891,7 +1934,7 @@ __global__ void kernel_trafficSimulation(
                     remove(&trafficPerson[passengers->data].transferPoints, transferPoints->key);
                     // Remove passenger from the linked list
                     LC::LNode* temp = passengers->next;
-                    removeL(&intersection.passengers, passengers->data);
+                    removeD(&intersection.passengers, passengers->data);
                     passengers = temp;
                     break;
                 }
