@@ -103,8 +103,8 @@ class B18TrafficSimulator {
   // car path
   void generateCarPaths(bool useJohnsonRouting);
 
-  // Person
-  std::vector<B18TrafficPerson> trafficPersonVec;
+  // Vehicle
+  std::vector<B18TrafficVehicle> trafficVehicleVec;
   std::vector<uint> indexPathVec;
   
   std::vector<uint> indexPathVecOrder;

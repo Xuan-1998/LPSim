@@ -35,18 +35,18 @@ typedef DistanceProperty::matrix_type DistanceMatrix;
 typedef DistanceProperty::matrix_map_type DistanceMatrixMap;
 
 // Convert OD pairs to SP graph format
-std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std::vector<B18TrafficPerson> B18TrafficPerson, 
+std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std::vector<B18TrafficVehicle> B18TrafficVehicle, 
 									    const int nagents) {
   bool status = true;
   std::vector<std::array<abm::graph::vertex_t, 2>> od_pairs;
   try {
     abm::graph::vertex_t v1, v2;
     abm::graph::weight_t weight;
-    printf("trafficPersonSize = %d\n", B18TrafficPerson.size());
-    for (int person = 0; person < B18TrafficPerson.size(); person++) {
+    printf("trafficPersonSize = %d\n", B18TrafficVehicle.size());
+    for (int person = 0; person < B18TrafficVehicle.size(); person++) {
     //for (int person = 0; person < 1; person++) {
-      v1 = B18TrafficPerson[person].init_intersection;
-      v2 = B18TrafficPerson[person].end_intersection;
+      v1 = B18TrafficVehicle[person].init_intersection;
+      v2 = B18TrafficVehicle[person].end_intersection;
       std::array<abm::graph::vertex_t, 2> od = {v1, v2};
       od_pairs.emplace_back(od);
     }
@@ -81,7 +81,7 @@ std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::make_od_pairs(std
     */
 
   } catch (std::exception& exception) {
-    std::cout << "Looping through B18TrafficPerson doesn't work " << exception.what() << "\n";
+    std::cout << "Looping through B18TrafficVehicle doesn't work " << exception.what() << "\n";
     status = false;
   }
   return od_pairs;
@@ -284,7 +284,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const float currentBatchStartTimeSecs,
   const float currentBatchEndTimeSecs,
   const int reroute_batch_number,
-  std::vector<LC::B18TrafficPerson>& B18TrafficPerson) {
+  std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle) {
 
   if (all_od_pairs_.size() != dep_times.size())
     throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");
@@ -343,22 +343,22 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
   const std::vector<personPath>& pathsInVertexes,
   const std::vector<uint> &edgeIdToLaneMapNum,
   const std::shared_ptr<abm::Graph>& graph_,
-  std::vector<B18TrafficPerson>& B18TrafficPerson) {
+  std::vector<B18TrafficVehicle>& B18TrafficVehicle) {
   std::vector<uint> allPathsInEdgesCUDAFormat;
 
   for (const personPath & aPersonPath: pathsInVertexes) {
-    assert(aPersonPath.person_id < B18TrafficPerson.size());
+    assert(aPersonPath.person_id < B18TrafficVehicle.size());
     int personPathLength = 0;
 
     // assign current indexPathInit and assert there are no reassignments
-    if (B18TrafficPerson[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET &&
-          B18TrafficPerson[aPersonPath.person_id].indexPathInit != allPathsInEdgesCUDAFormat.size()) {
+    if (B18TrafficVehicle[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET &&
+          B18TrafficVehicle[aPersonPath.person_id].indexPathInit != allPathsInEdgesCUDAFormat.size()) {
       std::string errorMessage = "Error! person_id " + std::to_string(aPersonPath.person_id)
-      + " has indexPathInit " + std::to_string(B18TrafficPerson[aPersonPath.person_id].indexPathInit)
+      + " has indexPathInit " + std::to_string(B18TrafficVehicle[aPersonPath.person_id].indexPathInit)
       + " while we're trying to set it as " + std::to_string(allPathsInEdgesCUDAFormat.size());
       throw std::runtime_error(errorMessage);
     }
-    B18TrafficPerson[aPersonPath.person_id].indexPathInit = allPathsInEdgesCUDAFormat.size();
+    B18TrafficVehicle[aPersonPath.person_id].indexPathInit = allPathsInEdgesCUDAFormat.size();
 
     // convert the path from vertexes to edges in CUDA format (laneMapNum)
     for (int j=0; j < aPersonPath.pathInVertexes.size()-1; j++) {
@@ -370,13 +370,13 @@ std::vector<uint> B18TrafficSP::convertPathsToCUDAFormat (
       personPathLength++;
     }
     allPathsInEdgesCUDAFormat.emplace_back(END_OF_PATH);
-    B18TrafficPerson[aPersonPath.person_id].path_length_cpu = aPersonPath.pathInVertexes.size() - 1; // not including END_OF_PATH
+    B18TrafficVehicle[aPersonPath.person_id].path_length_cpu = aPersonPath.pathInVertexes.size() - 1; // not including END_OF_PATH
 
     assert(aPersonPath.pathInVertexes.size() > 1 ||
-      allPathsInEdgesCUDAFormat[B18TrafficPerson[aPersonPath.person_id].indexPathInit] == END_OF_PATH);
+      allPathsInEdgesCUDAFormat[B18TrafficVehicle[aPersonPath.person_id].indexPathInit] == END_OF_PATH);
     assert(aPersonPath.pathInVertexes.size() > 1 ||
-      B18TrafficPerson[aPersonPath.person_id].path_length_cpu == 0);
-    assert(B18TrafficPerson[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET);
+      B18TrafficVehicle[aPersonPath.person_id].path_length_cpu == 0);
+    assert(B18TrafficVehicle[aPersonPath.person_id].indexPathInit != INIT_EDGE_INDEX_NOT_SET);
   }
 
   std::cout << "Converted to CUDA format" << std::endl;

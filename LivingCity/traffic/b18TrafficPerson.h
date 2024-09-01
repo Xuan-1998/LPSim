@@ -13,7 +13,7 @@
 
 namespace LC {
 
-struct B18TrafficPerson {
+struct B18TrafficVehicle {
   int id;
   unsigned int init_intersection;
   unsigned int end_intersection;
@@ -70,7 +70,7 @@ struct B18TrafficPerson {
   unsigned short LC_stateofLaneChanging;
 
   int isInIntersection;
-  bool operator==(const B18TrafficPerson& other) const {
+  bool operator==(const B18TrafficVehicle& other) const {
         return id == other.id &&
                init_intersection == other.init_intersection &&
                end_intersection == other.end_intersection &&
@@ -113,7 +113,7 @@ struct B18TrafficPerson {
                isInIntersection == other.isInIntersection;
     }
 };
-struct B18TrafficPersonModify{
+struct B18TrafficVehicleModify{
   bool ifToCopy;
   bool ifToRemove;
   int gpuIndexToCopy;
