@@ -29,11 +29,11 @@ typedef DistanceProperty::matrix_map_type DistanceMatrixMap;
 
 void B18TrafficJohnson::generateRoutes(
     LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-    std::vector<B18TrafficVehicle> &trafficVehicleVec,
+    std::vector<B18TrafficPerson> &trafficPersonVec,
     std::vector<uint>& indexPathVec,
     std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum,
     int weigthMode, float sample) {
-  if (trafficVehicleVec.empty()) {
+  if (trafficPersonVec.empty()) {
     printf("ERROR generateRoutes: people empty");
     return;
   }
@@ -170,10 +170,10 @@ void B18TrafficJohnson::generateRoutes(
   timer2.start();
   const int kMaxNumPath = 250;
 
-  for (int p = 0; p < trafficVehicleVec.size(); p++) {
-    if (trafficVehicleVec.size() > 200) {
-      if ((p % (trafficVehicleVec.size() / 20)) == 0) {
-        printf("Route %d of %d (%2.0f%%)\n", p, trafficVehicleVec.size(), (100.0f * p) / trafficVehicleVec.size());
+  for (int p = 0; p < trafficPersonVec.size(); p++) {
+    if (trafficPersonVec.size() > 200) {
+      if ((p % (trafficPersonVec.size() / 20)) == 0) {
+        printf("Route %d of %d (%2.0f%%)\n", p, trafficPersonVec.size(), (100.0f * p) / trafficPersonVec.size());
       }
     }
 
@@ -183,8 +183,8 @@ void B18TrafficJohnson::generateRoutes(
       if (sample > (((float) qrand()) / RAND_MAX)) { // not recalculate
         printf("Person %d does not change route\n", p);
         // Copy route directly
-        uint oldIndex = trafficVehicleVec[p].indexPathInit;
-        trafficVehicleVec[p].indexPathInit = currIndexPath;
+        uint oldIndex = trafficPersonVec[p].indexPathInit;
+        trafficPersonVec[p].indexPathInit = currIndexPath;
         uint index = 0;
         while (oldIndexPathVec[oldIndex + index] != -1) {
           indexPathVec.push_back(oldIndexPathVec.at(oldIndex + index));
@@ -198,14 +198,14 @@ void B18TrafficJohnson::generateRoutes(
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////
-    trafficVehicleVec[p].indexPathInit = currIndexPath;
+    trafficPersonVec[p].indexPathInit = currIndexPath;
 
-    LC::RoadGraph::roadGraphVertexDesc_BI srcvertex = trafficVehicleVec[p].init_intersection;
-    LC::RoadGraph::roadGraphVertexDesc_BI tgtvertex = trafficVehicleVec[p].end_intersection;
+    LC::RoadGraph::roadGraphVertexDesc_BI srcvertex = trafficPersonVec[p].init_intersection;
+    LC::RoadGraph::roadGraphVertexDesc_BI tgtvertex = trafficPersonVec[p].end_intersection;
 
     // check whether source same than target (we have arrived)
     if (tgtvertex == srcvertex) {
-      //trafficVehicleVec[p].indexPathInit = 0; // that index points to -1
+      //trafficPersonVec[p].indexPathInit = 0; // that index points to -1
       indexPathVec.push_back(-1);
       currIndexPath++;
       sameSrcDst++;
@@ -214,7 +214,7 @@ void B18TrafficJohnson::generateRoutes(
 
     // check if accesible
     if (dm[srcvertex][tgtvertex] == (std::numeric_limits < float >::max)()) {
-      //trafficVehicleVec[p].indexPathInit = 0; // that index points to -1
+      //trafficPersonVec[p].indexPathInit = 0; // that index points to -1
       indexPathVec.push_back(-1);
       currIndexPath++;
       noAccesible++;
@@ -283,8 +283,8 @@ void B18TrafficJohnson::generateRoutes(
     ////////////////////////////////////////////////////////////////////////////////////////////
   }
  printf("Final Path Size %u\n", currIndexPath);
-  for (int p = 0; p < trafficVehicleVec.size(); p++) {
-    trafficVehicleVec[p].indexPathCurr = trafficVehicleVec[p].indexPathInit;
+  for (int p = 0; p < trafficPersonVec.size(); p++) {
+    trafficPersonVec[p].indexPathCurr = trafficPersonVec[p].indexPathInit;
   }
 
   std::cerr
@@ -294,7 +294,7 @@ void B18TrafficJohnson::generateRoutes(
     << "- Shortest path length (distance -> amount of ODs): " << std::endl;
 
   std::vector<int> amountOfEdges(300, 0);
-  for (const auto p : trafficVehicleVec) {
+  for (const auto p : trafficPersonVec) {
     int d = 0;
     int cur = p.indexPathInit;
     while (indexPathVec.at(cur) != -1) { cur++; d++; }
@@ -312,8 +312,8 @@ void B18TrafficJohnson::generateRoutes(
   for (const auto x : indexPathVec) {
     std::cerr << i++ << " " << x << " " << std::endl;
   }
-  std::cerr << "trafficVehicleVec: " << std::endl;
-  for (const auto p : trafficVehicleVec) {
+  std::cerr << "trafficPersonVec: " << std::endl;
+  for (const auto p : trafficPersonVec) {
     std::cerr << p.indexPathInit << " " << p.indexPathCurr << std::endl;
   }
   #endif
