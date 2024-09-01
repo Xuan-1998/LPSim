@@ -283,8 +283,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   const std::vector<float>& dep_times,
   const float currentBatchStartTimeSecs,
   const float currentBatchEndTimeSecs,
-  const int reroute_batch_number,
-  std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle) {
+  const int reroute_batch_number) {
 
   if (all_od_pairs_.size() != dep_times.size())
     throw std::runtime_error("RoutingWrapper received od_pairs and dep_times with different sizes.");

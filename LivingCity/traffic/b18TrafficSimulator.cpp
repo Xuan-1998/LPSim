@@ -421,7 +421,7 @@ void B18TrafficSimulator::simulateInGPU(const int ngpus, const int numOfPasses, 
 
       auto currentBatchPathsInVertexes = B18TrafficSP::RoutingWrapper(all_od_pairs, graph_, dep_times,
                                             currentBatchStartTimeSecs, currentBatchEndTimeSecs,
-                                            (const int) increment_index, trafficVehicleVec);
+                                            (const int) increment_index);
     
       allPathsInVertexes.insert(std::end(allPathsInVertexes), std::begin(currentBatchPathsInVertexes), std::end(currentBatchPathsInVertexes));
 

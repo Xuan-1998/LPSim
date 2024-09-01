@@ -61,8 +61,7 @@ class B18TrafficSP {
     const std::vector<float>& dep_times,
     const float currentBatchStartTimeSecs,
     const float currentBatchEndTimeSecs,
-    const int reroute_batch_number,
-    std::vector<LC::B18TrafficVehicle>& B18TrafficVehicle);
+    const int reroute_batch_number);
 
   static void initialize_person_to_init_edge(
     std::vector<abm::graph::edge_id_t>& all_paths,
