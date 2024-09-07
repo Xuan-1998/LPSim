@@ -318,9 +318,52 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   routingCH.startMeasuring();
   //MTC::accessibility::Accessibility *graph_ch = new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(), edges_routing, edge_weights_routing, false);
    std::unique_ptr<MTC::accessibility::Accessibility> graph_ch(
-    new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
-    edges_routing, edge_weights_routing, false));
-  std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
+  new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
+  edges_routing, edge_weights_routing, false));
+  std::vector<std::vector<abm::graph::edge_id_t>> paths_ch;
+
+  // To decide if we want to read the routes from file or compute them
+  bool ifPreprocess = true;
+  if (ifPreprocess) {
+    std::cout<<"---------------Start to read route from file:---------------\n";
+    std::string route_file_name = "berkeley_2018/uam_network/uam.txt";
+    std::fstream file(route_file_name, std::ios::in);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file." << std::endl;
+        throw std::runtime_error("Failed to open file."); // Exit if the file cannot be opened
+    }
+
+    std::string line, word;
+    while (std::getline(file, line)) {
+        if (line.empty()) continue; // Skip empty lines
+        std::vector<abm::graph::edge_id_t> row;
+        std::stringstream str(line);
+        while (std::getline(str, word, ',')) {
+            if (word.empty()) continue; // Skip empty words
+
+            try {
+                int tem = std::stoi(word);
+                row.push_back(static_cast<abm::graph::edge_id_t>(tem));
+            } catch (const std::invalid_argument& e) {
+                std::cerr << "Invalid input '" << word << "' encountered." << std::endl;
+                continue;
+            }
+        }
+
+        paths_ch.push_back(row); // Use push_back to avoid indexing issues
+    }
+
+    // for (const auto &path : paths_ch) {
+    //       for (const auto &edge_id : path) {
+    //           std::cout << edge_id << ' ';
+    //       }
+    //       std::cout << '\n';
+    //   }
+  }
+  else {
+    paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
+  }
+
   routingCH.stopAndEndBenchmark();
 
   std::cout << "# of paths = " << paths_ch.size() << std::endl;
