@@ -88,10 +88,11 @@ void B18CommandLineVersion::runB18Simulation() {
     
 
   const parameters simParameters {
-      settings.value("a",0.557040909258405).toDouble(),
-      settings.value("b",2.9020578588167).toDouble(),
-      settings.value("T",0.5433027817144876).toDouble(),
-      settings.value("s_0",1.3807498735425845).toDouble()};
+    settings.value("a",1.955841144929).toDouble(),
+    settings.value("b",9.698320475255).toDouble(),
+    settings.value("T",1.840637908890).toDouble(),
+    settings.value("s_0",1.070462354045).toDouble()
+  };
 
 
   std::cout << "Simulation parameters: "

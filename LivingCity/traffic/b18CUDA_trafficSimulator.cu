@@ -521,7 +521,7 @@ __global__ void kernel_trafficSimulation(
 
   assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficPersonVec[p].indexPathCurr] == END_OF_PATH) {
-        float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+    float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
 
     // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
     // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
