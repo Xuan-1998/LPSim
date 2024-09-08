@@ -73,7 +73,7 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
   
   // Check distribution of street length
   float binLength = 1.0f;//1km
-  int numBins = 31 / binLength;//maxlength is 26km
+  int numBins = 100 / binLength;//maxlength is 26km
   std::vector<int> bins(numBins, 0);
   for (auto const& x : graph_->edges_) {
 	  const float metersLength = std::get<1>(x)->second.length;
@@ -314,7 +314,7 @@ void B18TrafficLaneMap::createLaneMap(
   ////////////////////////////////
   // Check distribution of street length
   float binLength = 1.0f;//1km
-  int numBins = 31 / binLength;//maxlength is 26km
+  int numBins = 100 / binLength;//maxlength is 26km
   std::vector<int> bins(numBins, 0);
   for (boost::tie(ei, ei_end) = boost::edges(inRoadGraph.myRoadGraph_BI); ei != ei_end; ++ei) {
     const float metersLength = inRoadGraph.myRoadGraph_BI[*ei].edgeLength;

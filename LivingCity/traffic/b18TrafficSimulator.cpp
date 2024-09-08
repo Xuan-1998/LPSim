@@ -160,7 +160,7 @@ void B18TrafficSimulator::updateEdgeImpedances(
     }
     auto vertex_from = std::get<0>(std::get<0>(x));
     auto vertex_to = std::get<1>(std::get<0>(x));
-    assert(new_impedance > 0);
+    // assert(new_impedance > 0);
     graph_->update_edge(vertex_from, vertex_to, new_impedance);
 
     index++;

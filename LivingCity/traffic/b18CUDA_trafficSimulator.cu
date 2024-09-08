@@ -549,12 +549,21 @@ __global__ void kernel_trafficSimulation(
     return;
   }
 
+  uint indexCurrentEdge = trafficPersonVec[p].indexPathCurr;
+  assert(indexCurrentEdge < indexPathVec_d_size);
+  uint currentEdge = indexPathVec[indexCurrentEdge];
+  bool isUAM = edgesData[currentEdge].maxSpeedMperSec < 0; // 0.44704 * 50
+
   //2.1. check if person should still wait or should start
   if (trafficPersonVec[p].active == 0) {
     //1.2 find first edge
     assert(trafficPersonVec[p].indexPathInit != INIT_EDGE_INDEX_NOT_SET);
     trafficPersonVec[p].indexPathCurr = trafficPersonVec[p].indexPathInit; // reset index.
     int indexFirstEdge = trafficPersonVec[p].indexPathCurr;
+    indexCurrentEdge = trafficPersonVec[p].indexPathCurr;
+    currentEdge = indexPathVec[indexCurrentEdge];
+    isUAM = edgesData[currentEdge].maxSpeedMperSec < 0;
+    if(isUAM) printf("UAM, %f, %d\n",edgesData[currentEdge].maxSpeedMperSec, p);
     assert(indexFirstEdge < indexPathVec_d_size);
     uint firstEdge = indexPathVec[indexFirstEdge];
 
@@ -630,7 +639,12 @@ __global__ void kernel_trafficSimulation(
       return;
     }
 
-    trafficPersonVec[p].v = 0;
+    if(isUAM){
+      trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -0.5;
+    }
+    else{
+      trafficPersonVec[p].v = 0;
+    }
     trafficPersonVec[p].LC_stateofLaneChanging = 0;
 
     //1.5 active car
@@ -650,12 +664,6 @@ __global__ void kernel_trafficSimulation(
     trafficPersonVec[p].prevEdge = firstEdge;
     return;
   }
-
-  // set up next edge info
-  int indexCurrentEdge = trafficPersonVec[p].indexPathCurr;
-  assert(indexCurrentEdge < indexPathVec_d_size);
-  uint currentEdge = indexPathVec[indexCurrentEdge];
-  assert(currentEdge < edgesData_d_size);
 
   int indexNextEdge = trafficPersonVec[p].indexPathCurr + 1;
   assert(indexNextEdge < indexPathVec_d_size);
@@ -728,6 +736,7 @@ __global__ void kernel_trafficSimulation(
   float thirdTerm = 0;
   // 2.1.1 Find front car
   int numCellsCheck = max(30.0f, trafficPersonVec[p].v * deltaTime * 2); //30 or double of the speed*time
+  if(isUAM) numCellsCheck /= 2;
   
   // a) SAME LINE (BEFORE SIGNALING)
   bool found = false;
@@ -794,7 +803,7 @@ __global__ void kernel_trafficSimulation(
 
 
   float s_star;
-  if (found && delta_v > 0) { //car in front and slower than us
+  if (!isUAM && found && delta_v > 0) { //car in front and slower than us
     // 2.1.2 calculate dv_dt
     // The following operation is taken from Designing Large-Scale Interactive Traffic Animations for Urban Modeling
     // Section 4.3.1. Car-Following Model formula (2)
@@ -812,10 +821,15 @@ __global__ void kernel_trafficSimulation(
     trafficPersonVec[p].v / edgesData[currentEdge].maxSpeedMperSec), 4) - thirdTerm);
 
   // 2.1.3 update values
-  numMToMove = max(0.0f, trafficPersonVec[p].v * deltaTime + 0.5f * (dv_dt) * deltaTime * deltaTime);
-  trafficPersonVec[p].v += dv_dt * deltaTime;
+  if(!isUAM) {
+    numMToMove = max(0.0f, trafficPersonVec[p].v * deltaTime + 0.5f * (dv_dt) * deltaTime * deltaTime);
+    trafficPersonVec[p].v += dv_dt * deltaTime;
+  }
+  else{
+    numMToMove = max(0.0f, trafficPersonVec[p].v * deltaTime);
+  }
 
-  if (trafficPersonVec[p].v < 0) {
+  if (!isUAM && trafficPersonVec[p].v < 0) {
     trafficPersonVec[p].v = 0;
     dv_dt = 0.0f;
   }
@@ -918,7 +932,7 @@ __global__ void kernel_trafficSimulation(
     assert(nextEdge < edgesData_d_size || nextEdge == END_OF_PATH);
 
     // LANE CHANGING (happens when we are not reached the intersection)
-    if (trafficPersonVec[p].v > 3.0f && trafficPersonVec[p].num_steps % 5 == 0) {
+    if (!isUAM && trafficPersonVec[p].v > 3.0f && trafficPersonVec[p].num_steps % 5 == 0) {
       //at least 10km/h to try to change lane
       //just check every (5 steps) 5 seconds
 
@@ -947,7 +961,7 @@ __global__ void kernel_trafficSimulation(
         // LC 2 NOT MANDATORY STATE
         if (trafficPersonVec[p].LC_stateofLaneChanging == 0) {
           // discretionary change: v slower than the current road limit and deccelerating and moving
-          if ((trafficPersonVec[p].v < (edgesData[currentEdge].maxSpeedMperSec * 0.7f)) &&
+          if (!isUAM && (trafficPersonVec[p].v < (edgesData[currentEdge].maxSpeedMperSec * 0.7f)) &&
             (dv_dt < 0) && trafficPersonVec[p].v > 3.0f) {
 
             bool leftLane = trafficPersonVec[p].numOfLaneInEdge >

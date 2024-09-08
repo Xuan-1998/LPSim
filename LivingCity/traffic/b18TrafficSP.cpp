@@ -173,7 +173,7 @@ void const B18TrafficSP::edgePreprocessingForRouting(
     std::shared_ptr<abm::Graph::Edge> edge = one_edge.second;
     abm::EdgeProperties anEdgeProperties = edge->second;
     double edge_weight = anEdgeProperties.weight;
-    assert(edge_weight > 0);
+    // assert(edge_weight > 0);
     edge_weights_routing_inside_vec.emplace_back(edge_weight);
   }
   edge_weights_routing.emplace_back(edge_weights_routing_inside_vec);
