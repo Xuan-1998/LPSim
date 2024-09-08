@@ -1108,7 +1108,7 @@ __global__ void kernel_trafficSimulation(
   uint currentEdge_d=-1;
   currentEdge_d=laneMapper[currentEdge];
   // FIXME-YIBO: to verify its not updated before declaration in the original code
-  bool isUAM = edgesData[currentEdge_d].maxSpeedMperSec >22.3f; // 0.44704 * 50
+  bool isUAM = edgesData[currentEdge_d].maxSpeedMperSec < 0; // 0.44704 * 50
 
   //2.1. check if person should still wait or should start
   if (trafficVehicleVec[p].active == 0) {
@@ -1119,8 +1119,8 @@ __global__ void kernel_trafficSimulation(
     indexCurrentEdge = trafficVehicleVec[p].indexPathCurr;
     currentEdge = indexPathVec[indexCurrentEdge];
     currentEdge_d=laneMapper[currentEdge];
-    isUAM = edgesData[currentEdge_d].maxSpeedMperSec >22.3f;
-    // if(isUAM) printf("UAM, %f\n",edgesData[currentEdge_d].maxSpeedMperSec);
+    isUAM = edgesData[currentEdge_d].maxSpeedMperSec < 0;
+    if(isUAM) printf("UAM, %f, %d\n",edgesData[currentEdge_d].maxSpeedMperSec, p);
     assert(indexFirstEdge < indexPathVec_d_size);
     // firstEdge convert to LaneIndex
     uint firstEdge = indexPathVec[indexFirstEdge];
@@ -1205,7 +1205,7 @@ __global__ void kernel_trafficSimulation(
     }
 
     if(isUAM){
-      trafficVehicleVec[p].v = edgesData[currentEdge_d].maxSpeedMperSec;
+      trafficVehicleVec[p].v = edgesData[currentEdge_d].maxSpeedMperSec * -1;
     }
     else{
       trafficVehicleVec[p].v = 0;
