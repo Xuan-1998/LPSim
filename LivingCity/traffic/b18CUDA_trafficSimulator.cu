@@ -640,7 +640,7 @@ __global__ void kernel_trafficSimulation(
     }
 
     if(isUAM){
-      trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -0.5;
+      trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
     }
     else{
       trafficPersonVec[p].v = 0;

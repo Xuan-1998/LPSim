@@ -2496,14 +2496,24 @@ void writePeopleFile(
       //     }
       int n2 = sizeof(trafficPersonVec[p].travel_time)/sizeof(trafficPersonVec[p].travel_time[0]);
       QString str2 = "";
-      for (int i = 0; i < n2; i++) {
-              if (trafficPersonVec[p].travel_time[i] == -0.5) {
-                break;
-              }
-              str2 += QString::fromStdString(to_string(trafficPersonVec[p].travel_time[i])) + QString::fromStdString(" ");
-          }
-//       int n3 = sizeof(trafficPersonVec[p].end_time_on_prev_edge_array)/sizeof(trafficPersonVec[p].end_time_on_prev_edge_array[0]);
+      double sum = 0.0;  // Initialize the sum
 
+      for (int i = 0; i < n2; i++) {
+          if (trafficPersonVec[p].travel_time[i] == -0.5) {
+              break;  // Stop if the value is -0.5
+          }
+          
+          // Check if the integer representation is not zero but append the float value
+          if (static_cast<int>(trafficPersonVec[p].travel_time[i]) != 0) {
+              str2 += QString::fromStdString(std::to_string(trafficPersonVec[p].travel_time[i])) + QString::fromStdString(" ");
+          }
+          sum += trafficPersonVec[p].travel_time[i];  // Accumulate the sum
+      }
+
+      double travel_time_last = trafficPersonVec[p].num_steps * deltaTime - sum;
+      str2 += QString::fromStdString(std::to_string(travel_time_last)) + QString::fromStdString(" ");  // Append travel_time_last as a float
+
+//       int n3 = sizeof(trafficPersonVec[p].end_time_on_prev_edge_array)/sizeof(trafficPersonVec[p].end_time_on_prev_edge_array[0]);
 //       QString str3 = "";
 //       for (int i = 0; i < n3; i++) {
 //           str3 += QString::fromStdString(to_string(trafficPersonVec[p].end_time_on_prev_edge_array[i])) + QString::fromStdString(" ");
