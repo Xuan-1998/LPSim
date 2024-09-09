@@ -365,7 +365,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   int count = 0;
   if (if_change_route){
     cout<<"using prefixed routes"<<endl;
-    string csv_name = "uam.txt";
+    string csv_name = "updated_route_test.txt";
     string line,word;
     fstream file(csv_name,ios::in);
     
@@ -431,7 +431,7 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   std::cout<<paths_ch.size()<<std::endl;
   for (int j=0;j<1;j++){
     std::cout<<"trajectory for trip "<<j<<std::endl;
-    for (int i=0;i<paths_ch[j].size();i++) std::cout<<paths_ch[j][i]<<std::endl;
+    // for (int i=0;i<paths_ch[j].size();i++) std::cout<<paths_ch[j][i]<<std::endl;
   }
   
   //abm::graph::edge_id_t test = 192085;

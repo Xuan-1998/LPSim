@@ -520,6 +520,7 @@ __global__ void kernel_trafficSimulation(
   if (trafficPersonVec[p].time_departure > currentTime) return; //1.1 just continue waiting
 
   assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
+  return;
   if (indexPathVec[trafficPersonVec[p].indexPathCurr] == END_OF_PATH) {
     float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
 
