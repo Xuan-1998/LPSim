@@ -519,6 +519,7 @@ __global__ void kernel_trafficSimulation(
   if (trafficPersonVec[p].active == 2) return; // trip finished
   if (trafficPersonVec[p].time_departure > currentTime) return; //1.1 just continue waiting
 
+
   assert(trafficPersonVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficPersonVec[p].indexPathCurr] == END_OF_PATH) {
     float elapsed_s = (trafficPersonVec[p].end_time_on_prev_edge - trafficPersonVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
@@ -553,7 +554,9 @@ __global__ void kernel_trafficSimulation(
   assert(indexCurrentEdge < indexPathVec_d_size);
   uint currentEdge = indexPathVec[indexCurrentEdge];
   bool isUAM = edgesData[currentEdge].maxSpeedMperSec < 0; // 0.44704 * 50
-
+  if(isUAM){
+    trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
+  }
   //2.1. check if person should still wait or should start
   if (trafficPersonVec[p].active == 0) {
     //1.2 find first edge
