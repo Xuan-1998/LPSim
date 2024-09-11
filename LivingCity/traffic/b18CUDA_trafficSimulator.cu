@@ -1097,15 +1097,52 @@ __global__ void kernel_trafficSimulation(
   // check that the current path index does not exceed the size of the path index vector
   assert(trafficVehicleVec[p].indexPathCurr < indexPathVec_d_size);
   if (indexPathVec[trafficVehicleVec[p].indexPathCurr] == END_OF_PATH) {
+    float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+    if(trafficVehicleVec[p].prevEdge >= edgesData_d_size){
+      printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
+    }
+    assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
+    if (trafficVehicleVec[p].window_flag < 300) {
+      if (trafficVehicleVec[p].window_flag == 0) {
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+          trafficVehicleVec[p].window_flag++;
+      } else {
+          if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+          trafficVehicleVec[p].window_flag++;    
+        }
+      }
+    }
+
     trafficVehicleVec[p].active = 2; //finished
     return;
   }
+  // set up next edge info
+  uint indexCurrentEdge = trafficVehicleVec[p].indexPathCurr;
+  assert(indexCurrentEdge < indexPathVec_d_size);
+  uint currentEdge = indexPathVec[indexCurrentEdge];
+  uint currentEdge_d=-1;
+  currentEdge_d=laneMapper[currentEdge];
+  // FIXME-YIBO: to verify its not updated before declaration in the original code
+  bool isUAM = edgesData[currentEdge_d].maxSpeedMperSec < 0; // 0.44704 * 50
+  if(isUAM){
+    trafficVehicleVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
+  }
+
   //2.1. check if person should still wait or should start
   if (trafficVehicleVec[p].active == 0) {
     //1.2 find first edge
     assert(trafficVehicleVec[p].indexPathInit != INIT_EDGE_INDEX_NOT_SET);
     trafficVehicleVec[p].indexPathCurr = trafficVehicleVec[p].indexPathInit; // reset index.
     uint indexFirstEdge = trafficVehicleVec[p].indexPathCurr;
+    indexCurrentEdge = trafficVehicleVec[p].indexPathCurr;
+    currentEdge = indexPathVec[indexCurrentEdge];
+    currentEdge_d=laneMapper[currentEdge];
+    isUAM = edgesData[currentEdge_d].maxSpeedMperSec < 0;
+    if(isUAM) printf("UAM, %f, %d\n",edgesData[currentEdge_d].maxSpeedMperSec, p);
+
     assert(indexFirstEdge < indexPathVec_d_size);
     // firstEdge convert to LaneIndex
     uint firstEdge = indexPathVec[indexFirstEdge];
@@ -1122,6 +1159,24 @@ __global__ void kernel_trafficSimulation(
     trafficVehicleVec[p].last_time_simulated = currentTime;
     
     if (firstEdge == END_OF_PATH) {
+      float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+      if(trafficVehicleVec[p].prevEdge >= edgesData_d_size){
+        printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
+      }
+      assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
+      if (trafficVehicleVec[p].window_flag < 300) {
+        if (trafficVehicleVec[p].window_flag == 0) {
+            trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+            trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+            trafficVehicleVec[p].window_flag++;
+        } else {
+            if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+            trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+            trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+            trafficVehicleVec[p].window_flag++;    
+          }
+        }
+      }  
       trafficVehicleVec[p].active = 2;
       return;
     }
@@ -1188,7 +1243,12 @@ __global__ void kernel_trafficSimulation(
       
       return;
     }
-    trafficVehicleVec[p].v = 0;
+    if(isUAM){
+      trafficVehicleVec[p].v = edgesData[currentEdge_d].maxSpeedMperSec * -1;
+    }
+    else{
+      trafficVehicleVec[p].v = 0;
+    }
     trafficVehicleVec[p].LC_stateofLaneChanging = 0;
 
     //1.5 active car
@@ -1212,14 +1272,7 @@ __global__ void kernel_trafficSimulation(
   //   printf("%hu %f %f %f \n",trafficVehicleVec[p].num_steps,trafficVehicleVec[p].v,currentTime,trafficVehicleVec[p].last_time_simulated);
   // }
   bool ifPassIntersection=false;
-  // set up next edge info
-  uint indexCurrentEdge = trafficVehicleVec[p].indexPathCurr;
-  assert(indexCurrentEdge < indexPathVec_d_size);
-  uint currentEdge = indexPathVec[indexCurrentEdge];
   trafficVehicleVec[p].currentEdge=currentEdge;
-  uint currentEdge_d=-1;
-  // return;
-  currentEdge_d=laneMapper[currentEdge];
   if(trafficVehicleVec[p].id==410){
   }
   // getLaneIdToLaneIdInGpuValue(laneIdToLaneIdInGpu_d_keys, laneIdToLaneIdInGpu_d_values, wholeLaneMap_size,currentEdge,currentEdge_d); //get edge index in edgesData_d
@@ -1277,6 +1330,23 @@ __global__ void kernel_trafficSimulation(
   if (currentEdge == trafficVehicleVec[p].nextEdge) {
     trafficVehicleVec[p].end_time_on_prev_edge = currentTime - deltaTime;
     float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+    if(trafficVehicleVec[p].prevEdge >= edgesData_d_size){
+      printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
+    }
+    assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
+    if (trafficVehicleVec[p].window_flag < 300) {
+      if (trafficVehicleVec[p].window_flag == 0) {
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+          trafficVehicleVec[p].window_flag++;
+      } else {
+          if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+          trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+          trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+          trafficVehicleVec[p].window_flag++;    
+        }
+      }
+    }
 
     // We filter whenever elapsed_s == 0, which means the time granularity was not enough to measure the speed
     // We also filter whenever 0 > elapsed_s > 5, because it causes manual_v to turn extraordinarily high
@@ -1301,6 +1371,7 @@ __global__ void kernel_trafficSimulation(
   float thirdTerm = 0;
   // 2.1.1 Find front car
   int numCellsCheck = max(30.0f, trafficVehicleVec[p].v * deltaTime * 2); //30 or double of the speed*time
+  if(isUAM) numCellsCheck /= 2;
   
   // a) SAME LINE (BEFORE SIGNALING)
   bool found = false;
@@ -1379,7 +1450,7 @@ __global__ void kernel_trafficSimulation(
 
   LC::B18TrafficVehicle trafficVehicle_original=trafficVehicleVec[p];
   float s_star;
-  if (found && (delta_v > 0 || (delta_v==0 &&trafficVehicleVec[p].v==0))) { //car in front and slower than us
+  if (!isUAM && found && (delta_v > 0 || (delta_v==0 &&trafficVehicleVec[p].v==0))) { //car in front and slower than us
     // 2.1.2 calculate dv_dt
     // The following operation is taken from Designing Large-Scale Interactive Traffic Animations for Urban Modeling
     // Section 4.3.1. Car-Following Model formula (2)
@@ -1397,16 +1468,20 @@ __global__ void kernel_trafficSimulation(
     trafficVehicleVec[p].v / edgesData[currentEdge_d].maxSpeedMperSec), 4) - thirdTerm);
 
   // 2.1.3 update values
-  numMToMove = max(0.0f, trafficVehicleVec[p].v * deltaTime + 0.5f * (dv_dt) * deltaTime * deltaTime);
-  trafficVehicleVec[p].v += dv_dt * deltaTime;
-
-  if (trafficVehicleVec[p].v < 0) {
+  if(!isUAM) {
+    numMToMove = max(0.0f, trafficVehicleVec[p].v * deltaTime + 0.5f * (dv_dt) * deltaTime * deltaTime);
+    trafficVehicleVec[p].v += dv_dt * deltaTime;
+  }
+  else{
+    numMToMove = max(0.0f, trafficVehicleVec[p].v * deltaTime);
+  }
+  if (!isUAM && trafficVehicleVec[p].v < 0) {
     trafficVehicleVec[p].v = 0;
     dv_dt = 0.0f;
   }
   trafficVehicleVec[p].cum_v += trafficVehicleVec[p].v;
   // ignore temporarily
-  if (calculatePollution && ((float(currentTime) == int(currentTime)))) { // enabled and each second (assuming deltaTime 0.5f)
+  if (!isUAM && calculatePollution && ((float(currentTime) == int(currentTime)))) { // enabled and each second (assuming deltaTime 0.5f)
     const float coStep = calculateCOStep(trafficVehicleVec[p].v);
     if (coStep > 0) {
       trafficVehicleVec[p].co += coStep;
@@ -1475,7 +1550,7 @@ __global__ void kernel_trafficSimulation(
         }
       }
       float s_star;
-      if (found && (delta_v > 0 || (delta_v==0 &&trafficVehicleVec[p].v==0))) { //car in front and slower than us
+      if (!isUAM && found && (delta_v > 0 || (delta_v==0 &&trafficVehicleVec[p].v==0))) { //car in front and slower than us
         s_star = simParameters.s_0 + max(0.0f,
           (trafficVehicleVec[p].v * trafficVehicleVec[p].T + (trafficVehicleVec[p].v *
           delta_v) / (2 * sqrtf(trafficVehicleVec[p].a * trafficVehicleVec[p].b))));
@@ -1484,8 +1559,9 @@ __global__ void kernel_trafficSimulation(
       float dv_dt = trafficVehicleVec[p].a * (1.0f - std::pow((
         trafficVehicleVec[p].v / edgesData[nextEdge_d].maxSpeedMperSec), 4) - thirdTerm);
       numMToMove = max(0.0f, trafficVehicleVec[p].v * deltaTime + 0.5f * (dv_dt) * deltaTime * deltaTime);
+      if(!isUAM) numMToMove /= 2;
       trafficVehicleVec[p].v += dv_dt * deltaTime; 
-      if (trafficVehicleVec[p].v < 0) {
+      if (!isUAM && trafficVehicleVec[p].v < 0) {
         trafficVehicleVec[p].v = 0;
         dv_dt = 0.0f;
       }
@@ -1543,7 +1619,7 @@ __global__ void kernel_trafficSimulation(
       else{ // backtracking
       // printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, nextEdge_d, currentTime);
         trafficVehicleVec[p].cum_v -= trafficVehicleVec[p].v;
-        trafficVehicleVec[p].v -= dv_dt * deltaTime;
+        if(!isUAM) trafficVehicleVec[p].v -= dv_dt * deltaTime;
         trafficVehicleVec[p].posInLaneM = posInLaneM_previous;
         trafficVehicleVec[p].dist_traveled -= edgesData[currentEdge_d].length;
         trafficVehicleVec[p].path_length_gpu--;
@@ -1556,6 +1632,24 @@ __global__ void kernel_trafficSimulation(
       trafficVehicleVec[p].LC_initOKLanes = 0xFF;
       trafficVehicleVec[p].LC_endOKLanes = 0xFF;
     } else {
+      float elapsed_s = (trafficVehicleVec[p].end_time_on_prev_edge - trafficVehicleVec[p].start_time_on_prev_edge); //multiply by delta_time to get seconds elapsed (not half seconds)
+      if(trafficVehicleVec[p].prevEdge >= edgesData_d_size){
+        printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
+      }
+      assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
+      if (trafficVehicleVec[p].window_flag < 300) {
+        if (trafficVehicleVec[p].window_flag == 0) {
+            trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+            trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
+            trafficVehicleVec[p].window_flag++;
+        } else {
+            if (trafficVehicleVec[p].curEdge  != trafficVehicleVec[p].prevEdge) {
+            trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
+            trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s;
+            trafficVehicleVec[p].window_flag++;    
+          }
+        }
+      }  
       trafficVehicleVec[p].active == 2;
     }
     trafficVehicleVec[p].indexPathCurr++;
@@ -1569,7 +1663,7 @@ __global__ void kernel_trafficSimulation(
     assert(nextEdge_d < edgesData_d_size || nextEdge == END_OF_PATH);
 
     // LANE CHANGING (happens when we are not reached the intersection)
-    if (trafficVehicleVec[p].v > 3.0f && trafficVehicleVec[p].num_steps % 5 == 0) {
+    if (!isUAM && trafficVehicleVec[p].v > 3.0f && trafficVehicleVec[p].num_steps % 5 == 0) {
       //at least 10km/h to try to change lane
       //just check every (5 steps) 5 seconds
 
@@ -1598,7 +1692,7 @@ __global__ void kernel_trafficSimulation(
         // LC 2 NOT MANDATORY STATE
         if (trafficVehicleVec[p].LC_stateofLaneChanging == 0) {
           // discretionary change: v slower than the current road limit and deccelerating and moving
-          if ((trafficVehicleVec[p].v < (edgesData[currentEdge_d].maxSpeedMperSec * 0.7f)) &&
+          if (!isUAM && (trafficVehicleVec[p].v < (edgesData[currentEdge_d].maxSpeedMperSec * 0.7f)) &&
             (dv_dt < 0) && trafficVehicleVec[p].v > 3.0f) {
 
             bool leftLane = trafficVehicleVec[p].numOfLaneInEdge >
@@ -1686,7 +1780,7 @@ __global__ void kernel_trafficSimulation(
           if (trafficVehicleVec[p].numOfLaneInEdge >= trafficVehicleVec[p].LC_initOKLanes &&
             trafficVehicleVec[p].numOfLaneInEdge < trafficVehicleVec[p].LC_endOKLanes) {
             // for discretionary it should be under some circustances
-            if ((trafficVehicleVec[p].v < (edgesData[currentEdge_d].maxSpeedMperSec * 0.7f)) &&
+            if (!isUAM && (trafficVehicleVec[p].v < (edgesData[currentEdge_d].maxSpeedMperSec * 0.7f)) &&
               (dv_dt < 0) && trafficVehicleVec[p].v > 3.0f) {
               leftLane =
                 (trafficVehicleVec[p].numOfLaneInEdge > 0) && //at least one lane on the left
@@ -1819,7 +1913,7 @@ __global__ void kernel_trafficSimulation(
       else{ // backtracking
         // printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, currentEdge_d, currentTime);
         trafficVehicleVec[p].cum_v -= trafficVehicleVec[p].v;
-        trafficVehicleVec[p].v -= dv_dt * deltaTime;
+        if(!isUAM) trafficVehicleVec[p].v -= dv_dt * deltaTime;
         trafficVehicleVec[p].posInLaneM = posInLaneM_previous;
         trafficVehicleVec[p].dist_traveled -= edgesData[currentEdge_d].length;
         trafficVehicleVec[p].path_length_gpu--;

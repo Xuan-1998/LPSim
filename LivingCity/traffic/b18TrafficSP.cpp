@@ -175,7 +175,7 @@ void const B18TrafficSP::edgePreprocessingForRouting(
     std::shared_ptr<abm::Graph::Edge> edge = one_edge.second;
     abm::EdgeProperties anEdgeProperties = edge->second;
     double edge_weight = anEdgeProperties.weight;
-    assert(edge_weight > 0);
+    // assert(edge_weight > 0); 
     edge_weights_routing_inside_vec.emplace_back(edge_weight);
   }
   edge_weights_routing.emplace_back(edge_weights_routing_inside_vec);
@@ -316,12 +316,53 @@ std::vector<personPath> B18TrafficSP::RoutingWrapper (
   B18TrafficSP::edgePreprocessingForRouting(edges_routing, edge_weights_routing, street_graph);
 
   Benchmarker routingCH("Routing_CH_batch_" + std::to_string(reroute_batch_number), true);
+  cout<<street_graph->vertices_data_.size()<<","<<endl;
   routingCH.startMeasuring();
-  //MTC::accessibility::Accessibility *graph_ch = new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(), edges_routing, edge_weights_routing, false);
    std::unique_ptr<MTC::accessibility::Accessibility> graph_ch(
     new MTC::accessibility::Accessibility((int) street_graph->vertices_data_.size(),
     edges_routing, edge_weights_routing, false));
+  std::cout<<"--------------------------------routing start--------------------------------"<<std::endl;
   std::vector<std::vector<abm::graph::edge_id_t> > paths_ch = graph_ch->Routes(filtered_od_pairs_sources_, filtered_od_pairs_targets_, 0);
+
+  bool if_change_route = true;
+  int count = 0;
+  if (if_change_route){
+    cout<<"using prefixed routes"<<endl;
+    string csv_name = "updated_route_test.txt";
+    string line,word;
+    fstream file(csv_name,ios::in);
+    
+    if(file.is_open())
+    {
+      std::cout<<"here"<<std::endl;
+      while(getline(file, line))
+      {
+        vector<abm::graph::edge_id_t> row;
+        stringstream str(line);
+        while(getline(str, word, ',')) {
+          int tem = std::stoi(word);
+          abm::graph::edge_id_t test = tem;
+          row.push_back(test);
+        }
+        paths_ch[count]=row;
+        // paths_ch.push_back(row);
+        count++;
+      } 
+    }
+    else
+    {
+      cout<<"error"<<endl;
+    }
+  }
+  
+  std::cout<<paths_ch.size()<<std::endl;
+  for (int j=0;j<1;j++){
+    std::cout<<"trajectory for trip "<<j<<std::endl;
+    for (int i=0;i<paths_ch[j].size();i++) std::cout<<paths_ch[j][i]<<',';
+    std::cout<<std::endl<<std::endl<<std::endl;
+  }
+  
+  std::cout<<"--------------------------------routing stop--------------------------------"<<std::endl;
   routingCH.stopAndEndBenchmark();
 
   std::cout << "# of paths = " << paths_ch.size() << std::endl;

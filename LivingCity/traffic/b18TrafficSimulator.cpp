@@ -10,6 +10,7 @@
 #include "b18TrafficSimulator.h"
 #include <assert.h>
 
+#include "b18TrafficPerson.h"
 #include "src/benchmarker.h"
 
 #include "../global.h"
@@ -175,7 +176,7 @@ void B18TrafficSimulator::updateEdgeImpedances(
     }
     auto vertex_from = std::get<0>(std::get<0>(x));
     auto vertex_to = std::get<1>(std::get<0>(x));
-    assert(new_impedance > 0);
+    // assert(new_impedance > 0);
     graph_->update_edge(vertex_from, vertex_to, new_impedance);
 
     index++;
@@ -2586,25 +2587,34 @@ void writePeopleFile(
   if (peopleFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
     std::cout << "> Saving People file... (size " << trafficVehicleVec.size() << ")" << std::endl;
     QTextStream streamP(&peopleFile);
-    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
-
+    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,travel_time,distance\n";
     for (int p = 0; p < trafficVehicleVec.size(); p++) {
-      streamP << trafficVehicleVec[p].id;
+      int n2 = sizeof(trafficVehicleVec[p].travel_time)/sizeof(trafficVehicleVec[p].travel_time[0]);
+      QString str2 = "";
+      double sum = 0.0;  // Initialize the sum
+
+      for (int i = 0; i < n2; i++) {
+          if (trafficVehicleVec[p].travel_time[i] == -0.5) {
+              break;  // Stop if the value is -0.5
+          }
+          
+          // Check if the integer representation is not zero but append the float value
+          if (static_cast<int>(trafficVehicleVec[p].travel_time[i]) != 0) {
+              str2 += QString::fromStdString(std::to_string(trafficVehicleVec[p].travel_time[i])) + QString::fromStdString(" ");
+          }
+          sum += trafficVehicleVec[p].travel_time[i];  // Accumulate the sum
+      }
+
+      double travel_time_last = trafficVehicleVec[p].num_steps * deltaTime - sum;
+      str2 += QString::fromStdString(std::to_string(travel_time_last)) + QString::fromStdString(" ");  // Append travel_time_last as a float
+
+      streamP << p;
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficVehicleVec[p].init_intersection];
       streamP << "," << graph_->nodeIndex_to_osmid_[trafficVehicleVec[p].end_intersection];
       streamP << "," << trafficVehicleVec[p].time_departure;
       streamP << "," << trafficVehicleVec[p].num_steps * deltaTime;
-      streamP << "," << trafficVehicleVec[p].co;
-      streamP << "," << trafficVehicleVec[p].gas;
+      streamP << "," << str2; // the travel time we added
       streamP << "," << trafficVehicleVec[p].dist_traveled;
-      streamP << "," << trafficVehicleVec[p].a;
-      streamP << "," << trafficVehicleVec[p].b;
-      streamP << "," << trafficVehicleVec[p].T;
-      streamP << "," << (trafficVehicleVec[p].cum_v / trafficVehicleVec[p].num_steps) * 3600 / 1609.34;
-      streamP << "," << trafficVehicleVec[p].active;
-      streamP << "," << trafficVehicleVec[p].last_time_simulated;
-      streamP << "," << trafficVehicleVec[p].path_length_cpu;
-      streamP << "," << trafficVehicleVec[p].path_length_gpu;
       streamP << "\n";
     }
 
