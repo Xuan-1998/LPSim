@@ -1112,10 +1112,6 @@ __global__ void kernel_trafficSimulation(
     uint firstEdge_d = -1;
     if(firstEdge != END_OF_PATH){
       firstEdge_d=laneMapper[firstEdge];
-      // getLaneIdToLaneIdInGpuValue(laneIdToLaneIdInGpu_d_keys, laneIdToLaneIdInGpu_d_values, wholeLaneMap_size,firstEdge,firstEdge_d); // turn overall edgeId(laneId) to edge(lane) index in edgesData[i]
-      // if(firstEdge_d==-1){
-      //   printf("%d %d %f %d: %u\n",p, gpuIndex,currentTime,trafficVehicleVec[p].id,firstEdge);
-      // }
       assert(firstEdge_d!=-1);
     }
     
@@ -1185,7 +1181,7 @@ __global__ void kernel_trafficSimulation(
       
     }
     if (!placed) { //not posible to start now
-      
+
       return;
     }
     trafficVehicleVec[p].v = 0;
@@ -1197,7 +1193,7 @@ __global__ void kernel_trafficSimulation(
     trafficVehicleVec[p].num_steps = 1;
     trafficVehicleVec[p].co = 0.0f;
     trafficVehicleVec[p].gas = 0.0f;
-    
+
     assert(trafficVehicleVec[p].indexPathCurr + 1 < indexPathVec_d_size);
     if (indexPathVec[trafficVehicleVec[p].indexPathCurr + 1] != END_OF_PATH) {
       trafficVehicleVec[p].LC_initOKLanes = 0xFF;
@@ -1208,9 +1204,6 @@ __global__ void kernel_trafficSimulation(
     trafficVehicleVec[p].prevEdge = firstEdge;
     return;
   }
-  // if(trafficVehicleVec[p].id==0){
-  //   printf("%hu %f %f %f \n",trafficVehicleVec[p].num_steps,trafficVehicleVec[p].v,currentTime,trafficVehicleVec[p].last_time_simulated);
-  // }
   bool ifPassIntersection=false;
   // set up next edge info
   uint indexCurrentEdge = trafficVehicleVec[p].indexPathCurr;
@@ -1816,13 +1809,11 @@ __global__ void kernel_trafficSimulation(
           ghostLaneBuffer[cursor+3]=vInMpS;// target value
         }
       }
-      else{ // backtracking
+      else{ // not reach intersection, backtracking
         // printf("%d: found vehicle on edge %u in target position, keep still [%f]\n",trafficVehicleVec[p].id, currentEdge_d, currentTime);
         trafficVehicleVec[p].cum_v -= trafficVehicleVec[p].v;
         trafficVehicleVec[p].v -= dv_dt * deltaTime;
         trafficVehicleVec[p].posInLaneM = posInLaneM_previous;
-        trafficVehicleVec[p].dist_traveled -= edgesData[currentEdge_d].length;
-        trafficVehicleVec[p].path_length_gpu--;
         trafficVehicleVec[p].LC_stateofLaneChanging = LC_stateofLaneChanging_previous;
         trafficVehicleVec[p].numOfLaneInEdge = numOfLaneInEdge_previous;
         return;
