@@ -312,13 +312,16 @@ nvprof --metrics flop_count_sp,flop_count_dp ./LivingCity >> output_g3.txt 2>&1 
 
 ## Acknowledgments
 
-This repository and code have been developed and maintained by Xuan Jiang, Jiaying Li, Chonghe Jiang, Xin Peng, Johan Agerup, Yuhan Tang, and Raja Sengupta. This work is based on Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
+This repository and code have been developed and maintained by Xuan Jiang, Jiaying Li, Yibo Zhao, Chonghe Jiang, Xin Peng, Johan Agerup, Yuhan Tang, and Raja Sengupta. This work is based on Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
 
 If this code is used in any shape or form for your project, please cite this paper accordingly:
 
+Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2024). Large scale multi-GPU based parallel traffic simulation for accelerated traffic assignment and propagation. Transportation Research Part C: Emerging Technologies, 169, 104873. Available: [https://www.sciencedirect.com/science/article/pii/S0968090X24003942](https://www.sciencedirect.com/science/article/pii/S0968090X24003942)
+
 Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., Sengupta, R. (2023). Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey. *Journal of Air Transportation*, 1-11. Available: [https://arc.aiaa.org/doi/10.2514/1.D0431](https://arc.aiaa.org/doi/10.2514/1.D0431)
 
-Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2023). LPSim: Large Scale Multi-GPU Parallel Computing based Regional Scale Traffic Simulation Framework. *arXiv preprint arXiv:2406.08496*. Available: [https://arxiv.org/abs/2406.08496](https://arxiv.org/abs/2406.08496)
+
+
 
 
 
@@ -331,7 +334,7 @@ This project is licensed under the MIT License.
 
 MIT License
 
-Copyright (c) 2023 Xuan Jiang, Jiaying Li, Chonghe Jiang, Dingyi Zhuang, Jinhua Zhao, Raja Sengupta
+Copyright (c) 2024 Xuan Jiang, Jiaying Li, Chonghe Jiang, Dingyi Zhuang, Jinhua Zhao, Raja Sengupta
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
