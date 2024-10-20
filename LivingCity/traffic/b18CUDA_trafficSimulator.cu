@@ -1129,6 +1129,8 @@ __global__ void kernel_trafficSimulation(
   bool isUAM = edgesData[currentEdge_d].maxSpeedMperSec < 0; // 0.44704 * 50
   if(isUAM){
     trafficVehicleVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
+    intersections[edgesData[currentEdge_d].nextIntersMapped].isVertiport = true;
+    intersections[edgesData[currentEdge_d].prevIntersMapped].isVertiport = true;
   }
 
   //2.1. check if person should still wait or should start
@@ -1141,7 +1143,11 @@ __global__ void kernel_trafficSimulation(
     currentEdge = indexPathVec[indexCurrentEdge];
     currentEdge_d=laneMapper[currentEdge];
     isUAM = edgesData[currentEdge_d].maxSpeedMperSec < 0;
-    if(isUAM) printf("UAM, %f, %d\n",edgesData[currentEdge_d].maxSpeedMperSec, p);
+    if(isUAM) {
+      printf("UAM, %f, %d\n",edgesData[currentEdge_d].maxSpeedMperSec, p);
+      intersections[edgesData[currentEdge_d].nextIntersMapped].isVertiport = true;
+      intersections[edgesData[currentEdge_d].prevIntersMapped].isVertiport = true;  
+    }
 
     assert(indexFirstEdge < indexPathVec_d_size);
     // firstEdge convert to LaneIndex
@@ -1244,7 +1250,20 @@ __global__ void kernel_trafficSimulation(
       return;
     }
     if(isUAM){
+      assert(currentEdge_d + trafficVehicleVec[p].numOfLaneInEdge < trafficLights_d_size);
+      uchar trafficLightState = trafficLights[currentEdge_d + trafficVehicleVec[p].numOfLaneInEdge];
+
+      if (trafficLightState != 0x00) { //0 ready to go, 1 wait
+        printf("UAM not ready to go\n");
+        return;
+      }
+
       trafficVehicleVec[p].v = edgesData[currentEdge_d].maxSpeedMperSec * -1;
+
+      // update traffic light to 1
+      trafficLights[currentEdge_d + trafficVehicleVec[p].numOfLaneInEdge] = 0x01;
+      printf("UAM ready to go, change traffic light\n");
+      intersections[edgesData[currentEdge_d].prevIntersMapped].nextEvent = currentTime + 90.0f;
     }
     else{
       trafficVehicleVec[p].v = 0;
@@ -1980,10 +1999,10 @@ __global__ void kernel_intersectionOneSimulation(
           uchar numLinesI = edgeIT >> 24;
 
           for (int nL = 0; nL < numLinesI; nL++) {
-            trafficLights[edgeINum + nL] = 0xFF;
+            if (intersections[i].isVertiport) trafficLights[edgeINum + nL] = 0x00;
+            else trafficLights[edgeINum + nL] = 0xFF;
           }
 
-          //trafficLights[edgeINum]=0xFF;
           break;
         }
       }//green new traffic light
