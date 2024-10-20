@@ -44,6 +44,8 @@ struct B18IntersectionData {
   ushort totalInOutEdges;
   uint edge[28];// up to six arms intersection
   float nextEvent;
+  bool isVertiport;
+  float nextEventForVertiport;
 };
 }
 

@@ -18,7 +18,7 @@ extern void b18InitCUDA(bool fistInitialization, // crate buffers
                         std::vector<LC::B18TrafficPerson> &trafficPersonVec,
                         std::vector<uint> &indexPathVec,
                         std::vector<LC::B18EdgeData> &edgesData, std::vector<uchar> &laneMap,
-                        std::vector<uchar> &trafficLights,
+                        std::vector<float> &trafficLights,
                         std::vector<LC::B18IntersectionData> &intersections,
                         float startTimeH, float endTimeH,
                         std::vector<float>& accSpeedPerLinePerTimeInterval,

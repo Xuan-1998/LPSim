@@ -76,7 +76,7 @@ float startTime;
 
 
 LC::B18IntersectionData *intersections_d;
-uchar *trafficLights_d;
+float *trafficLights_d;
 
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
@@ -87,7 +87,7 @@ void b18InitCUDA(
   std::vector<uint> &indexPathVec, 
   std::vector<LC::B18EdgeData>& edgesData, 
   std::vector<uchar>& laneMap, 
-  std::vector<uchar>& trafficLights, 
+  std::vector<float>& trafficLights, 
   std::vector<LC::B18IntersectionData>& intersections,
   float startTimeH, float endTimeH,
   std::vector<float>& accSpeedPerLinePerTimeInterval,
@@ -126,7 +126,7 @@ void b18InitCUDA(
     size_t sizeI = intersections.size() * sizeof(LC::B18IntersectionData);
     if (fistInitialization) gpuErrchk(cudaMalloc((void **) &intersections_d, sizeI));   // Allocate array on device
     gpuErrchk(cudaMemcpy(intersections_d, intersections.data(), sizeI, cudaMemcpyHostToDevice));
-    size_t sizeT = trafficLights.size() * sizeof(uchar);//total number of lanes
+    size_t sizeT = trafficLights.size() * sizeof(float);//total number of lanes
     trafficLights_d_size = trafficLights.size();
     if (fistInitialization) gpuErrchk(cudaMalloc((void **) &trafficLights_d, sizeT));   // Allocate array on device
     gpuErrchk(cudaMemcpy(trafficLights_d, trafficLights.data(), sizeT, cudaMemcpyHostToDevice));
@@ -199,7 +199,7 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::ve
  __device__ void calculateGapsLC(
    uint mapToReadShift,
    uchar* laneMap,
-   uchar trafficLightState,
+   float trafficLightState,
    uint laneToCheck,
    ushort numLinesEdge,
    float posInMToCheck,
@@ -509,7 +509,7 @@ __global__ void kernel_trafficSimulation(
   uchar *laneMap,
   int laneMap_d_size,
   LC::B18IntersectionData *intersections,
-  uchar *trafficLights,
+  float *trafficLights,
   uint trafficLights_d_size,
   float deltaTime,
   const parameters simParameters)
@@ -533,15 +533,15 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
+          // trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          // printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
       } else {
           if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          // trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
       }
@@ -584,15 +584,15 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
+          // trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          // printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
       } else {
           if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          // trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
       }
@@ -643,7 +643,19 @@ __global__ void kernel_trafficSimulation(
     }
 
     if(isUAM){
+      assert(currentEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
+
+      // use traffic light to store the time when the UAM can start
+      if (currentTime < trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge]) { //0 ready to go, 1 wait
+        printf("UAM not ready to go\n");
+        return;
+      }
+
       trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
+
+      // update traffic light to next time slot
+      trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge] = currentTime + 90.0f;
+      printf("UAM ready to go, change traffic light\n");
     }
     else{
       trafficPersonVec[p].v = 0;
@@ -707,15 +719,15 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
+          // trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          // printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
       } else {
           if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          // trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
       }
@@ -868,6 +880,21 @@ __global__ void kernel_trafficSimulation(
   //2.2 close to intersection
   //2.2 check if change intersection
   if (trafficPersonVec[p].posInLaneM > edgesData[currentEdge].length) { //reach intersection
+
+    if(isUAM){
+      assert(nextEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
+
+      // use traffic light to store the time when the UAM can start
+      if (currentTime < trafficLights[nextEdge + trafficPersonVec[p].numOfLaneInEdge]) { //0 ready to go, 1 wait
+        printf("UAM not ready to reach intersection\n, %f, %d\n", currentTime, p);
+        return;
+      }
+
+      // update traffic light to next time slot
+      trafficLights[nextEdge + trafficPersonVec[p].numOfLaneInEdge] = currentTime + 90.0f;
+      printf("UAM ready to land, change traffic light\n, %f, %d\n", currentTime, p);
+    }
+
     numMToMove = trafficPersonVec[p].posInLaneM - edgesData[currentEdge].length;
     trafficPersonVec[p].posInLaneM = numMToMove;
     trafficPersonVec[p].dist_traveled += edgesData[currentEdge].length;
@@ -991,7 +1018,7 @@ __global__ void kernel_trafficSimulation(
             float gap_a, gap_b;
 
             assert(currentEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
-            uchar trafficLightState = trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge];
+            float trafficLightState = trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge];
             calculateGapsLC(mapToReadShift, laneMap, trafficLightState,
               currentEdge + laneToCheck, edgesData[currentEdge].numLines,
               trafficPersonVec[p].posInLaneM,
@@ -1113,7 +1140,7 @@ __global__ void kernel_trafficSimulation(
             uchar v_a, v_b;
             float gap_a, gap_b;
             assert(currentEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
-            uchar trafficLightState = trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge];
+            float trafficLightState = trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge];
             calculateGapsLC(mapToReadShift, laneMap, trafficLightState,
               currentEdge + laneToCheck, edgesData[currentEdge].numLines,
               trafficPersonVec[p].posInLaneM,
@@ -1239,7 +1266,7 @@ __global__ void kernel_intersectionOneSimulation(
       uint numIntersections,
       float currentTime,
       LC::B18IntersectionData *intersections,
-      uchar *trafficLights) {
+      float *trafficLights) {
 
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i<numIntersections){//CUDA check (inside margins)

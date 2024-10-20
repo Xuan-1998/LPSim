@@ -37,10 +37,10 @@ class B18TrafficSimulatorRender {
 
 class B18TrafficLightRender {
  public:
-  std::vector<uchar> trafficLight;
+  std::vector<float> trafficLight;
   int indexToRead;
 
-  void getInterpolated(uchar newTrafficLight, uchar &interTrafficLight);
+  void getInterpolated(float newTrafficLight, float &interTrafficLight);
 };//
 
 
@@ -116,7 +116,7 @@ class B18TrafficSimulator {
 
 
   // Traffic lights
-  std::vector<uchar> trafficLights;
+  std::vector<float> trafficLights;
   std::vector<B18IntersectionData> intersections;
 
   // measurements

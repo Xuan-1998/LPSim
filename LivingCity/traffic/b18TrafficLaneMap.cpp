@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cmath>
 #include "b18TrafficLaneMap.h"
+#include "b18EdgeData.h"
 #include "sp/graph.h"
 #include "sp/config.h"
 
@@ -41,7 +42,7 @@ namespace {
 
 void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph_, std::vector<uchar> &laneMap,
       std::vector<B18EdgeData> &edgesData, std::vector<B18IntersectionData> &intersections,
-      std::vector<uchar> &trafficLights, 
+      std::vector<float> &trafficLights, 
       std::map<uint, std::shared_ptr<abm::Graph::Edge>> &laneMapNumToEdgeDescSP,
       std::map<std::shared_ptr<abm::Graph::Edge>, uint> &edgeDescToLaneMapNumSP,
       std::vector<uint> &edgeIdToLaneMapNum){
@@ -166,6 +167,8 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
     //intersections[std::get<0>(vertex)].nextEvent = 0.0f;
     //intersections[std::get<0>(vertex)].totalInOutEdges = vertex.second.size();
     intersections[std::get<0>(vertex)].nextEvent = 0.0f;
+    intersections[std::get<0>(vertex)].nextEventForVertiport = 0.0f;
+    intersections[std::get<0>(vertex)].isVertiport = false;
     intersections[std::get<0>(vertex)].totalInOutEdges = vertex.second.size();
     if (intersections[std::get<0>(vertex)].totalInOutEdges <= 0) {
       printf("Vertex without in/out edges\n");
@@ -291,7 +294,7 @@ void B18TrafficLaneMap::createLaneMap(
     std::vector<uchar> &laneMap,
     std::vector<B18EdgeData> &edgesData,
     std::vector<B18IntersectionData> &intersections,
-    std::vector<uchar> &trafficLights,
+    std::vector<float> &trafficLights,
     std::map<uint, RoadGraph::roadGraphEdgeDesc_BI> &laneMapNumToEdgeDesc,
     std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum) {
   //////////////////////////////////////////////////////////
@@ -380,6 +383,8 @@ void B18TrafficLaneMap::createLaneMap(
   for (boost::tie(vi, viEnd) = boost::vertices(inRoadGraph.myRoadGraph_BI); vi != viEnd; ++vi) {
     intersections[*vi].state = 0;
     intersections[*vi].nextEvent = 0.0f;
+    intersections[*vi].nextEventForVertiport = 0.0f;
+    intersections[*vi].isVertiport = false;
     intersections[*vi].totalInOutEdges = boost::degree(*vi, inRoadGraph.myRoadGraph_BI);
     if (intersections[*vi].totalInOutEdges <= 0) {
       printf("Vertex without in/out edges\n");
@@ -496,16 +501,18 @@ void B18TrafficLaneMap::createLaneMap(
 }//
 
 void B18TrafficLaneMap::resetIntersections(std::vector<B18IntersectionData>
-    &intersections, std::vector<uchar> &trafficLights) {
+    &intersections, std::vector<float> &trafficLights) {
   for (int i = 0; i < intersections.size(); i++) {
     intersections[i].nextEvent =
       0.0f; //otherwise they not change until reach time again
+    intersections[i].nextEventForVertiport = 0.0f;
+    intersections[i].isVertiport = false;
     intersections[i].state = 0; //to make the system to repeat same execution
   }
 
   if (trafficLights.size() > 0) {
     memset(trafficLights.data(), 0, trafficLights.size()*sizeof(
-             uchar));  //to make the system to repeat same execution
+             float));  //to make the system to repeat same execution
   }
 }//
 

@@ -708,7 +708,7 @@ void calculateLaneCarShouldBe(
 void calculateGapsLC(
   uint mapToReadShift,
   std::vector<uchar> &laneMap,
-  uchar trafficLightState,
+  float trafficLightState,
   uint laneToCheck,
   ushort numLinesEdge,
   float posInMToCheck,
@@ -791,7 +791,7 @@ void simulateOnePersonCPU(
   std::vector<LC::B18EdgeData> &edgesData,
   std::vector<uchar> &laneMap,
   std::vector<B18IntersectionData> &intersections,
-  std::vector<uchar> &trafficLights,
+  std::vector<float> &trafficLights,
   const parameters & simParameters) {
   //if(DEBUG_TRAFFIC==1)printf("currentTime %f   0 Person: %d State %d Time Dep %f\n",currentTime,p,trafficPersonVec[p].active, trafficPersonVec[p].time_departure);
   ///////////////////////////////
@@ -1266,7 +1266,7 @@ void simulateOnePersonCPU(
             uchar v_a, v_b;
             float gap_a, gap_b;
             //printf("p %u LC 1 %u\n",p,laneToCheck);
-            uchar trafficLightState = trafficLights[currentEdge +
+            float trafficLightState = trafficLights[currentEdge +
                                                                 trafficPersonVec[p].numOfLaneInEdge];
             calculateGapsLC(mapToReadShift, laneMap, trafficLightState,
                             currentEdge + laneToCheck, trafficPersonVec[p].edgeNumLanes,
@@ -1407,7 +1407,7 @@ void simulateOnePersonCPU(
             uchar v_a, v_b;
             float gap_a, gap_b;
             //printf("p %u LC 1 %u\n",p,laneToCheck);
-            uchar trafficLightState = trafficLights[currentEdge +
+            float trafficLightState = trafficLights[currentEdge +
                                                                 trafficPersonVec[p].numOfLaneInEdge];
             calculateGapsLC(mapToReadShift, laneMap, trafficLightState,
                             currentEdge + laneToCheck, trafficPersonVec[p].edgeNumLanes,
@@ -1574,7 +1574,7 @@ void simulateOneSTOPIntersectionCPU(
   uint i,
   float deltaTime,
   float currentTime, std::vector<B18IntersectionData> &intersections,
-  std::vector<uchar> &trafficLights,
+  std::vector<float> &trafficLights,
   std::vector<LC::B18EdgeData> &edgesData,//for the length
   std::vector<uchar> &laneMap,//to check if there are cars
   uint mapToReadShift) {
@@ -1636,7 +1636,7 @@ void simulateOneSTOPIntersectionCPU(
 
 void simulateOneIntersectionCPU(uint i, float currentTime,
                                 std::vector<B18IntersectionData> &intersections,
-                                std::vector<uchar> &trafficLights) {
+                                std::vector<float> &trafficLights) {
   const float deltaEvent = 20.0f; /// !!!!
 
   //if (DEBUG_T_LIGHT == 1) printf("Inter %d CurrTime %.1f Next Event %.1f InOut %d\n", i, currentTime, intersections[i].nextEvent, intersections[i].totalInOutEdges);
@@ -2979,8 +2979,8 @@ bool B18TrafficSimulatorRender::getInterpolated(bool goodPoint,
 }//
 
 
-void B18TrafficLightRender::getInterpolated(uchar newTrafficLight,
-    uchar &interTrafficLight) {
+void B18TrafficLightRender::getInterpolated(float newTrafficLight,
+    float &interTrafficLight) {
   if (trafficLight.size() < numElements) {
     trafficLight.push_back(newTrafficLight);
     interTrafficLight = trafficLight[0];
