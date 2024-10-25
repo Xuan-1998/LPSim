@@ -70,7 +70,7 @@ Clone the repo in your home directory with:
 git clone git@github.com:Xuan-1998/LPSim.git ~/LPSim && cd ~/LPSim
 ```
 
-Clone the [Pandana repository](https://github.com/UDST/pandana) to your home directory stay on the `main` branch, since MANTA now uses a fast contraction hierarchies framework for shortest path routing. Previously implemented shortest path frameworks include Johnson's all pairs shortest path and a parallelized Dijkstra's priority queue.
+Clone the [Pandana repository](https://github.com/UDST/pandana) to your home directory stay on the `main` branch, since LPSim now uses a fast contraction hierarchies framework for shortest path routing. Previously implemented shortest path frameworks include Johnson's all pairs shortest path and a parallelized Dijkstra's priority queue.
 
 Create `Makefile` and compile with:
 ```bash
@@ -320,7 +320,7 @@ Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2024). Large scale multi-GP
 
 Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., Sengupta, R. (2023). Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey. *Journal of Air Transportation*, 1-11. Available: [https://arc.aiaa.org/doi/10.2514/1.D0431](https://arc.aiaa.org/doi/10.2514/1.D0431)
 
-
+Jiang, X., Cao, S., Mo, B., Cao, J., Yang, H., Tang, Y., Hansen, M., Zhao, J. and Sengupta, R., 2024. Simulation-Based Optimization for Vertiport Location Selection: A Surrogate Model With Machine Learning Method. Transportation Research Record, p.03611981241277755. Available: [https://journals.sagepub.com/doi/full/10.1177/03611981241277755](https://journals.sagepub.com/doi/full/10.1177/03611981241277755)
 
 
 
