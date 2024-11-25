@@ -2,7 +2,7 @@
 
 LPSim is a discrete time-driven simulation platform that enables microsimulation analysis for network traffic assignment for both cars and aircrafts. Its architecture incorporates a highly parallelized GPU implementation that provides efficient execution of large-scale simulations on demand and networks with hundreds of thousands of nodes and edges, as well as millions of trips. The computational performance of LPSim is assessed by testing the platform to simulate the entire Bay Area metropolitan region during morning hours, utilizing half-second time steps. The runtime for the nine-county Bay Area simulation, excluding routing and initialization, is just over within minutes depending on how many GPUs are available to be used. 
 
-<img width="1200" alt="merged_image" src="https://github.com/Xuan-1998/LPSim/assets/58761221/6d7f874f-5d49-4a72-8dcd-f8a02497ab29">
+<img width="1200" alt="merged_image" src="https://github.com/Xuan-1998/LPSim/assets/58761221/1c41f659-aee0-4887-99e0-39b0133154ce">
 
 
 
@@ -70,7 +70,7 @@ Clone the repo in your home directory with:
 git clone git@github.com:Xuan-1998/LPSim.git ~/LPSim && cd ~/LPSim
 ```
 
-Clone the [Pandana repository](https://github.com/UDST/pandana) to your home directory stay on the `main` branch, since MANTA now uses a fast contraction hierarchies framework for shortest path routing. Previously implemented shortest path frameworks include Johnson's all pairs shortest path and a parallelized Dijkstra's priority queue.
+Clone the [Pandana repository](https://github.com/UDST/pandana) to your home directory stay on the `main` branch, since LPSim now uses a fast contraction hierarchies framework for shortest path routing. Previously implemented shortest path frameworks include Johnson's all pairs shortest path and a parallelized Dijkstra's priority queue.
 
 Create `Makefile` and compile with:
 ```bash
@@ -130,13 +130,19 @@ sudo systemctl restart docker
 sudo apt-get install -y nvidia-container-toolkit
 ```
 
-2. You can build it yourself and run it
+2. You also need to check the status of NVIDIA GPU on your instance or local machine
+```bash
+nvidia-smi
+```
+If error occurs e.g. on GCloud, you can check and install the correct NVIDIA driver version for your GPU on https://www.nvidia.cn/Download/index.aspx.
+
+3. You can build it yourself and run it
 ```bash
 
 docker run -it --rm --gpus all -v "$PWD":/lpsim -w /lpsim  xuanjiang1998/lpsim:v1 bash
 ```
 
-3. Once inside the container, compile and run
+4. Once inside the container, compile and run
 ```bash
 qmake LivingCity/LivingCity.pro
 make
@@ -271,7 +277,7 @@ docker run -it your-dockerhub-username/lpsim:latest /bin/bash
 ## multiple GPUs
 ![One_GPU_VS_Multiple drawio](https://github.com/Xuan-1998/LPSim/assets/58761221/6b9c36c0-488d-47a5-ab9e-d3bf0609bde4)
 
-/usr/local/cuda-11.2/bin/nvcc -m64 -O3 -arch=sm_50 -c --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr -I/usr/include/opencv4/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/usr/include -I/usr/include/pandana/src -I/usr/local/cuda-11.2/include  -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl -L/usr/include/pandana/src -lchrouting -lcudart -lcuda -lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o LivingCity/obj/b18CUDA_trafficSimulator_cuda.o
+/usr/local/cuda-12.3/bin/nvcc -m64 -O2 -arch=sm_80 -c --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr -I/usr/include/opencv4/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/lpsim/LivingCity/glew/include/ -I/usr/include/pandana/src -I/usr/local/cuda-12.3/include  -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl -L/usr/include/pandana/src -lchrouting -lcudart -lcuda -lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o ${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o
 
 ## Running on gcloud
 curl https://raw.githubusercontent.com/GoogleCloudPlatform/compute-gpu-installation/main/linux/install_gpu_driver.py --output install_gpu_driver.py
@@ -306,15 +312,18 @@ nvprof --metrics flop_count_sp,flop_count_dp ./LivingCity >> output_g3.txt 2>&1 
 
 ## Acknowledgments
 
-This repository and code have been developed and maintained by Xuan Jiang, Jiaying Li, Chonghe Jiang, Xin Peng, Johan Agerup, Yuhan Tang, and Raja Sengupta. This work is based on Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
+This repository and code have been developed and maintained by Xuan Jiang, Jiaying Li, Yibo Zhao, Chonghe Jiang, Xin Peng, Johan Agerup, Yuhan Tang, and Raja Sengupta. This work is based on Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
 
 If this code is used in any shape or form for your project, please cite this paper accordingly:
 
-Jiang, X., Agerup, J. F., & Tang, Y. (2023, May 11). Benchmarking and preparing LPSim for scalability on multiple GPUs. Retrieved from osf.io/ezjrc, Available: [https://osf.io/ezjrc/](https://osf.io/ezjrc/).
+Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2024). Large scale multi-GPU based parallel traffic simulation for accelerated traffic assignment and propagation. Transportation Research Part C: Emerging Technologies, 169, 104873. Available: [https://www.sciencedirect.com/science/article/pii/S0968090X24003942](https://www.sciencedirect.com/science/article/pii/S0968090X24003942)
 
-and 
+Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., Sengupta, R. (2023). Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey. *Journal of Air Transportation*, 1-11. Available: [https://arc.aiaa.org/doi/10.2514/1.D0431](https://arc.aiaa.org/doi/10.2514/1.D0431)
 
-Jiang, X., Tang, Y., Tang, Z., Cao, J., Bulusu, V., Poliziani, C., & Sengupta, R. (2023). Simulating the Integration of Urban Air Mobility into Existing Transportation Systems: A Survey. Available:  [arXiv preprint arXiv:2301.12901.](https://arxiv.org/abs/2301.12901)
+Jiang, X., Cao, S., Mo, B., Cao, J., Yang, H., Tang, Y., Hansen, M., Zhao, J. and Sengupta, R., 2024. Simulation-Based Optimization for Vertiport Location Selection: A Surrogate Model With Machine Learning Method. Transportation Research Record, p.03611981241277755. Available: [https://journals.sagepub.com/doi/full/10.1177/03611981241277755](https://journals.sagepub.com/doi/full/10.1177/03611981241277755)
+
+
+
 
 Thank you!
 
@@ -325,7 +334,7 @@ This project is licensed under the MIT License.
 
 MIT License
 
-Copyright (c) 2023 Xuan Jiang, Jiaying Li, Chonghe Jiang, Dingyi Zhuang, Jinhua Zhao, Raja Sengupta
+Copyright (c) 2024 Xuan Jiang, Jiaying Li, Chonghe Jiang, Dingyi Zhuang, Jinhua Zhao, Raja Sengupta
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
