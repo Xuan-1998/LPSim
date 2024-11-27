@@ -27,7 +27,7 @@ struct B18TrafficPerson {
   float  travel_time[500];
   // float  end_time_on_prev_edge_array[100];
 
-  unsigned short active;//0 inactive 1 active 2 finished
+  unsigned int active;//0 inactive 1 active 2 finished 3 waiting for flying 4 waiting for landing 5 stop waiting, ready to go
   unsigned short numOfLaneInEdge;//number of lane in that edge
 
   float posInLaneM;

@@ -81,6 +81,66 @@ float *trafficLights_d;
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
 
+__host__ __device__ void removeL(LC::LNode **head, int value) {
+  LC::LNode* temp = *head;
+  LC::LNode* prev = NULL;
+
+  if (temp != NULL && temp->data == value) {
+      *head = temp->next;
+      delete temp;
+      return;
+  }
+
+  while (temp != NULL && temp->data != value) {
+      prev = temp;
+      temp = temp->next;
+  }
+
+  if (temp == NULL) return;
+  prev->next = temp->next;
+  delete temp;
+}
+
+__host__ __device__ void appendL(LC::LNode** head, int val) {
+  LC::LNode* new_node = new LC::LNode();
+  new_node->data = val;
+  new_node->next = NULL;
+  if(*head == NULL) {
+      *head = new_node;
+  } else {
+      LC::LNode* temp = *head;
+      while(temp->next != NULL) {
+          temp = temp->next;
+      }
+      temp->next = new_node;
+  }
+}
+
+__host__ __device__ int removeFirst(LC::LNode **head) {
+  if (*head == NULL) {
+      return -1;
+  }
+
+  LC::LNode* temp = *head;
+  int removedValue = temp->data;
+  *head = (*head)->next;
+  delete temp;
+
+  return removedValue;
+}
+
+__host__ __device__ int getLength(LC::LNode* head) {
+  int length = 0;
+  LC::LNode* current = head;
+
+  while (current != NULL) {
+      length++;           // Increment the count for each node
+      current = current->next;  // Move to the next node
+  }
+
+  return length;  // Return the total length of the list
+}
+
 void b18InitCUDA(
   bool fistInitialization,
   std::vector<LC::B18TrafficPerson>& trafficPersonVec, 
@@ -498,6 +558,7 @@ __device__ const float calculateGasConsumption(const float a, const float v) {
  // Kernel that executes on the CUDA device
 __global__ void kernel_trafficSimulation(
   int numPeople,
+  uint numIntersections,
   float currentTime,
   uint mapToReadShift,
   uint mapToWriteShift,
@@ -517,6 +578,10 @@ __global__ void kernel_trafficSimulation(
   int p = blockIdx.x * blockDim.x + threadIdx.x;
   if (p >= numPeople) return; //CUDA check (inside margins)
   if (trafficPersonVec[p].active == 2) return; // trip finished
+  if (trafficPersonVec[p].active > 2 && trafficPersonVec[p].active != 5) { // waiting for vertiport
+    trafficPersonVec[p].num_steps++;
+    return;
+  }
   if (trafficPersonVec[p].time_departure > currentTime) return; //1.1 just continue waiting
 
 
@@ -558,7 +623,7 @@ __global__ void kernel_trafficSimulation(
     trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
   }
   //2.1. check if person should still wait or should start
-  if (trafficPersonVec[p].active == 0) {
+  if (trafficPersonVec[p].active == 0 || trafficPersonVec[p].active > 2) {
     //1.2 find first edge
     assert(trafficPersonVec[p].indexPathInit != INIT_EDGE_INDEX_NOT_SET);
     trafficPersonVec[p].indexPathCurr = trafficPersonVec[p].indexPathInit; // reset index.
@@ -566,7 +631,34 @@ __global__ void kernel_trafficSimulation(
     indexCurrentEdge = trafficPersonVec[p].indexPathCurr;
     currentEdge = indexPathVec[indexCurrentEdge];
     isUAM = edgesData[currentEdge].maxSpeedMperSec < 0;
-    if(isUAM) printf("UAM, %f, %d\n",edgesData[currentEdge].maxSpeedMperSec, p);
+    if(isUAM){
+      printf("UAM, %f, %d\n",edgesData[currentEdge].maxSpeedMperSec, p);
+      if(trafficPersonVec[p].active == 3 || trafficPersonVec[p].active == 4){
+        return;
+      }
+
+      // get the intersection time, if waiting, add to currentEdge edge waiting list, if not, go
+      assert(numIntersections > edgesData[currentEdge].prevInters);
+      assert(edgesData[currentEdge].prevInters >= 0);
+      float timeToDeparture = intersections[edgesData[currentEdge].prevInters].nextEventForVertiport;
+      if(timeToDeparture > currentTime && trafficPersonVec[p].active != 5){
+        appendL(&(edgesData[currentEdge].waitingList), p);
+        // int now_length = getLength(edgesData[currentEdge].waitingList);
+        // printf("Line 639, active, p, now length: %d, %d, %d\n", trafficPersonVec[p].active, p, now_length);
+        trafficPersonVec[p].active = edgesData[currentEdge].prevInters;
+        return;
+      }
+
+      trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
+      if (trafficPersonVec[p].active != 5) {
+        // intersections[edgesData[currentEdge].prevInters].nextEventForVertiport = currentTime + 180.0f;
+        atomicAdd(&intersections[edgesData[currentEdge].prevInters].nextEventForVertiport, 90);
+      }
+
+    }
+    else{
+      trafficPersonVec[p].v = 0;
+    }
     assert(indexFirstEdge < indexPathVec_d_size);
     uint firstEdge = indexPathVec[indexFirstEdge];
 
@@ -642,24 +734,6 @@ __global__ void kernel_trafficSimulation(
       return;
     }
 
-    if(isUAM){
-      assert(currentEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
-
-      // use traffic light to store the time when the UAM can start
-      if (currentTime < trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge]) { //0 ready to go, 1 wait
-        printf("UAM not ready to go\n");
-        return;
-      }
-
-      trafficPersonVec[p].v = edgesData[currentEdge].maxSpeedMperSec * -1;
-
-      // update traffic light to next time slot
-      trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge] = currentTime + 90.0f;
-      printf("UAM ready to go, change traffic light\n");
-    }
-    else{
-      trafficPersonVec[p].v = 0;
-    }
     trafficPersonVec[p].LC_stateofLaneChanging = 0;
 
     //1.5 active car
@@ -882,17 +956,45 @@ __global__ void kernel_trafficSimulation(
   if (trafficPersonVec[p].posInLaneM > edgesData[currentEdge].length) { //reach intersection
 
     if(isUAM){
-      assert(nextEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
-
-      // use traffic light to store the time when the UAM can start
-      if (currentTime < trafficLights[nextEdge + trafficPersonVec[p].numOfLaneInEdge]) { //0 ready to go, 1 wait
-        printf("UAM not ready to reach intersection\n, %f, %d\n", currentTime, p);
+      if(trafficPersonVec[p].active > 2 && trafficPersonVec[p].active != 5){
         return;
       }
 
-      // update traffic light to next time slot
-      trafficLights[nextEdge + trafficPersonVec[p].numOfLaneInEdge] = currentTime + 90.0f;
-      printf("UAM ready to land, change traffic light\n, %f, %d\n", currentTime, p);
+      // get the intersection time, if waiting, add to currentEdge edge waiting list, if not, go
+      assert(numIntersections > edgesData[currentEdge].nextInters);
+      assert(edgesData[currentEdge].nextInters >= 0);
+      float timeToDeparture = intersections[edgesData[currentEdge].nextInters].nextEventForVertiport;
+      if(timeToDeparture > currentTime && trafficPersonVec[p].active != 5){
+        appendL(&(edgesData[currentEdge].waitingList), p);
+        int now_length = getLength(edgesData[currentEdge].waitingList);
+        trafficPersonVec[p].active = edgesData[currentEdge].nextInters;
+
+        // printf("Line 966, active and p and now length: %d, %d, %d\n", trafficPersonVec[p].active, p, now_length);
+        // printf("Adding waiting: direction: landing, p: %d, now length: %d, will be landing at intersection: %d, edgeID: %d, currentTime: %f, timeToDeparture: %f, was from\n", p, now_length, edgesData[currentEdge].nextInters, currentEdge, currentTime, timeToDeparture, edgesData[currentEdge].prevInters);
+
+        // ushort posInLineCells = (ushort) (trafficPersonVec[p].posInLaneM);
+        // const uint posToSample = mapToWriteShift +
+        //   kMaxMapWidthM * (currentEdge +
+        //   (((int) (posInLineCells / kMaxMapWidthM)) * edgesData[currentEdge].numLines) +
+        //   trafficPersonVec[p].numOfLaneInEdge) +
+        //   posInLineCells % kMaxMapWidthM;
+        // assert(posToSample < laneMap_d_size);
+        // assert(posToSample >= 0);
+        // laneMap[posToSample] = 0xFF;
+    
+        return;
+      }
+      if (trafficPersonVec[p].active != 5) {
+        // printf("P %d, nextEventForVertiport %f, currentTime %f\n", p, intersections[edgesData[currentEdge].nextInters].nextEventForVertiport, currentTime);
+          // intersections[edgesData[currentEdge].nextInters].nextEventForVertiport = currentTime + 180.0f;
+          float baseTime = currentTime; // Load currentTime into a local variable
+          intersections[edgesData[currentEdge].nextInters].nextEventForVertiport = baseTime;
+          atomicAdd(&intersections[edgesData[currentEdge].nextInters].nextEventForVertiport, 90.0f);
+          printf("P %d, nextEventForVertiport %f, currentTime %f, intersection ID %d\n", p, intersections[edgesData[currentEdge].nextInters].nextEventForVertiport, currentTime, edgesData[currentEdge].nextInters);
+      }
+      else{
+        trafficPersonVec[p].active = 1;
+      }
     }
 
     numMToMove = trafficPersonVec[p].posInLaneM - edgesData[currentEdge].length;
@@ -911,6 +1013,30 @@ __global__ void kernel_trafficSimulation(
       assert(nextEdge < edgesData_d_size);
       if (trafficPersonVec[p].numOfLaneInEdge >= edgesData[nextEdge].numLines) {
         trafficPersonVec[p].numOfLaneInEdge = edgesData[nextEdge].numLines - 1; //change line if there are less roads
+      }
+
+      bool isNextEdgeUAM = edgesData[nextEdge].maxSpeedMperSec < 0;
+      if(isNextEdgeUAM){
+        if(trafficPersonVec[p].active > 2 && trafficPersonVec[p].active != 5){
+          return;
+        }
+
+        float timeToDeparture = intersections[edgesData[nextEdge].prevInters].nextEventForVertiport;
+        if(timeToDeparture > currentTime && trafficPersonVec[p].active != 5){
+          appendL(&(edgesData[nextEdge].waitingList), p);
+          int now_length = getLength(edgesData[nextEdge].waitingList);
+          trafficPersonVec[p].active = edgesData[nextEdge].prevInters;
+          // printf("Adding waiting: direction: departure, p: %d, now length: %d, now reaching intersection: %d, edgeID: %d, currentTime: %f, timeToDeparture: %f, will be going to: %d\n", p, now_length, edgesData[nextEdge].prevInters, nextEdge, currentTime, timeToDeparture, edgesData[nextEdge].nextInters);
+          return;
+        }
+
+        if (trafficPersonVec[p].active != 5) {
+          // intersections[edgesData[nextEdge].prevInters].nextEventForVertiport = currentTime + 180.0f;
+          atomicAdd(&intersections[edgesData[nextEdge].prevInters].nextEventForVertiport, 90.0f);
+        }
+        else{
+          trafficPersonVec[p].active = 1;
+        }
       }
 
       //TODO: Test if the following line is doing the conversion wrong
@@ -938,15 +1064,15 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
-//           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
+          // trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          // printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
       } else {
           if (trafficPersonVec[p].curEdge  != trafficPersonVec[p].prevEdge) {
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
-//           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
+          //  rafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
       }
@@ -1266,12 +1392,15 @@ __global__ void kernel_intersectionOneSimulation(
       uint numIntersections,
       float currentTime,
       LC::B18IntersectionData *intersections,
+      LC::B18TrafficPerson *trafficPersonVec,
+      int numPeople,
+      LC::B18EdgeData* edgesData,
+      int edgesData_d_size,
       float *trafficLights) {
-
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if(i<numIntersections){//CUDA check (inside margins)
+  if(i<numIntersections && intersections[i].totalInOutEdges > 0){//CUDA check (inside margins)
     const float deltaEvent = 20.0f; /// !!!!
-    if (currentTime > intersections[i].nextEvent && intersections[i].totalInOutEdges > 0) {
+    if (currentTime > intersections[i].nextEvent) {
 
       uint edgeOT = intersections[i].edge[intersections[i].state];
       uchar numLinesO = edgeOT >> 24;
@@ -1304,9 +1433,160 @@ __global__ void kernel_intersectionOneSimulation(
 
       intersections[i].nextEvent = currentTime + deltaEvent;
     }
-  }
-   
+
+    // if time to update vertiport
+    if (currentTime > intersections[i].nextEventForVertiport) {
+      // Get the busiest edge first
+      int max_length = 0;
+      int max_edge_id = 0;
+      int real_edge_id = 0;
+      int active = 0;
+      int whole_length_at_max = 0;
+      for (int edge = 0; edge < intersections[i].totalInOutEdges; edge++) {
+        int length = 0;
+        int edgeNum = 0;
+        int local_active = 0;
+        int whole_length = 0;
+        if ((intersections[i].edge[edge] & kMaskInEdge) == kMaskInEdge) {
+          uint edgeIT = intersections[i].edge[edge];
+          uchar numLinesI = edgeIT >> 24;
+
+          if ((edgeIT & kMaskInEdge) == kMaskInEdge) {
+            // Process incoming edge
+            edgeNum = edgeIT & kMaskLaneMap; // Extract the edge number
+            assert(edgeNum < edgesData_d_size);
+            LC::LNode* current = edgesData[edgeNum].waitingList;
+            while (current != NULL) {
+              assert(current->data < numPeople);
+              assert(current->data >= 0);
+              if (trafficPersonVec[current->data].active == i) {
+                length++;
+              }
+              whole_length++;
+              current = current->next;
+            }
+            local_active = i;
+          } 
+        }else{
+          // } else if ((edgeIT & kMaskOutEdge) == kMaskOutEdge) {
+            // Process outgoing edge
+            uint edgeIT = intersections[i].edge[edge];
+            edgeNum = edgeIT & kMaskLaneMap; // Extract the edge number
+            assert(edgeNum < edgesData_d_size);
+            LC::LNode* current = edgesData[edgeNum].waitingList;
+            while (current != NULL) {
+              assert(current->data < numPeople);
+              assert(current->data >= 0);
+              if (trafficPersonVec[current->data].active == i) {
+                length++;
+              }
+              whole_length++;
+              current = current->next;
+            }         
+            local_active = i;
+          }
+        if(length > max_length){
+          max_length = length;
+          max_edge_id = edge;
+          real_edge_id = edgeNum;
+          active = local_active;
+          whole_length_at_max = whole_length;
+        }
+      }
+      // if(max_length != 0) printf("Max edge id: %d, max length: %d, intersection ID: %d, currentTime: %f, real edge id: %d\n", max_edge_id, max_length, i, currentTime, real_edge_id);
+      if(max_length <= 0) {
+        // printf("No one is waiting at the intersection, intersection ID: %d, currentTime: %f\n", i, currentTime);
+        return;
+      }
+      // if(max_length > 5000) {
+      //   printf("Too many people waiting at the edge, intersection ID: %d, edge ID: %d, length: %d, currentTime: %f\n", i, max_edge_id, max_length, currentTime);
+      //   do{
+      //     int removedValue = removeFirst(&(edgesData[max_edge_id].waitingList));
+      //     if(removedValue < 0) break;
+      //     assert(removedValue < numPeople);
+      //     trafficPersonVec[removedValue].active = 2;
+      //     trafficPersonVec[removedValue].num_steps = 65500;
+      //   } while(1);
+      // }
+
+      int capacity = 85;
+      // if (i == 159391, 45864, 34645, 80853, 34576, 199502, 155687, 38767, 221480, 95429, 102015) capacity = 9;
+      // if (i == 148222 || i == 34088 || i == 76430 || i == 140797 || i == 161480 || i == 134116 || i == 181005 || i == 187892) {
+      //   capacity = 18;
+      // }
+
+      // if (i == 28255) capacity = 27;
+      // if(i == 58621) capacity = 36;
+
+      int removedCount = capacity;
+      if(max_length < capacity) removedCount = max_length;
+      // for(int j = 0; j < capacity; j++){
+      //   // remove the first waiting person in the edge
+      //   int removedValue = removeFirst(&(edgesData[max_edge_id].waitingList));
+      //   if(removedValue < 0) break;
+      //   removedCount++;
+      //     // printf("Error: removedValue: %d\n", removedValue);
+      //   // assert(removedValue >= 0);
+      //   assert(removedValue < numPeople);
+      //   trafficPersonVec[removedValue].active = 5;
+      // }
+      // LC::LNode* temp = edgesData[real_edge_id].waitingList;
+      // assert(temp != NULL);
+      
+      // for (int j = 0; j < removedCount && temp != NULL; j++) {
+      //     // Store the current node to delete it after updating the head
+      //     LC::LNode* nodeToDelete = temp;
+      
+      //     // Retrieve the data and process the person
+      //     int removedValue = temp->data;
+      //     assert(removedValue >= 0 && removedValue < numPeople);
+      //     trafficPersonVec[removedValue].active = 5;
+      
+      //     // Move to the next node
+      //     temp = temp->next;
+      
+      //     // Delete the current node to free memory
+      //     delete nodeToDelete;
+      // }
+      LC::LNode *temp = edgesData[real_edge_id].waitingList;
+      assert(temp != NULL);
+      LC::LNode *prev = nullptr; // To keep track of the previous node
+
+      while (temp != NULL) {
+        int removedValue = temp->data;
+        assert(removedValue >= 0 && removedValue < numPeople);
+
+        if (trafficPersonVec[removedValue].active == active) {
+          // Remove this node
+          trafficPersonVec[removedValue].active = 5;
+
+          LC::LNode *nodeToDelete = temp;
+
+          // Update the head of the list if we're deleting the first node
+          if (prev == nullptr) {
+            edgesData[real_edge_id].waitingList = temp->next;
+          } else {
+            // Otherwise, bypass the current node
+            prev->next = temp->next;
+          }
+
+          // Move temp to the next node and delete the current node
+          temp = temp->next;
+          delete nodeToDelete;
+        } else {
+          // Continue to the next node without deletion
+          prev = temp;
+          temp = temp->next;
+        }
+      }
+
+      // Update the head pointer to the new start of the list
+      // edgesData[real_edge_id].waitingList = temp;
+      intersections[i].nextEventForVertiport = currentTime + 90.0f;
+      printf("Max edge id: %d, max length: %d, intersection ID: %d, currentTime: %f, real edge id: %d, removed count: %d, nextEventForVertiport: %f, whole length: %d, edge_from_intersection: %d, edge_to_intersection: %d\n", max_edge_id, max_length, i, currentTime, real_edge_id, removedCount, intersections[i].nextEventForVertiport, whole_length_at_max, edgesData[real_edge_id].prevInters, edgesData[real_edge_id].nextInters);
+    }
  }//
+}
 
 // Kernel that executes on the CUDA device
 __global__ void kernel_sampleTraffic(
@@ -1383,7 +1663,10 @@ void b18SimulateTrafficCUDA(float currentTime,
   readFirstMapC=!readFirstMapC;//next iteration invert use
 
   // Simulate intersections.
-  kernel_intersectionOneSimulation << < ceil(numIntersections / 512.0f), 512 >> > (numIntersections, currentTime, intersections_d, trafficLights_d);
+  kernel_intersectionOneSimulation << < ceil(numIntersections / 512.0f), 512 >> > (numIntersections, 
+    currentTime, intersections_d, 
+    trafficPersonVec_d, numPeople, edgesData_d, edgesData_d_size,
+    trafficLights_d);
   gpuErrchk(cudaPeekAtLastError());
 
   intersectionBench.stopMeasuring();
@@ -1391,7 +1674,7 @@ void b18SimulateTrafficCUDA(float currentTime,
   peopleBench.startMeasuring();
   // Simulate people.
   kernel_trafficSimulation <<< numBlocks, threadsPerBlock>> >
-    (numPeople, currentTime, mapToReadShift,
+    (numPeople, numIntersections, currentTime, mapToReadShift,
     mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
     edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
     intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters);
