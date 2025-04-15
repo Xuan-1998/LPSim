@@ -532,6 +532,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
 //           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
@@ -540,6 +541,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
@@ -572,6 +574,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
 //           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
@@ -580,6 +583,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
@@ -695,6 +699,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
 //           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
@@ -703,6 +708,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }
@@ -893,6 +899,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s - trafficPersonVec[p].time_departure;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
 //           printf("%f", trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag]);
           trafficPersonVec[p].window_flag++;
@@ -901,6 +908,7 @@ __global__ void kernel_trafficSimulation(
           // trafficPersonVec[p].avg_speed[trafficPersonVec[p].window_flag] = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
           trafficPersonVec[p].curEdge = trafficPersonVec[p].prevEdge;
           trafficPersonVec[p].travel_time[trafficPersonVec[p].window_flag] = elapsed_s;
+          trafficPersonVec[p].travel_lane[trafficPersonVec[p].window_flag] = trafficPersonVec[p].numOfLaneInEdge;
 //           trafficPersonVec[p].end_time_on_prev_edge_array[trafficPersonVec[p].window_flag] = trafficPersonVec[p].end_time_on_prev_edge;
           trafficPersonVec[p].window_flag++;    
         }

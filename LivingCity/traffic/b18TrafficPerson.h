@@ -25,6 +25,7 @@ struct B18TrafficPerson {
   // float avg_speed[500];
   // unsigned int  prevEdge_array[300];
   float  travel_time[500];
+  unsigned short travel_lane[500]; 
   // float  end_time_on_prev_edge_array[100];
 
   unsigned short active;//0 inactive 1 active 2 finished
