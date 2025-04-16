@@ -2476,7 +2476,7 @@ void writePeopleFile(
     QTextStream streamP(&peopleFile);
 //     streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,avg_speed,prevEdge,travel_time,endtimeonprevEdge,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
     //streamP << "p,init_intersection,end_intersection,time_departure,num_steps,co,travel_time,gas,distance,a,b,T,avg_v(mph),active,last_time_simulated,path_length_cpu,path_length_gpu\n";
-    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,travel_time,distance,travel_lane\n";
+    streamP << "p,init_intersection,end_intersection,time_departure,num_steps,travel_time,distance,travel_lane,travel_edge\n";
     for (int p = 0; p < trafficPersonVec.size(); p++) {
       // int n = sizeof(trafficPersonVec[p].avg_speed)/sizeof(trafficPersonVec[p].avg_speed[0]);
       // QString str = "";
@@ -2497,6 +2497,7 @@ void writePeopleFile(
       int n2 = sizeof(trafficPersonVec[p].travel_time)/sizeof(trafficPersonVec[p].travel_time[0]);
       QString str2 = "";
       QString str2_2 = "";
+      QString str2_3 = "";
 
       for (int i = 0; i < n2; i++) {
               if (trafficPersonVec[p].travel_time[i] == -0.5) {
@@ -2504,6 +2505,7 @@ void writePeopleFile(
               }
               str2 += QString::fromStdString(to_string(trafficPersonVec[p].travel_time[i])) + QString::fromStdString(" ");
               str2_2 += QString::fromStdString(std::to_string(trafficPersonVec[p].travel_lane[i])) + QString::fromStdString(" ");
+              str2_3 += QString::fromStdString(std::to_string(trafficPersonVec[p].travel_edge[i])) + QString::fromStdString(" ");
           }
 //       int n3 = sizeof(trafficPersonVec[p].end_time_on_prev_edge_array)/sizeof(trafficPersonVec[p].end_time_on_prev_edge_array[0]);
 
@@ -2537,6 +2539,7 @@ void writePeopleFile(
       // streamP << "," << trafficPersonVec[p].path_length_cpu;
       // streamP << "," << trafficPersonVec[p].path_length_gpu;
       streamP << "," << str2_2;  // the travel lane we added
+      streamP << "," << str2_3;  // the travel edge we added
       streamP << "\n";
     }
 

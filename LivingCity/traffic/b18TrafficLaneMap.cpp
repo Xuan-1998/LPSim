@@ -97,6 +97,8 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
 
     edgesData[tNumMapWidth].length = std::get<1>(x)->second.length;
     edgesData[tNumMapWidth].maxSpeedMperSec = std::get<1>(x)->second.max_speed_limit_mps;
+    // init threshold
+    edgesData[tNumMapWidth].lane_changing_threshold = 0.7 * edgesData[tNumMapWidth].maxSpeedMperSec;
 
     if (maxLength < edgesData[tNumMapWidth].length) { maxLength = edgesData[tNumMapWidth].length; }
     if (maxNumLanes < numLanes) { maxNumLanes = numLanes; }
@@ -338,6 +340,8 @@ void B18TrafficLaneMap::createLaneMap(
 
     edgesData[tNumMapWidth].length = inRoadGraph.myRoadGraph_BI[*ei].edgeLength;
     edgesData[tNumMapWidth].maxSpeedMperSec = inRoadGraph.myRoadGraph_BI[*ei].maxSpeedMperSec;
+    // init threshold
+    edgesData[tNumMapWidth].lane_changing_threshold = 0.7 * edgesData[tNumMapWidth].maxSpeedMperSec;
 
     if (maxLength < edgesData[tNumMapWidth].length) { maxLength = edgesData[tNumMapWidth].length; }
     if (maxNumLanes < numLanes) { maxNumLanes = numLanes; }

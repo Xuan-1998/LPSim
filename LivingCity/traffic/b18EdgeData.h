@@ -36,6 +36,7 @@ struct B18EdgeData {
   uint nextIntersMapped;
   float curr_cum_vel = 0;
   float curr_iter_num_cars = 0;
+  float lane_changing_threshold = 0;
 };
 
 struct B18IntersectionData {
