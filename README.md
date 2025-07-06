@@ -138,8 +138,10 @@ If error occurs e.g. on GCloud, you can check and install the correct NVIDIA dri
 
 3. You can build it yourself and run it
 ```bash
-
-docker run -it --rm --gpus all -v "$PWD":/lpsim -w /lpsim  xuanjiang1998/lpsim:v1 bash
+docker run -it --rm --gpus all \
+    -v "$PWD":/lpsim \
+    -w /lpsim \
+    lpsim:cuda12.4 bash
 ```
 
 4. Once inside the container, compile and run
