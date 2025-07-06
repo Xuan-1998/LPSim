@@ -136,7 +136,7 @@ nvidia-smi
 ```
 If error occurs e.g. on GCloud, you can check and install the correct NVIDIA driver version for your GPU on https://www.nvidia.cn/Download/index.aspx.
 
-3. You can build it yourself and run it
+3. You can pull and run it
 ```bash
 docker pull yibo123/lpsim:cuda12.4
 
