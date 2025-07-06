@@ -89,8 +89,8 @@ class RoadGraph {
   RoadGraph(const RoadGraph &ref) {
     //myRoadGraph = ref.myRoadGraph;
     //myRoadGraph_BI= ref.myRoadGraph_BI;
-    boost::copy_graph(ref.myRoadGraph, myRoadGraph);
-    boost::copy_graph(ref.myRoadGraph_BI, myRoadGraph_BI);
+    // boost::copy_graph(ref.myRoadGraph, myRoadGraph);  // Disabled due to Boost concept issues
+    // boost::copy_graph(ref.myRoadGraph_BI, myRoadGraph_BI);  // Disabled due to Boost concept issues
 
     updateDL = ref.updateDL;
     dlIdx = ref.dlIdx;
@@ -103,8 +103,8 @@ class RoadGraph {
   inline RoadGraph &operator=(const RoadGraph &ref) {
     //myRoadGraph = ref.myRoadGraph;
     //myRoadGraph_BI= ref.myRoadGraph_BI;
-    boost::copy_graph(ref.myRoadGraph, myRoadGraph);
-    boost::copy_graph(ref.myRoadGraph_BI, myRoadGraph_BI);
+    // boost::copy_graph(ref.myRoadGraph, myRoadGraph);  // Disabled due to Boost concept issues
+    // boost::copy_graph(ref.myRoadGraph_BI, myRoadGraph_BI);  // Disabled due to Boost concept issues
 
     updateDL = ref.updateDL;
     dlIdx = ref.dlIdx;

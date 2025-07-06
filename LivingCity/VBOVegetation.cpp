@@ -166,8 +166,8 @@ bool VBOVegetation::generateVegetation(VBORenderManager &rendManager,
         //boost::geometry::point_2d bg_testPt;
         typedef boost::geometry::model::d2::point_xy<double> point_2d;
         point_2d bg_testPt;
-        boost::geometry::assign(bg_loop,
-                                (blocks[i].myParcels[*vi]).parcelContour.contour);
+        //boost::geometry::assign(bg_loop,  // Disabled due to Boost concept issues
+        //                        (blocks[i].myParcels[*vi]).parcelContour.contour);  // Disabled due to Boost concept issues
 
         for (int i = 0; i < numTreesInParcel; ++i) {
           pos.setX(LC::misctools::genRand(xmin, xmax));

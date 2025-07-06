@@ -1,8 +1,11 @@
 #include "b18TrafficSP.h"
 
 #include <boost/graph/exterior_property.hpp>
-#include "src/linux_host_memory_logger.h"
+#include "linux_host_memory_logger.h"
 #include "roadGraphB2018Loader.h"
+
+// Include OpenMP before any Pandana headers to avoid macro conflicts
+#include "omp.h"
 #include "accessibility.h"
 #include <math.h>
 #include <typeinfo>

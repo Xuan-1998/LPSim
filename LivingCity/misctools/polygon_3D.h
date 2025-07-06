@@ -37,6 +37,9 @@
 #include <vector>
 #include "qvector3d.h"
 #ifndef Q_MOC_RUN
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <boost/geometry/geometry.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
@@ -44,6 +47,7 @@
 #include <boost/geometry/geometries/register/ring.hpp>
 #include <boost/geometry/multi/multi.hpp>
 #include <boost/polygon/polygon.hpp>
+#pragma GCC diagnostic pop
 #endif
 
 class Vector3D : public QVector3D {

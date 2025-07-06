@@ -1,7 +1,7 @@
 #define BOOST_TT_HAS_OPERATOR_HPP_INCLUDED
 
-#include "src/benchmarker.h"
-#include "src/linux_host_memory_logger.h"
+#include "benchmarker.h"
+#include "linux_host_memory_logger.h"
 
 #ifdef B18_RUN_WITH_GUI
 #include <QApplication>

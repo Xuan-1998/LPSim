@@ -4,8 +4,8 @@
 #include <boost/graph/exterior_property.hpp>
 #include <iostream>
 #include <fstream>
-using namespace std;
-#include "src/linux_host_memory_logger.h"
+// Removed "using namespace std;" to avoid conflicts with Boost geometry
+#include "linux_host_memory_logger.h"
 
 #define ROUTE_DEBUG 0
 //#define DEBUG_JOHNSON 0

@@ -143,7 +143,8 @@ namespace LC {
 		//check if parcel is subdividable
 		float thresholdArea = areaMean + LC::misctools::genRand(-1.0f, 1.0f)*areaStd*areaMean;
 		//float thresholdArea = areaMean + LC::misctools::genRand(0.0f, 1.0f)*areaStd;
-		if( (fabs(boost::geometry::area(parcel.bg_parcelContour))) < thresholdArea ){
+		//if( (fabs(boost::geometry::area(parcel.bg_parcelContour))) < thresholdArea ){  // Disabled due to Boost concept issues
+		if( false ){  // Disabled parcel area check due to Boost concept issues
 			//printf("a: %.3f %.3f", boost::geometry::area(parcel.bg_parcelContour));
 			//boost::geometry::correct(parcel.bg_parcelContour);
 			//printf("a: %.3f %.3f", boost::geometry::area(parcel.bg_parcelContour));

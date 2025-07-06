@@ -6,6 +6,9 @@
 #ifndef LC_B18_TRAFFIC_SIMULATOR_H
 #define LC_B18_TRAFFIC_SIMULATOR_H
 
+// Include OpenMP before any Pandana headers to avoid macro conflicts
+#include "omp.h"
+
 #include "../misctools/misctools.h"
 
 #include "b18TrafficOD.h"

@@ -34,7 +34,9 @@
 //based on www.yolinux.com/TUTORIALS/C++Singleton.html
 
 #pragma once
-
+#ifdef set
+#  undef set
+#endif
 #include <QHash>
 #include <QVariant>
 #include <QVector3D>

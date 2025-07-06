@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <string>
-using namespace std;
+// using namespace std;  // Commented to avoid conflicts with Boost Geometry
 
 #include "Geometry/client_geometry.h"
 #include "bTraffic/bTrafficIntersection.h"

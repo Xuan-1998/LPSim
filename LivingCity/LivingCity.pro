@@ -1,21 +1,36 @@
-QT += core
+QT += core gui
 
 # Project build directories
 DESTDIR     = $$PWD
 OBJECTS_DIR = $$DESTDIR/obj
+QMAKE_CXXFLAGS -= -Werror
+
+# 让 qmake 给所有目标加 -fPIC 并移除 -fPIE
+QMAKE_CXXFLAGS += -fPIC -fno-PIE
+QMAKE_LFLAGS   += -no-pie        # 链接阶段也关掉 PIE
 
 unix {
     LIBS += -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl
-	# -L/Developer/NVIDIA/CUDA-7.5/lib -lcudart -lcublas -lgomp
+    # -L/Developer/NVIDIA/CUDA-7.5/lib -lcudart -lcublas -lgomp
     INCLUDEPATH += \
-      /usr/include/opencv4/ \
-      /opt/local/include/ \ 
-      /usr/local/boost_1_59_0/ \
-      $$PWD/glew/include/
+        /usr/include/opencv4/ \
+        /opt/local/include/ \
+        $$PWD/glew/include/ \
+        $$PWD \
+        $$PWD/../src
+
+    # Treat Boost headers as system headers and silence concept‑check warnings
+    QMAKE_CXXFLAGS -= -isystem /usr/local/boost_1_59_0
+    INCLUDEPATH    += /usr/local/boost_1_59_0
+    QMAKE_CXXFLAGS += -Wno-nonnull -Wno-error=nonnull -Wno-error -Wno-unused-parameter -Wno-error=nonnull-compare -Wno-all -w
+    # Show full template back‑traces when debugging template errors
+    QMAKE_CXXFLAGS += -ftemplate-backtrace-limit=0
+    # (Optional) disable Boost concept asserts entirely
+    DEFINES += BOOST_CONCEPT_ASSERT_DISABLE BOOST_CONCEPT_DISABLE BOOST_DISABLE_ASSERTS BOOST_GEOMETRY_DISABLE_DEPRECATED_03_WARNING
 
     exists("/usr/include/pandana/src") {
       INCLUDEPATH += /usr/include/pandana/src
-      LIBS += -L/usr/include/pandana/src -lchrouting
+      LIBS += -L/usr/include/pandana/src -lchrouting -lgomp
       message("Found Pandana installation at /usr/include.")
     } else {
       message("Pandana not found at /usr/include. Please manually include it in the produced Makefile.")
@@ -74,8 +89,8 @@ HEADERS += \
     traffic/b18TrafficOD.h \
     traffic/b18TrafficPerson.h \
     traffic/b18TrafficSimulator.h \
-    src/benchmarker.h \
-    src/linux_host_memory_logger.h \
+    ../src/benchmarker.h \
+    ../src/linux_host_memory_logger.h \
     traffic/sp/config.h \
     traffic/sp/external/csv.h \
     traffic/sp/graph.h \
@@ -111,12 +126,9 @@ SOURCES += \
     traffic/b18TrafficLaneMap.cpp \
     traffic/b18TrafficOD.cpp \
     traffic/b18TrafficSimulator.cpp \
-    src/benchmarker.cpp \
-    src/linux_host_memory_logger.cpp \
+    ../src/benchmarker.cpp \
+    ../src/linux_host_memory_logger.cpp \
     traffic/sp/graph.cc
-
-OTHER_FILES += \
-        traffic/b18CUDA_trafficSimulator.cu \
 
 
 ###################################################################
@@ -143,7 +155,7 @@ win32{
     CUDA_ARCH     = sm_50
 
     # Here are some NVCC flags I've always used by default.
-    NVCCFLAGS     = --use_fast_math
+    NVCCFLAGS     = --use_fast_math --expt-relaxed-constexpr
 
 
     # Prepare the extra compiler configuration (taken from the nvidia forum - i'm not an expert in this part)
@@ -178,40 +190,21 @@ win32{
 }
 
 unix {
-  # Cuda sources
-  CUDA_SOURCES += traffic/b18CUDA_trafficSimulator.cu
-  # Path to cuda toolkit install
-  exists("/usr/local/cuda-11.2") {
-    CUDA_DIR = /usr/local/cuda-11.2
-    message("Found CUDA 11.2 installation, using CUDA 11.2.")
-  } else {
-    exists("/usr/local/cuda-10.1") {
-      CUDA_DIR = /usr/local/cuda-10.1
-      message("Found CUDA 10.1 installation, using CUDA 10.1.")
-    } else {
-      CUDA_DIR = /usr/local/cuda-9.0
-      message("CUDA 11.2 or 10.1 not found, defaulting to 9.0 instead.")
-    }
-  }
-  #CUDA_DIR = /usr/local/cuda-11.2
-  INCLUDEPATH += $$CUDA_DIR/include
-  QMAKE_LIBDIR += $$CUDA_DIR/lib64
-  # GPU architecture
-  CUDA_ARCH = sm_50
-  # NVCC flags
-  NVCCFLAGS = --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr
-  # Path to libraries
-  LIBS += -lcudart -lcuda -lgomp
-  QMAKE_CXXFLAGS += -fopenmp -w
-  #LIBS += -fopenmp
-  # join the includes in a line
-  CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
-  cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -O3 -arch=$$CUDA_ARCH -c $$NVCCFLAGS $$CUDA_INC $$LIBS ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
-  cuda.dependcy_type = TYPE_C
-  cuda.depend_command = $$CUDA_DIR/bin/nvcc -O3 -M $$CUDA_INC $$NVCCFLAGS      ${QMAKE_FILE_NAME}
+    CUDA_SOURCES = traffic/b18CUDA_trafficSimulator.cu    # keep only this file, avoid empty entries
+    CUDA_DIR     = /usr/local/cuda-12.4
+    CUDA_ARCH    = sm_50
+    NVCCFLAGS    = --use_fast_math --expt-relaxed-constexpr
+    CUDA_INC    = $$join(INCLUDEPATH, ' -I', '-I', ' ')
 
-  cuda.input = CUDA_SOURCES
-  cuda.output = ${OBJECTS_DIR}${QMAKE_FILE_BASE}_cuda.o
-  # Tell Qt that we want add more stuff to the Makefile
-  QMAKE_EXTRA_COMPILERS += cuda
+    INCLUDEPATH += $$CUDA_DIR/include
+    QMAKE_LIBDIR += $$CUDA_DIR/lib64
+    LIBS        += -lcudart -lcuda
+
+    cuda.input  = CUDA_SOURCES
+    cuda.output = $$OBJECTS_DIR/${QMAKE_FILE_BASE}.o
+    cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -arch=$$CUDA_ARCH -c \
+                    $$NVCCFLAGS $$CUDA_INC ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+    cuda.dependency_type = TYPE_C
+
+    QMAKE_EXTRA_COMPILERS += cuda
 }

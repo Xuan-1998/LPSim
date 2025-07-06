@@ -2,7 +2,7 @@
 #include "b18TrafficSimulator.h"
 #include <assert.h>
 
-#include "src/benchmarker.h"
+#include "benchmarker.h"
 
 #include "../global.h"
 #ifdef B18_RUN_WITH_GUI
@@ -17,6 +17,9 @@
 #include "b18CUDA_trafficSimulator.h"
 #include "roadGraphB2018Loader.h"
 #include <thread>
+
+// Include OpenMP before any Pandana headers to avoid macro conflicts
+#include "omp.h"
 #include "accessibility.h"
 #include <math.h>
 

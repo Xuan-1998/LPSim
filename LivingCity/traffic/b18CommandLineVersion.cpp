@@ -2,9 +2,12 @@
 #include <QString>
 #include <string>
 
+// Include OpenMP before any Pandana headers to avoid macro conflicts
+#include "omp.h"
+
 #include "b18CommandLineVersion.h"
 
-#include "src/benchmarker.h"
+#include "benchmarker.h"
 
 #include "roadGraphB2018Loader.h"
 #include "qcoreapplication.h"

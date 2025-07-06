@@ -1,4 +1,4 @@
-#include "src/benchmarker.h"
+#include "benchmarker.h"
 #include <QString>
 
 

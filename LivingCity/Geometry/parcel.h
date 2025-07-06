@@ -96,7 +96,7 @@ namespace LC {
 			{
 				this->parcelContour = inContour;
 				if(parcelContour.contour.size()>0){
-					boost::geometry::assign(bg_parcelContour, parcelContour.contour);
+					//boost::geometry::assign(bg_parcelContour, parcelContour.contour);  // Disabled due to Boost concept issues
 				}
 				initializeParcel();
 			}
@@ -107,8 +107,8 @@ namespace LC {
 			void initializeParcel()
 			{
 				if(parcelContour.contour.size()>0){
-					boost::geometry::assign(bg_parcelContour, parcelContour.contour);
-					boost::geometry::correct(parcelContour.contour);
+					//boost::geometry::assign(bg_parcelContour, parcelContour.contour);  // Disabled due to Boost concept issues
+					//boost::geometry::correct(parcelContour.contour);  // Disabled due to Boost concept issues
 				}
 				parcelContour.getBBox(bbox.minPt, bbox.maxPt);
 			}

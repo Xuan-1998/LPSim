@@ -18,13 +18,21 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/benchmarker.h"
-#include "src/linux_host_memory_logger.h"
+// Prevent Pandana OpenMP macro conflicts
+#ifdef omp_get_thread_num
+#undef omp_get_thread_num
+#endif
+#ifdef omp_get_max_threads
+#undef omp_get_max_threads
+#endif
+
+#include "omp.h"
+#include "benchmarker.h"
+#include "linux_host_memory_logger.h"
 #include "b18TrafficPerson.h"
 #include "../RoadGraph/roadGraph.h"
 #include "sp/graph.h"
 //#include "sp/external/csv.h"
-#include "omp.h"
 
 #include "sp/config.h"
 #include "sp/mpi_wrapper.h"

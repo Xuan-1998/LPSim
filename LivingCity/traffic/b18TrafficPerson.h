@@ -7,11 +7,12 @@
 *		@author igaciad
 *
 ************************************************************************************************/
-using namespace std;
 #include <vector>
 #include <thrust/device_vector.h>
 #ifndef LC_B18_TRAFFIC_PERSON_H
 #define LC_B18_TRAFFIC_PERSON_H
+
+// Use std:: prefix instead of "using namespace std;" to avoid conflicts
 
 namespace LC {
 
