@@ -51,11 +51,13 @@ class B18TrafficSimulator {
  private:
     float av_penetration_rate_;
     float av_toll_discount_;
+    int scenario_mode_;
 
  public:
   B18TrafficSimulator(float deltaTime, RoadGraph *geoRoadGraph, 
     const parameters & simParameters, LCUrbanMain *urbanMain = nullptr, 
-    float av_penetration_rate = 0.0f, float av_toll_discount = 1.0f);
+    float av_penetration_rate = 0.0f, float av_toll_discount = 1.0f,
+    int scenario_mode = 2);
   ~B18TrafficSimulator();
 
   // init data

@@ -51,12 +51,14 @@ const bool calculatePollution = true;
 B18TrafficSimulator::B18TrafficSimulator(float _deltaTime, RoadGraph *originalRoadGraph,
     const parameters & inputSimParameters, LCUrbanMain *urbanMain,
     float av_penetration_rate, 
-    float av_toll_discount) : 
+    float av_toll_discount,
+    int scenario_mode) : 
     deltaTime(_deltaTime), 
     simParameters(inputSimParameters),
     b18TrafficOD(B18TrafficOD(simParameters)),
     av_penetration_rate_(av_penetration_rate),
-    av_toll_discount_(av_toll_discount)
+    av_toll_discount_(av_toll_discount),
+    scenario_mode_(scenario_mode)
 {
     simRoadGraph = new RoadGraph(*originalRoadGraph);
     clientMain = urbanMain;
@@ -298,27 +300,28 @@ void B18TrafficSimulator::updateEdgeImpedances(
         avg_edge_vel_for_logging.push_back(anEdgeProperties.max_speed_limit_mps);
     }
     
-    // --- New, More Stable Generalized Cost Calculation ---
-    abm::EdgeProperties anEdgeProperties = x.second->second;
-    float toll = anEdgeProperties.toll_fee;
-    float eta = this->av_penetration_rate_; 
-    float gamma = this->av_toll_discount_; 
-    const float alpha = 1.0f;
-    const float beta = 1.0f;
-    float toll_lane_proportion = prev_iter_toll_proportion[ind];
-    const float toll_component_weight = 1.0f;
-    const float alpha_value_of_time = 0.0055f;
+    float generalized_cost_float;
 
-    // We now have two components in the same unit (e.g., dollars)
-    float toll_component_hv = toll * toll_lane_proportion * toll_component_weight;
-    float toll_component_av = toll * gamma * toll_lane_proportion * toll_component_weight;
+    if (this->scenario_mode_ == 1) {
+        // SCENARIO 1: Competition - Routing ignores tolls, uses time only.
+        generalized_cost_float = travel_time;
+    } else {
+        // SCENARIOS 2 & 3: Collaboration - Routing uses full generalized cost.
+        abm::EdgeProperties anEdgeProperties = x.second->second;
+        float toll = anEdgeProperties.toll_fee;
+        float eta = this->av_penetration_rate_;
+        float gamma = this->av_toll_discount_;
+        float toll_lane_proportion = (ind < prev_iter_toll_proportion.size()) ? prev_iter_toll_proportion[ind] : 0.0f;
+        const float toll_component_weight = 1.0f;
+        const float alpha_value_of_time = 0.0055f;
 
-    float time_cost = alpha_value_of_time * travel_time;
-
-    float cost_hv = time_cost + toll_component_hv;
-    float cost_av = time_cost + toll_component_av;
-
-    float generalized_cost_float = (1.0f - eta) * cost_hv + eta * cost_av;
+        float time_cost_in_dollars = alpha_value_of_time * travel_time;
+        float toll_component_hv = toll * toll_lane_proportion * toll_component_weight;
+        float toll_component_av = toll * gamma * toll_lane_proportion * toll_component_weight;
+        float cost_hv = time_cost_in_dollars + toll_component_hv;
+        float cost_av = time_cost_in_dollars + toll_component_av;
+        generalized_cost_float = (1.0f - eta) * cost_hv + eta * cost_av;
+    }
 
     // --- Convert to high-precision integer for the routing algorithm ---
     const int COST_PRECISION_FACTOR = 10; // Using a smaller factor is safer with scaled costs

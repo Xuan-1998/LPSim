@@ -48,6 +48,7 @@ void B18CommandLineVersion::runB18Simulation() {
   const float endSimulationH = settings.value("END_HR", 12).toFloat();
   const float av_penetration_rate = settings.value("AV_PENETRATION_RATE", 0.0).toFloat(); 
   const float av_toll_discount = settings.value("AV_TOLL_DISCOUNT", 1.0).toFloat();   
+  const int scenario_mode = settings.value("SCENARIO_MODE", 2).toInt(); 
   const bool showBenchmarks = settings.value("SHOW_BENCHMARKS", false).toBool();
   int rerouteIncrementMins = settings.value("REROUTE_INCREMENT", 30).toInt(); //in minutes
   std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "UAM_ground_od_file_200sample.csv").toString().toStdString();
@@ -62,7 +63,7 @@ void B18CommandLineVersion::runB18Simulation() {
                                             "SHOW_BENCHMARKS", "REROUTE_INCREMENT",
                                             "OD_DEMAND_FILENAME", "RUN_UNIT_TESTS",
                                             "TOLL_FILE_PATH", "AV_PENETRATION_RATE",
-                                            "AV_TOLL_DISCOUNT"};
+                                            "AV_TOLL_DISCOUNT", "SCENARIO_MODE"};
 
   for (const auto inputedParameter: settings.childKeys()) {
     if (inputedParameter.at(0) != QChar('#') // it's a comment
@@ -117,8 +118,7 @@ void B18CommandLineVersion::runB18Simulation() {
   Benchmarker loadNetwork("Load_network", true);
   Benchmarker loadODDemandData("Load_OD_demand_data", true);
   
-  B18TrafficSimulator b18TrafficSimulator(deltaTime, &cg.roadGraph, simParameters, nullptr, av_penetration_rate, av_toll_discount);
-
+  B18TrafficSimulator b18TrafficSimulator(deltaTime, &cg.roadGraph, simParameters, nullptr, av_penetration_rate, av_toll_discount, scenario_mode);
   
   const bool directed = true;
   const std::shared_ptr<abm::Graph>& street_graph = std::make_shared<abm::Graph>(directed, networkPathSP);

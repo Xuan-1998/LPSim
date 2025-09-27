@@ -1259,8 +1259,12 @@ __global__ void kernel_trafficSimulation(
             float leaderSpeed_c = v_a_c / 3.0f;
             if (leaderSpeed_c > 0.1f) {
                 C_c = alpha * (max_speed - leaderSpeed_c);
-            } else { C_c = 0.0f; } // 如果没有前车或前车很慢，拥堵成本为0？或许应该设为一个大值？
-
+            } else { C_c = 0.0f; } 
+//toll discount for AV
+//combination of gamma 
+//fix one of them and only change the other 
+//average time (normalized by free flow time) 
+//total time ()
             float leaderSpeed_t = v_a_t / 3.0f;
             float tollCost_t = edgesData[currentEdge].toll_fee;
             if (leaderSpeed_t > 0.1f) {
