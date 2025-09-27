@@ -148,6 +148,7 @@ class RoadGraphEdge {
   **/
   float edgeLength;
   float maxSpeedMperSec;
+  float toll_fee;
 
   float roadSegmentWidth;
   float edge_weight;

@@ -14,7 +14,7 @@
 #include "bTraffic/bTrafficIntersection.h"
 #include "global.h"
 #include "roadGraphB2018Loader.h"
-
+#include <cstdio>
 namespace LC {
 
 using namespace std::chrono;
@@ -84,6 +84,7 @@ void saveSetToFile(QSet<uint64_t> &set, QString &filename) {
 //////////////////////////////////////////////////////////
 
 void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkPath) {
+  printf("\n\n===== The program is calling loadB2018RoadGraph! =====\n\n");
   inRoadGraph.myRoadGraph.clear();
   inRoadGraph.myRoadGraph_BI.clear();
 
@@ -228,6 +229,7 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
   const int indexLen = headers.indexOf("length");
   const int indexLanes = headers.indexOf("lanes");
   const int indexSpeedMH = headers.indexOf("speed_mph");
+  const int indexTollFee = headers.indexOf("toll_fee");
 
   QHash<int, std::pair<uint, uint>> dynEdgToEdge;
   std::pair<RoadGraph::roadGraphEdgeDesc_BI, bool> e0_pair;
@@ -270,7 +272,7 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
     float length = fields[indexLen].toFloat();
     int numLanes = std::max<int>(fields[indexLanes].toInt(),1); // at least one
     float speedMS = std::max<float>(0.01f, fields[indexSpeedMH].toFloat() * 0.44704f); //m/h --> m/sec // force to have a speed
-
+    float tollFee = (indexTollFee != -1) ? fields[indexTollFee].toFloat() : 0.0f;
     //printf("%d %d of %d): Leng %.2f #lanes %d speed %.2f\n", dynIndToInd[start], dynIndToInd[end], index, length, numLanes, speedMS);
 
     totalLeng += length;
@@ -294,6 +296,8 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
     inRoadGraph.myRoadGraph_BI[e0_pair.first].numberOfLanes = numLanes;
     inRoadGraph.myRoadGraph_BI[e0_pair.first].edgeLength = length;
     inRoadGraph.myRoadGraph_BI[e0_pair.first].maxSpeedMperSec = speedMS;
+    inRoadGraph.myRoadGraph_BI[e0_pair.first].toll_fee = tollFee;
+
     inRoadGraph.myRoadGraph_BI[e0_pair.first].faci = ind;
     // add to edge
     dynEdgToEdge[ind] = std::make_pair(dynIndToInd[start], dynIndToInd[end]);
@@ -370,6 +374,8 @@ void RoadGraphB2018::loadABMGraph(
   const std::string& networkPath,
   const std::shared_ptr<abm::Graph>& graph_,
   int start_time, int end_time) {
+
+  printf("\n\n===== The program is calling loadABMGraph=====\n\n");
   
   const std::string& edgeFileName = networkPath + "edges.csv";
   std::cout << edgeFileName << " as edges file\n";
@@ -387,6 +393,7 @@ void RoadGraphB2018::loadABMGraph(
   
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<milliseconds>(stop - start);
+
 }
 
 

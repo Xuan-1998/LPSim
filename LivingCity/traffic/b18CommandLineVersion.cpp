@@ -40,7 +40,7 @@ void B18CommandLineVersion::runB18Simulation() {
   const std::string networkPathSP = networkPath.toStdString();
 
   bool addRandomPeople = settings.value("ADD_RANDOM_PEOPLE", true).toBool();
-  int limitNumPeople = settings.value("LIMIT_NUM_PEOPLE", -1).toInt(); // -1
+  int limitNumPeople = settings.value("LIMIT_NUM_PEOPLE", 1000).toInt(); // -1
   int numOfPasses = settings.value("NUM_PASSES", 1).toInt();
   const float deltaTime = settings.value("TIME_STEP", .5).toFloat();
   const float startSimulationH = settings.value("START_HR", 5).toFloat();

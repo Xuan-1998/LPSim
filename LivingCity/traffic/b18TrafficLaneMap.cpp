@@ -15,7 +15,7 @@
 #include "b18EdgeData.h"
 #include "sp/graph.h"
 #include "sp/config.h"
-
+#include <cstdlib>
 
 #define LANE_DEBUG 1
 
@@ -48,7 +48,7 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
       std::vector<uint> &edgeIdToLaneMapNum){
   // GENERATE LANE MAP
   if (LANE_DEBUG) {
-    printf("  >> createLaneMap\n");
+    printf("  >> createLaneMapSP\n");
   }
 
   // 1. Cretae edgesData and find requires sizes.
@@ -99,6 +99,8 @@ void B18TrafficLaneMap::createLaneMapSP(const std::shared_ptr<abm::Graph>& graph
     edgesData[tNumMapWidth].length = std::get<1>(x)->second.length;
     edgesData[tNumMapWidth].maxSpeedMperSec = std::get<1>(x)->second.max_speed_limit_mps;
 
+    edgesData[tNumMapWidth].toll_fee = std::get<1>(x)->second.toll_fee;
+    
     if (maxLength < edgesData[tNumMapWidth].length) { maxLength = edgesData[tNumMapWidth].length; }
     if (maxNumLanes < numLanes) { maxNumLanes = numLanes; }
 

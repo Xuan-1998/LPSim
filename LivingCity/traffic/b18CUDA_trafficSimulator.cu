@@ -81,6 +81,8 @@ float *trafficLights_d;
 float* accSpeedPerLinePerTimeInterval_d;
 float* numVehPerLinePerTimeInterval_d;
 
+uint *cost_lc_counter_d; 
+
 __host__ __device__ void removeL(LC::LNode **head, int value) {
   LC::LNode* temp = *head;
   LC::LNode* prev = NULL;
@@ -208,6 +210,14 @@ void b18InitCUDA(
     accSpeedPerLinePerTimeInterval_d_size = sizeAcc;
     numVehPerLinePerTimeInterval_d_size = sizeAcc;
   }
+
+  { // cost_lc_counter
+    if (fistInitialization) {
+        gpuErrchk(cudaMalloc((void **)&cost_lc_counter_d, sizeof(uint)));
+    }
+    gpuErrchk(cudaMemset(cost_lc_counter_d, 0, sizeof(uint)));
+  }
+
   printMemoryUsage();
 }
 
@@ -245,6 +255,7 @@ void b18FinishCUDA(void){
   cudaFree(trafficLights_d);
   cudaFree(accSpeedPerLinePerTimeInterval_d);
   cudaFree(numVehPerLinePerTimeInterval_d);
+  cudaFree(cost_lc_counter_d);
 }
 
 void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
@@ -573,7 +584,8 @@ __global__ void kernel_trafficSimulation(
   float *trafficLights,
   uint trafficLights_d_size,
   float deltaTime,
-  const parameters simParameters)
+  const parameters simParameters,
+  uint* cost_lc_counter)
   {
   int p = blockIdx.x * blockDim.x + threadIdx.x;
   if (p >= numPeople) return; //CUDA check (inside margins)
@@ -1118,6 +1130,8 @@ __global__ void kernel_trafficSimulation(
         // LC 2 NOT MANDATORY STATE
         if (trafficPersonVec[p].LC_stateofLaneChanging == 0) {
           // discretionary change: v slower than the current road limit and deccelerating and moving
+          bool has_made_discretionary_lc = false;
+          const ushort tollLaneIdx = 0; 
           if (!isUAM && (trafficPersonVec[p].v < (edgesData[currentEdge].maxSpeedMperSec * 0.7f)) &&
             (dv_dt < 0) && trafficPersonVec[p].v > 3.0f) {
 
@@ -1140,48 +1154,102 @@ __global__ void kernel_trafficSimulation(
               laneToCheck = trafficPersonVec[p].numOfLaneInEdge + 1;
             }
 
-            uchar v_a, v_b;
-            float gap_a, gap_b;
+            if (laneToCheck != tollLaneIdx) {
+              uchar v_a, v_b;
+              float gap_a, gap_b;
 
-            assert(currentEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
-            float trafficLightState = trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge];
-            calculateGapsLC(mapToReadShift, laneMap, trafficLightState,
-              currentEdge + laneToCheck, edgesData[currentEdge].numLines,
-              trafficPersonVec[p].posInLaneM,
-              edgesData[currentEdge].length, v_a, v_b, gap_a, gap_b, laneMap_d_size);
+              assert(currentEdge + trafficPersonVec[p].numOfLaneInEdge < trafficLights_d_size);
+              float trafficLightState = trafficLights[currentEdge + trafficPersonVec[p].numOfLaneInEdge];
+              calculateGapsLC(mapToReadShift, laneMap, trafficLightState,
+                currentEdge + laneToCheck, edgesData[currentEdge].numLines,
+                trafficPersonVec[p].posInLaneM,
+                edgesData[currentEdge].length, v_a, v_b, gap_a, gap_b, laneMap_d_size);
 
-            if (gap_a == 1000.0f && gap_b == 1000.0f) { //lag and lead car very far
-              trafficPersonVec[p].numOfLaneInEdge = laneToCheck; // CHANGE LINE
-
-            } else { // NOT ALONE
-              float b1A = 0.05f, b2A = 0.15f;
-              float b1B = 0.15f, b2B = 0.40f;
-              // simParameters.s_0-> critical lead gap
-              float g_na_D, g_bn_D;
-              bool acceptLC = true;
-
-              if (gap_a != 1000.0f) {
-                g_na_D = max(simParameters.s_0, simParameters.s_0 + b1A * trafficPersonVec[p].v + b2A *
-                  (trafficPersonVec[p].v - v_a * 3.0f));
-
-                if (gap_a < g_na_D) { //gap smaller than critical gap
-                  acceptLC = false;
-                }
-              }
-
-              if (acceptLC && gap_b != 1000.0f) {
-                g_bn_D = max(simParameters.s_0, simParameters.s_0 + b1B * v_b * 3.0f + b2B * (v_b * 3.0f - trafficPersonVec[p].v));
-
-                if (gap_b < g_bn_D) { //gap smaller than critical gap
-                  acceptLC = false;
-                }
-              }
-
-              if (acceptLC) {
+              if (gap_a == 1000.0f && gap_b == 1000.0f) { //lag and lead car very far
                 trafficPersonVec[p].numOfLaneInEdge = laneToCheck; // CHANGE LINE
+                has_made_discretionary_lc = true;
+
+              } else { // NOT ALONE
+                float b1A = 0.05f, b2A = 0.15f;
+                float b1B = 0.15f, b2B = 0.40f;
+                // simParameters.s_0-> critical lead gap
+                float g_na_D, g_bn_D;
+                bool acceptLC = true;
+
+                if (gap_a != 1000.0f) {
+                  g_na_D = max(simParameters.s_0, simParameters.s_0 + b1A * trafficPersonVec[p].v + b2A *
+                    (trafficPersonVec[p].v - v_a * 3.0f));
+
+                  if (gap_a < g_na_D) { //gap smaller than critical gap
+                    acceptLC = false;
+                  }
+                }
+
+                if (acceptLC && gap_b != 1000.0f) {
+                  g_bn_D = max(simParameters.s_0, simParameters.s_0 + b1B * v_b * 3.0f + b2B * (v_b * 3.0f - trafficPersonVec[p].v));
+
+                  if (gap_b < g_bn_D) { //gap smaller than critical gap
+                    acceptLC = false;
+                  }
+                }
+
+                if (acceptLC) {
+                  trafficPersonVec[p].numOfLaneInEdge = laneToCheck; // CHANGE LINE
+                }
               }
             }
           }
+        // LC 2.5 COST-BASED DISCRETIONARY LANE CHANGE
+        if (!has_made_discretionary_lc && trafficPersonVec[p].numOfLaneInEdge > 0) {
+            const float alpha = 2.0f;
+            const float gamma = 1.0f;
+            ushort currentLaneIdx = trafficPersonVec[p].numOfLaneInEdge;
+            const ushort tollLaneIdx = 0; 
+
+            uchar v_a_c, v_b_c, v_a_t, v_b_t;
+            float gap_a_c, gap_b_c, gap_a_t, gap_b_t;
+            float currentTrafficLightState = trafficLights[currentEdge + currentLaneIdx];
+
+            calculateGapsLC(mapToReadShift, laneMap, currentTrafficLightState,
+                            currentEdge + currentLaneIdx, edgesData[currentEdge].numLines,
+                            trafficPersonVec[p].posInLaneM, edgesData[currentEdge].length,
+                            v_a_c, v_b_c, gap_a_c, gap_b_c, laneMap_d_size);
+            
+            calculateGapsLC(mapToReadShift, laneMap, currentTrafficLightState,
+                            currentEdge + tollLaneIdx, edgesData[currentEdge].numLines,
+                            trafficPersonVec[p].posInLaneM, edgesData[currentEdge].length,
+                            v_a_t, v_b_t, gap_a_t, gap_b_t, laneMap_d_size);
+
+            float C_c = 0.0f, C_t = 0.0f;
+            float max_speed = edgesData[currentEdge].maxSpeedMperSec;
+            
+            float leaderSpeed_c = v_a_c / 3.0f;
+            if (leaderSpeed_c > 0.1f) {
+                C_c = alpha * (max_speed - leaderSpeed_c);
+            } else { C_c = 0.0f; } // 如果没有前车或前车很慢，拥堵成本为0？或许应该设为一个大值？
+
+            float leaderSpeed_t = v_a_t / 3.0f;
+            float tollCost_t = edgesData[currentEdge].toll_fee;
+            if (leaderSpeed_t > 0.1f) {
+                C_t = alpha * (max_speed - leaderSpeed_t) + tollCost_t;
+            } else { C_t = tollCost_t; }
+
+            if (C_t < C_c) {
+                float r = (C_c > 0.01f) ? (C_c - C_t) / C_c : 1.0f;
+                float P_toll = 1.0f - expf(-gamma * r);
+                float random_val = (((int)(trafficPersonVec[p].v * 100)) % 100) / 100.0f;
+
+                if (random_val < P_toll) {
+                    bool acceptLC = true;                    
+                    if (acceptLC) {
+                        atomicAdd(cost_lc_counter, 1);
+                        trafficPersonVec[p].numOfLaneInEdge = tollLaneIdx;
+                        has_made_discretionary_lc = true;
+                    }
+                }
+            }
+            
+        }
 
 
         }// Discretionary
@@ -1677,8 +1745,12 @@ void b18SimulateTrafficCUDA(float currentTime,
     (numPeople, numIntersections, currentTime, mapToReadShift,
     mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
     edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
-    intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters);
+    intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters, cost_lc_counter_d);
   cudaDeviceSynchronize();
   gpuErrchk(cudaPeekAtLastError());
   peopleBench.stopMeasuring();
+}
+
+void b18GetLaneChangeCountCUDA(uint& host_count) {
+    gpuErrchk(cudaMemcpy(&host_count, cost_lc_counter_d, sizeof(uint), cudaMemcpyDeviceToHost));
 }

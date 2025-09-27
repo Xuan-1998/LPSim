@@ -161,11 +161,23 @@ void B18TrafficSimulator::updateEdgeImpedances(
       abm::EdgeProperties anEdgeProperties = x.second->second;
       new_impedance = edgesData.at(ind).length / anEdgeProperties.max_speed_limit_mps; // no one transited - default impedance
     }
+    const float alpha = 2.0f;
+    const float beta = 1000.0f;
+    const int COST_PRECISION_FACTOR = 1;
+    abm::EdgeProperties anEdgeProperties = x.second->second;
+    float toll = anEdgeProperties.toll_fee;
+    float generalized_cost_float = (alpha * new_impedance) + toll/beta;
+
+    int generalized_cost_int = static_cast<int>(generalized_cost_float * COST_PRECISION_FACTOR);
+
+    const int MINIMUM_INTEGER_WEIGHT = 1;
+    int final_cost = std::max(MINIMUM_INTEGER_WEIGHT, generalized_cost_int);
+
     auto vertex_from = std::get<0>(std::get<0>(x));
     auto vertex_to = std::get<1>(std::get<0>(x));
     // assert(new_impedance > 0);
-    graph_->update_edge(vertex_from, vertex_to, new_impedance);
-
+    //graph_->update_edge(vertex_from, vertex_to, new_impedance);
+    graph_->update_edge(vertex_from, vertex_to, final_cost);
     index++;
   }
 
@@ -199,6 +211,17 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
 	  createLaneMap();
   }
   laneMapCreation.stopAndEndBenchmark();
+
+  //printf("===== [DEBUG] CHECKING TOLL FEES IN edgesData =====\n");
+    //int non_zero_toll_count = 0;
+    //for (size_t i = 0; i < edgesData.size(); ++i) {
+        // Only print edges that have a non-zero toll to avoid flooding the console
+        //if (edgesData[i].toll_fee > 0.0f) {
+            //printf("  -> DEBUG: edgesData[%zu].toll_fee = %f\n", i, edgesData[i].toll_fee);
+            //non_zero_toll_count++;
+       // }
+    //}
+    //printf("===== [DEBUG] Found %d edges with non-zero tolls. =====\n\n", non_zero_toll_count);
 
   QTime pathTimer;
   pathTimer.start();
@@ -422,6 +445,12 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
       }
       #endif
     }
+
+    uint final_toll_lc_count = 0;
+    b18GetLaneChangeCountCUDA(final_toll_lc_count);
+    printf("\n========================================================\n");
+    printf("QUANTITATIVE ANALYSIS: Total Cost-Based Lane Changes: %u\n", final_toll_lc_count);
+    printf("========================================================\n\n");
 
     // 3. Finish
     b18GetDataCUDA(trafficPersonVec, edgesData);
