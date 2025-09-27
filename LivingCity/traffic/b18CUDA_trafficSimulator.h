@@ -36,6 +36,8 @@ extern void b18SimulateTrafficCUDA(float currentTime, uint numPeople,
                                    uint numIntersections, float deltaTime, const parameters simParameters,
                                    int numBlocks, int threadsPerBlock);
 extern void b18GetLaneChangeCountCUDA(uint& host_count);
+extern void saveResultsForPython(const std::string& output_filename, const std::shared_ptr<abm::Graph>& graph_); 
+extern void updateTollFeesFromFile(const std::string& toll_filepath, const std::shared_ptr<abm::Graph>& graph_);
 
 #endif // B18_TRAFFIC_SIMULATION_H
 

@@ -35,6 +35,7 @@ void B18CommandLineVersion::runB18Simulation() {
   bool loadPrevPaths = settings.value("LOAD_PREV_PATHS", false).toBool();
   bool savePrevPaths = settings.value("SAVE_PREV_PATHS", false).toBool();
 
+  QString tollFilePath = settings.value("TOLL_FILE_PATH", "").toString();
 
   QString networkPath = settings.value("NETWORK_PATH").toString();
   const std::string networkPathSP = networkPath.toStdString();
@@ -57,7 +58,8 @@ void B18CommandLineVersion::runB18Simulation() {
                                             "LIMIT_NUM_PEOPLE", "NUM_PASSES",
                                             "TIME_STEP", "START_HR", "END_HR",
                                             "SHOW_BENCHMARKS", "REROUTE_INCREMENT",
-                                            "OD_DEMAND_FILENAME", "RUN_UNIT_TESTS"};
+                                            "OD_DEMAND_FILENAME", "RUN_UNIT_TESTS",
+                                            "TOLL_FILE_PATH"};
 
   for (const auto inputedParameter: settings.childKeys()) {
     if (inputedParameter.at(0) != QChar('#') // it's a comment
@@ -151,7 +153,8 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
-        networkPathSP);
+        networkPathSP,
+        tollFilePath); 
   }
 
 }

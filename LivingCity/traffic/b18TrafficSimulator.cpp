@@ -198,8 +198,13 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters,
     const int rerouteIncrementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
-    const std::vector<float> & dep_times, const std::string & networkPathSP) {
-  
+    const std::vector<float> & dep_times, const std::string & networkPathSP,
+    const QString& tollFilePath) {
+
+  if (!tollFilePath.isEmpty()) {
+        this->updateTollFeesFromFile(tollFilePath.toStdString(), graph_);
+    }
+
   std::vector<personPath> allPathsInVertexes;
       
   Benchmarker laneMapCreation("Lane_Map_creation", true);
@@ -207,7 +212,8 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
   laneMapCreation.startMeasuring();
   if (useSP) {
 	  createLaneMapSP(graph_);
-  } else {
+  } else {rementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
+    const std::vector<fl
 	  createLaneMap();
   }
   laneMapCreation.stopAndEndBenchmark();
@@ -475,6 +481,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     fileOutput.stopAndEndBenchmark();
   }
 
+  this->saveResultsForPython("results.csv", graph_, startTimeH, endTimeH);
   b18FinishCUDA();
   G::global()["cuda_render_displaylist_staticRoadsBuildings"] = 3;//kill display list
 
@@ -3024,6 +3031,101 @@ void B18TrafficLightRender::getInterpolated(float newTrafficLight,
   trafficLight[indexToRead] = newTrafficLight;
   indexToRead = (indexToRead + 1) % numElements;
 }//
+
+
+void B18TrafficSimulator::saveResultsForPython(
+    const std::string& output_filename,
+    const std::shared_ptr<abm::Graph>& graph_,
+    const float startTimeH, const float endTimeH) {
+    
+    printf("\n> Saving results for Python to %s...\n", output_filename.c_str());
+    
+    QFile resultsFile(QString::fromStdString(output_filename));
+    if (resultsFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QTextStream stream(&resultsFile);
+        stream << "edge_id,final_flow,final_travel_time\n";
+
+        std::map<uint, abm::graph::edge_id_t> tNumMapWidth_to_edge_id;
+        for (auto const& x : graph_->edges_) {
+            auto vertices = x.second->first;
+            
+            // !!! --- 核心修正 --- !!!
+            // 先检查 vector 的索引是否越界，然后再对 vector 内部的 map 使用 .count()
+            if (vertices.first < graph_->edge_ids_.size() && 
+                graph_->edge_ids_.at(vertices.first).count(vertices.second)) {
+                
+                abm::graph::edge_id_t edge_id = graph_->edge_ids_.at(vertices.first).at(vertices.second);
+                if (edgeDescToLaneMapNumSP.count(x.second)) {
+                    uint tNumMapWidth = edgeDescToLaneMapNumSP[x.second];
+                    tNumMapWidth_to_edge_id[tNumMapWidth] = edge_id;
+                }
+            }
+        }
+
+        for (size_t i = 0; i < edgesData.size(); ++i) {
+            if (tNumMapWidth_to_edge_id.count(i)) {
+                abm::graph::edge_id_t edge_id = tNumMapWidth_to_edge_id[i];
+                
+                float simulation_duration_sec = (endTimeH - startTimeH) * 3600.0f;
+                float final_flow = 0.0f;
+                if (simulation_duration_sec > 0) {
+                    final_flow = edgesData[i].curr_iter_num_cars / simulation_duration_sec;
+                }
+
+                float final_travel_time = edgesData[i].length / edgesData[i].maxSpeedMperSec;
+                if (edgesData[i].curr_iter_num_cars > 0 && edgesData[i].curr_cum_vel > 0) {
+                    float avg_velocity = edgesData[i].curr_cum_vel / edgesData[i].curr_iter_num_cars;
+                    if (avg_velocity > 0) { // 增加一个除以0的安全检查
+                        final_travel_time = edgesData[i].length / avg_velocity;
+                    }
+                }
+                
+                stream << edge_id << "," << final_flow << "," << final_travel_time << "\n";
+            }
+        }
+        resultsFile.close();
+        printf("> Finished saving results for Python.\n");
+    } else {
+        printf("ERROR: Could not open file %s for writing results.\n", output_filename.c_str());
+    }
+}
+
+
+void B18TrafficSimulator::updateTollFeesFromFile(
+        const std::string& toll_filepath,
+        const std::shared_ptr<abm::Graph>& graph_) {
+
+        printf("\n> Updating toll fees from file: %s\n", toll_filepath.c_str());
+
+        std::map<abm::graph::edge_id_t, float> toll_updates;
+
+        try {
+            csvio::CSVReader<2> in(toll_filepath);
+            in.read_header(csvio::ignore_extra_column, "edge_id", "toll_fee");
+            
+            abm::graph::edge_id_t edge_id;
+            float toll_fee;
+            while (in.read_row(edge_id, toll_fee)) {
+                toll_updates[edge_id] = toll_fee;
+            }
+            printf("> Successfully read %zu toll fee updates from file.\n", toll_updates.size());
+        } catch (const std::exception& e) {
+            printf("ERROR: Could not read toll file %s. Details: %s\n", toll_filepath.c_str(), e.what());
+            return; 
+        }
+
+        int updated_count = 0;
+        for (auto& edge_pair : graph_->edges_) {
+            auto vertices = edge_pair.second->first;
+            abm::graph::edge_id_t current_edge_id = graph_->edge_ids_.at(vertices.first).at(vertices.second);
+
+            if (toll_updates.count(current_edge_id)) {
+                edge_pair.second->second.toll_fee = toll_updates[current_edge_id];
+                updated_count++;
+            }
+        }
+        printf("> Applied %d toll fee updates to the in-memory graph.\n\n", updated_count);
+    }
 
 }
 

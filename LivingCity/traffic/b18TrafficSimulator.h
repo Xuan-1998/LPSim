@@ -82,7 +82,12 @@ class B18TrafficSimulator {
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters, const int rerouteIncrementMins,
     const std::vector<std::array<abm::graph::vertex_t, 2>>& all_od_pairs,
-    const std::vector<float>& dep_times, const std::string & networkPathSP);
+    const std::vector<float>& dep_times, const std::string & networkPathSP,
+    const QString& tollFilePath);
+
+  void saveResultsForPython(const std::string& output_filename, const std::shared_ptr<abm::Graph>& graph_, const float startTimeH, const float endTimeH);  
+  void updateTollFeesFromFile(const std::string& toll_filepath, const std::shared_ptr<abm::Graph>& graph_);
+
 
   // Lanes
   std::vector<uint> edgeIdToLaneMapNum;
