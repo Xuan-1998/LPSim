@@ -39,5 +39,7 @@ extern void b18GetLaneChangeCountCUDA(uint& host_count);
 extern void saveResultsForPython(const std::string& output_filename, const std::shared_ptr<abm::Graph>& graph_); 
 extern void updateTollFeesFromFile(const std::string& toll_filepath, const std::shared_ptr<abm::Graph>& graph_);
 
+extern void b18GetTollProportionsCUDA(std::vector<uint>& toll_steps, std::vector<uint>& total_steps, size_t num_edges);
+
 #endif // B18_TRAFFIC_SIMULATION_H
 

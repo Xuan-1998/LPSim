@@ -49,10 +49,17 @@ const float intersectionClearance = 7.8f;
 const bool calculatePollution = true;
 
 B18TrafficSimulator::B18TrafficSimulator(float _deltaTime, RoadGraph *originalRoadGraph,
-    const parameters & inputSimParameters, LCUrbanMain *urbanMain) : deltaTime(_deltaTime), simParameters(inputSimParameters),
-    b18TrafficOD (B18TrafficOD(simParameters)) {
-  simRoadGraph = new RoadGraph(*originalRoadGraph);
-  clientMain = urbanMain;
+    const parameters & inputSimParameters, LCUrbanMain *urbanMain,
+    float av_penetration_rate, 
+    float av_toll_discount) : 
+    deltaTime(_deltaTime), 
+    simParameters(inputSimParameters),
+    b18TrafficOD(B18TrafficOD(simParameters)),
+    av_penetration_rate_(av_penetration_rate),
+    av_toll_discount_(av_toll_discount)
+{
+    simRoadGraph = new RoadGraph(*originalRoadGraph);
+    clientMain = urbanMain;
 }
 
 B18TrafficSimulator::~B18TrafficSimulator() {
@@ -83,6 +90,15 @@ void B18TrafficSimulator::createB2018PeopleSP(
   b18TrafficOD.resetTrafficPersonJob(trafficPersonVec);
   b18TrafficOD.loadB18TrafficPeopleSP(startTime, endTime, trafficPersonVec,
       graph_, limitNumPeople, addRandomPeople, dep_times);
+  printf("> Assigning vehicle types with AV penetration rate: %.2f\n", this->av_penetration_rate_);
+  for (int i = 0; i < trafficPersonVec.size(); ++i) {
+      float random_sample = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+      if (random_sample < this->av_penetration_rate_) {
+          trafficPersonVec[i].carType = 1; // 1 represents AV
+      } else {
+          trafficPersonVec[i].carType = 0; // 0 represents HV (Human Vehicle)
+      }
+  }
 }
 
 void B18TrafficSimulator::resetPeopleJobANDintersections() {
@@ -141,53 +157,189 @@ void B18TrafficSimulator::printProgressBar(const float progress) const {
   }
 }
 
+// void B18TrafficSimulator::updateEdgeImpedances(
+//   const std::shared_ptr<abm::Graph>& graph_,
+//   const int increment_index) {
+
+//   std::map<int, float> edge_avg_velocity;
+//   for (size_t i = 0; i < edgesData.size(); ++i) {
+//       if (edgesData[i].curr_iter_num_cars > 0 && edgesData[i].curr_cum_vel > 0) {
+//           edge_avg_velocity[i] = edgesData[i].curr_cum_vel / edgesData[i].curr_iter_num_cars;
+//       }
+//   }
+
+//   std::vector<float> avg_edge_vel_for_logging;
+//   avg_edge_vel_for_logging.reserve(graph_->edges_.size());
+
+//   int index = 0;
+//   int avg_edge_vel_size = graph_->edges_.size();
+//   std::vector<float> avg_edge_vel(avg_edge_vel_size);
+//   for (auto const& x : graph_->edges_) {
+//     int ind = edgeDescToLaneMapNumSP[x.second];
+//     float new_impedance;
+//     if (edge_avg_velocity.count(ind)) {
+//         new_impedance = edgesData.at(ind).length / edge_avg_velocity.at(ind);
+//         avg_edge_vel_for_logging.push_back(edge_avg_velocity.at(ind));
+//     } else {
+//         abm::EdgeProperties anEdgeProperties = x.second->second;
+//         new_impedance = edgesData.at(ind).length / anEdgeProperties.max_speed_limit_mps;
+//         avg_edge_vel_for_logging.push_back(anEdgeProperties.max_speed_limit_mps);
+//     }
+//     const float alpha = 2.0f;
+//     const float beta = 1000.0f;
+//     const int COST_PRECISION_FACTOR = 1;
+//     abm::EdgeProperties anEdgeProperties = x.second->second;
+//     float toll = anEdgeProperties.toll_fee;
+//     float generalized_cost_float = (alpha * new_impedance) + toll/beta;
+
+//     int generalized_cost_int = static_cast<int>(generalized_cost_float * COST_PRECISION_FACTOR);
+
+//     const int MINIMUM_INTEGER_WEIGHT = 1;
+//     int final_cost = std::max(MINIMUM_INTEGER_WEIGHT, generalized_cost_int);
+
+//     auto vertex_from = std::get<0>(std::get<0>(x));
+//     auto vertex_to = std::get<1>(std::get<0>(x));
+//     assert(new_impedance > 0);
+//     graph_->update_edge(vertex_from, vertex_to, new_impedance);
+//     //graph_->update_edge(vertex_from, vertex_to, final_cost);
+//     index++;
+//   }
+
+//   //save avg_edge_vel vector to file
+//   Benchmarker allEdgesVelBenchmark("all_edges_vel_" + std::to_string(increment_index), true);
+//   allEdgesVelBenchmark.startMeasuring();
+//   std::string name = "./all_edges_vel_" + std::to_string(increment_index) + ".txt";
+//   std::ofstream output_file(name);
+//   std::ostream_iterator<float> output_iterator(output_file, "\n");
+//   std::copy(avg_edge_vel.begin(), avg_edge_vel.end(), output_iterator);
+//   allEdgesVelBenchmark.stopAndEndBenchmark();
+// }
+
 void B18TrafficSimulator::updateEdgeImpedances(
   const std::shared_ptr<abm::Graph>& graph_,
   const int increment_index) {
 
-  int index = 0;
-  int avg_edge_vel_size = graph_->edges_.size();
-  std::vector<float> avg_edge_vel(avg_edge_vel_size);
+  // This check ensures the proportion vector is initialized for the first run.
+  // if (prev_iter_toll_proportion.size() != edgesData.size()) {
+  //     prev_iter_toll_proportion.assign(edgesData.size(), 0.0f);
+  // }
+  loadTollProportions("toll_proportions.csv");
+  // 1. Get the dynamic average velocity from the last simulation's results.
+  std::map<int, float> edge_avg_velocity;
+  for (size_t i = 0; i < edgesData.size(); ++i) {
+      // Sum the car counts and cumulative velocities from both HV and AV
+      float total_cars = edgesData[i].curr_iter_num_cars_hv + edgesData[i].curr_iter_num_cars_av;
+      float total_vel = edgesData[i].curr_cum_vel_hv + edgesData[i].curr_cum_vel_av;
+
+      if (total_cars > 0 && total_vel > 0) {
+          // Calculate the overall average velocity for the edge
+          edge_avg_velocity[i] = total_vel / total_cars;
+      }
+  }
+  
+  // This vector is used for logging purposes.
+  std::vector<float> avg_edge_vel_for_logging;
+  avg_edge_vel_for_logging.reserve(graph_->edges_.size());
+
+  // // 2. Iterate through the graph to calculate and update the new edge weights.
+  // for (auto const& x : graph_->edges_) {
+  //   int ind = edgeDescToLaneMapNumSP[x.second];
+  //   float travel_time; // This variable will hold our T_e
+
+  //   // Calculate travel time based on the latest simulation results.
+  //   if (edge_avg_velocity.count(ind)) {
+  //       travel_time = edgesData.at(ind).length / edge_avg_velocity.at(ind);
+  //       avg_edge_vel_for_logging.push_back(edge_avg_velocity.at(ind));
+  //   } else {
+  //       // Fallback to free-flow time if no cars traversed the edge.
+  //       abm::EdgeProperties anEdgeProperties = x.second->second;
+  //       travel_time = edgesData.at(ind).length / anEdgeProperties.max_speed_limit_mps;
+  //       avg_edge_vel_for_logging.push_back(anEdgeProperties.max_speed_limit_mps);
+  //   }
+    
+  //   // --- New Generalized Cost Calculation using your formula ---
+  //   abm::EdgeProperties anEdgeProperties = x.second->second;
+  //   float toll = anEdgeProperties.toll_fee;
+    
+  //   // Get the toll lane usage proportion from the previous iteration's results.
+  //   float toll_lane_proportion = prev_iter_toll_proportion[ind];
+    
+  //   // This is the 'weight' parameter from your formula. You can tune this value.
+  //   const float toll_component_weight = 1.0f;
+
+  //   // Calculate the final generalized cost as a float.
+  //   float generalized_cost_float = travel_time + (toll * toll_lane_proportion * toll_component_weight);
+
+  //   // --- Convert to high-precision integer for the routing algorithm ---
+  //   const int COST_PRECISION_FACTOR = 100000;
+  //   int generalized_cost_int = static_cast<int>(generalized_cost_float * COST_PRECISION_FACTOR);
+  //   const int MINIMUM_INTEGER_WEIGHT = 1;
+  //   int final_cost = std::max(MINIMUM_INTEGER_WEIGHT, generalized_cost_int);
+
+  //   // Get vertices to update the edge
+  //   auto vertex_from = std::get<0>(std::get<0>(x));
+  //   auto vertex_to = std::get<1>(std::get<0>(x));
+    
+  //   // --- CRITICAL FIX ---
+  //   // Update the graph edge with the 'final_cost', which now correctly includes the toll component.
+  //   graph_->update_edge(vertex_from, vertex_to, final_cost);
+  // }
+
   for (auto const& x : graph_->edges_) {
     int ind = edgeDescToLaneMapNumSP[x.second];
-    float new_impedance;
-    if (edgesData.at(ind).curr_cum_vel != 0) {
-      avg_edge_vel[index] = edgesData.at(ind).curr_cum_vel / edgesData.at(ind).curr_iter_num_cars;// * 2.23694;
-      new_impedance =  edgesData.at(ind).length / avg_edge_vel[index];
-      auto cum_vel = edgesData.at(ind).curr_cum_vel;
-      auto num_cars = edgesData.at(ind).curr_iter_num_cars;
-      auto avg_edge_vel_index = avg_edge_vel[index];
+    float travel_time; // This is our T_e
+
+    if (edge_avg_velocity.count(ind)) {
+        travel_time = edgesData.at(ind).length / edge_avg_velocity.at(ind);
+        avg_edge_vel_for_logging.push_back(edge_avg_velocity.at(ind));
     } else {
-      abm::EdgeProperties anEdgeProperties = x.second->second;
-      new_impedance = edgesData.at(ind).length / anEdgeProperties.max_speed_limit_mps; // no one transited - default impedance
+        abm::EdgeProperties anEdgeProperties = x.second->second;
+        travel_time = edgesData.at(ind).length / anEdgeProperties.max_speed_limit_mps;
+        avg_edge_vel_for_logging.push_back(anEdgeProperties.max_speed_limit_mps);
     }
-    const float alpha = 2.0f;
-    const float beta = 1000.0f;
-    const int COST_PRECISION_FACTOR = 1;
+    
+    // --- New, More Stable Generalized Cost Calculation ---
     abm::EdgeProperties anEdgeProperties = x.second->second;
     float toll = anEdgeProperties.toll_fee;
-    float generalized_cost_float = (alpha * new_impedance) + toll/beta;
+    float eta = this->av_penetration_rate_; 
+    float gamma = this->av_toll_discount_; 
+    const float alpha = 1.0f;
+    const float beta = 1.0f;
+    float toll_lane_proportion = prev_iter_toll_proportion[ind];
+    const float toll_component_weight = 1.0f;
+    const float alpha_value_of_time = 0.0055f;
 
+    // We now have two components in the same unit (e.g., dollars)
+    float toll_component_hv = toll * toll_lane_proportion * toll_component_weight;
+    float toll_component_av = toll * gamma * toll_lane_proportion * toll_component_weight;
+
+    float time_cost = alpha_value_of_time * travel_time;
+
+    float cost_hv = time_cost + toll_component_hv;
+    float cost_av = time_cost + toll_component_av;
+
+    float generalized_cost_float = (1.0f - eta) * cost_hv + eta * cost_av;
+
+    // --- Convert to high-precision integer for the routing algorithm ---
+    const int COST_PRECISION_FACTOR = 10; // Using a smaller factor is safer with scaled costs
     int generalized_cost_int = static_cast<int>(generalized_cost_float * COST_PRECISION_FACTOR);
-
     const int MINIMUM_INTEGER_WEIGHT = 1;
     int final_cost = std::max(MINIMUM_INTEGER_WEIGHT, generalized_cost_int);
 
     auto vertex_from = std::get<0>(std::get<0>(x));
     auto vertex_to = std::get<1>(std::get<0>(x));
-    // assert(new_impedance > 0);
-    //graph_->update_edge(vertex_from, vertex_to, new_impedance);
+    
     graph_->update_edge(vertex_from, vertex_to, final_cost);
-    index++;
   }
 
-  //save avg_edge_vel vector to file
+  // --- Logging part is preserved and corrected ---
   Benchmarker allEdgesVelBenchmark("all_edges_vel_" + std::to_string(increment_index), true);
   allEdgesVelBenchmark.startMeasuring();
   std::string name = "./all_edges_vel_" + std::to_string(increment_index) + ".txt";
   std::ofstream output_file(name);
   std::ostream_iterator<float> output_iterator(output_file, "\n");
-  std::copy(avg_edge_vel.begin(), avg_edge_vel.end(), output_iterator);
+  // Use the correct vector for logging
+  std::copy(avg_edge_vel_for_logging.begin(), avg_edge_vel_for_logging.end(), output_iterator);
   allEdgesVelBenchmark.stopAndEndBenchmark();
 }
 
@@ -422,6 +574,36 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
       microsimulationInGPU.stopAndEndBenchmark();
       increment_index++;
 
+      { 
+        printf("\n> Calculating and saving toll lane proportions for next iteration...\n");
+
+        std::vector<uint> toll_steps;
+        std::vector<uint> total_steps;
+
+        b18GetTollProportionsCUDA(toll_steps, total_steps, edgesData.size());
+
+        prev_iter_toll_proportion.assign(edgesData.size(), 0.0f);
+
+        int edges_with_toll_usage = 0;
+        for (size_t i = 0; i < edgesData.size(); ++i) {
+            if (total_steps[i] > 0) {
+                prev_iter_toll_proportion[i] = static_cast<float>(toll_steps[i]) / static_cast<float>(total_steps[i]);
+                if (prev_iter_toll_proportion[i] > 0) {
+                    edges_with_toll_usage++;
+                }
+            }
+        }
+        printf("> Calculation complete. Found %d edges with toll lane usage.\n", edges_with_toll_usage);
+
+        saveTollProportions("toll_proportions.csv");
+    }
+
+    Benchmarker fileOutput("File_output", true);
+    fileOutput.startMeasuring();
+    savePeopleAndRoutesSP(allPathsInVertexes, allPathsInEdgesCUDAFormat, edgeIdToLaneMapNum, nP, graph_,
+                        (int) startTimeH, (int) endTimeH, edgesData);
+    fileOutput.stopAndEndBenchmark();
+
       #ifdef B18_RUN_WITH_GUI
 
       if (clientMain != nullptr &&
@@ -472,6 +654,28 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
     printf("Total num steps %.1f Avg %.2f min Avg CO %.2f\nSimulation time = %d ms\n",
             totalNumSteps, avgTravelTime, totalCO / trafficPersonVec.size(),
             timer.elapsed());
+
+    { 
+        printf("\n> Calculating toll lane proportions for next iteration...\n");
+
+        std::vector<uint> toll_steps;
+        std::vector<uint> total_steps;
+
+        b18GetTollProportionsCUDA(toll_steps, total_steps, edgesData.size());
+
+        prev_iter_toll_proportion.assign(edgesData.size(), 0.0f);
+
+        int edges_with_toll_usage = 0;
+        for (size_t i = 0; i < edgesData.size(); ++i) {
+            if (total_steps[i] > 0) {
+                prev_iter_toll_proportion[i] = static_cast<float>(toll_steps[i]) / static_cast<float>(total_steps[i]);
+                if (prev_iter_toll_proportion[i] > 0) {
+                    edges_with_toll_usage++;
+                }
+            }
+        }
+        printf("> Calculation complete. Found %d edges with toll lane usage.\n\n", edges_with_toll_usage);
+    }
 
     Benchmarker fileOutput("File_output", true);
     fileOutput.startMeasuring();
@@ -3037,19 +3241,17 @@ void B18TrafficSimulator::saveResultsForPython(
     const std::shared_ptr<abm::Graph>& graph_,
     const float startTimeH, const float endTimeH) {
     
-    printf("\n> Saving results for Python to %s...\n", output_filename.c_str());
+    printf("\n> Saving disaggregated AV/HV results for Python to %s...\n", output_filename.c_str());
     
     QFile resultsFile(QString::fromStdString(output_filename));
     if (resultsFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         QTextStream stream(&resultsFile);
-        stream << "edge_id,final_flow,final_travel_time\n";
+        
+        stream << "edge_id,final_flow_hv,final_flow_av,final_travel_time_hv,final_travel_time_av\n";
 
         std::map<uint, abm::graph::edge_id_t> tNumMapWidth_to_edge_id;
         for (auto const& x : graph_->edges_) {
             auto vertices = x.second->first;
-            
-            // !!! --- 核心修正 --- !!!
-            // 先检查 vector 的索引是否越界，然后再对 vector 内部的 map 使用 .count()
             if (vertices.first < graph_->edge_ids_.size() && 
                 graph_->edge_ids_.at(vertices.first).count(vertices.second)) {
                 
@@ -3066,20 +3268,34 @@ void B18TrafficSimulator::saveResultsForPython(
                 abm::graph::edge_id_t edge_id = tNumMapWidth_to_edge_id[i];
                 
                 float simulation_duration_sec = (endTimeH - startTimeH) * 3600.0f;
-                float final_flow = 0.0f;
+                
+                float final_flow_hv = 0.0f;
+                float final_flow_av = 0.0f;
+                float final_travel_time_hv = edgesData[i].length / edgesData[i].maxSpeedMperSec; // Default to free-flow
+                float final_travel_time_av = edgesData[i].length / edgesData[i].maxSpeedMperSec; // Default to free-flow
+
                 if (simulation_duration_sec > 0) {
-                    final_flow = edgesData[i].curr_iter_num_cars / simulation_duration_sec;
+                    final_flow_hv = edgesData[i].curr_iter_num_cars_hv / simulation_duration_sec;
+                    final_flow_av = edgesData[i].curr_iter_num_cars_av / simulation_duration_sec;
                 }
 
-                float final_travel_time = edgesData[i].length / edgesData[i].maxSpeedMperSec;
-                if (edgesData[i].curr_iter_num_cars > 0 && edgesData[i].curr_cum_vel > 0) {
-                    float avg_velocity = edgesData[i].curr_cum_vel / edgesData[i].curr_iter_num_cars;
-                    if (avg_velocity > 0) { // 增加一个除以0的安全检查
-                        final_travel_time = edgesData[i].length / avg_velocity;
+                if (edgesData[i].curr_iter_num_cars_hv > 0 && edgesData[i].curr_cum_vel_hv > 0) {
+                    float avg_velocity_hv = edgesData[i].curr_cum_vel_hv / edgesData[i].curr_iter_num_cars_hv;
+                    if (avg_velocity_hv > 0) {
+                        final_travel_time_hv = edgesData[i].length / avg_velocity_hv;
                     }
                 }
                 
-                stream << edge_id << "," << final_flow << "," << final_travel_time << "\n";
+                if (edgesData[i].curr_iter_num_cars_av > 0 && edgesData[i].curr_cum_vel_av > 0) {
+                    float avg_velocity_av = edgesData[i].curr_cum_vel_av / edgesData[i].curr_iter_num_cars_av;
+                    if (avg_velocity_av > 0) {
+                        final_travel_time_av = edgesData[i].length / avg_velocity_av;
+                    }
+                }
+                
+                stream << edge_id << "," 
+                       << final_flow_hv << "," << final_flow_av << ","
+                       << final_travel_time_hv << "," << final_travel_time_av << "\n";
             }
         }
         resultsFile.close();
@@ -3088,6 +3304,7 @@ void B18TrafficSimulator::saveResultsForPython(
         printf("ERROR: Could not open file %s for writing results.\n", output_filename.c_str());
     }
 }
+
 
 
 void B18TrafficSimulator::updateTollFeesFromFile(
@@ -3125,6 +3342,41 @@ void B18TrafficSimulator::updateTollFeesFromFile(
         }
         printf("> Applied %d toll fee updates to the in-memory graph.\n\n", updated_count);
     }
+
+void B18TrafficSimulator::loadTollProportions(const std::string& filepath) {
+    printf("> Attempting to load toll proportions from previous iteration...\n");
+    QFile propFile(QString::fromStdString(filepath));
+    if (propFile.open(QIODevice::ReadOnly)) {
+        QTextStream in(&propFile);
+        prev_iter_toll_proportion.clear();
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            prev_iter_toll_proportion.push_back(line.toFloat());
+        }
+        propFile.close();
+        printf("> Successfully loaded %zu proportion entries.\n", prev_iter_toll_proportion.size());
+    } else {
+        printf("> Proportion file not found. Assuming first iteration, initializing to zeros.\n");
+        if (edgesData.size() > 0) {
+            prev_iter_toll_proportion.assign(edgesData.size(), 0.0f);
+        }
+    }
+}
+
+void B18TrafficSimulator::saveTollProportions(const std::string& filepath) {
+    printf("> Saving toll proportions for next iteration to %s...\n", filepath.c_str());
+    QFile propFile(QString::fromStdString(filepath));
+    if (propFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QTextStream out(&propFile);
+        for (const auto& proportion : prev_iter_toll_proportion) {
+            out << proportion << "\n";
+        }
+        propFile.close();
+    } else {
+        printf("ERROR: Could not open proportion file for writing.\n");
+    }
+}
+
 
 }
 

@@ -63,6 +63,8 @@ uint laneMap_d_size;
 uint trafficLights_d_size;
 uint accSpeedPerLinePerTimeInterval_d_size;
 uint numVehPerLinePerTimeInterval_d_size;
+uint *toll_lane_vehicle_steps_d;
+uint *total_vehicle_steps_d; 
 
 __constant__ bool calculatePollution = true;
 __constant__ float cellSize = 1.0f;
@@ -218,6 +220,16 @@ void b18InitCUDA(
     gpuErrchk(cudaMemset(cost_lc_counter_d, 0, sizeof(uint)));
   }
 
+  { // Toll proportion counters
+    size_t counter_array_size = edgesData.size() * sizeof(uint);
+    if (fistInitialization) {
+        gpuErrchk(cudaMalloc((void **)&toll_lane_vehicle_steps_d, counter_array_size));
+        gpuErrchk(cudaMalloc((void **)&total_vehicle_steps_d, counter_array_size));
+    }
+    gpuErrchk(cudaMemset(toll_lane_vehicle_steps_d, 0, counter_array_size));
+    gpuErrchk(cudaMemset(total_vehicle_steps_d, 0, counter_array_size));
+  }
+
   printMemoryUsage();
 }
 
@@ -256,6 +268,8 @@ void b18FinishCUDA(void){
   cudaFree(accSpeedPerLinePerTimeInterval_d);
   cudaFree(numVehPerLinePerTimeInterval_d);
   cudaFree(cost_lc_counter_d);
+  cudaFree(toll_lane_vehicle_steps_d);
+  cudaFree(total_vehicle_steps_d);
 }
 
 void b18GetDataCUDA(std::vector<LC::B18TrafficPerson>& trafficPersonVec, std::vector<LC::B18EdgeData> &edgesData){
@@ -585,7 +599,9 @@ __global__ void kernel_trafficSimulation(
   uint trafficLights_d_size,
   float deltaTime,
   const parameters simParameters,
-  uint* cost_lc_counter)
+  uint* cost_lc_counter,
+  uint* total_steps,
+  uint* toll_steps)
   {
   int p = blockIdx.x * blockDim.x + threadIdx.x;
   if (p >= numPeople) return; //CUDA check (inside margins)
@@ -821,10 +837,16 @@ __global__ void kernel_trafficSimulation(
 
 
     if (elapsed_s > MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED) {
-      trafficPersonVec[p].manual_v = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
-      edgesData[trafficPersonVec[p].prevEdge].curr_iter_num_cars += 1;
-      edgesData[trafficPersonVec[p].prevEdge].curr_cum_vel += trafficPersonVec[p].manual_v;
+    trafficPersonVec[p].manual_v = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
+
+    if (trafficPersonVec[p].carType == 1) { // It's an AV
+        atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_iter_num_cars_av, 1.0f);
+        atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_cum_vel_av, trafficPersonVec[p].manual_v);
+    } else { // It's an HV
+        atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_iter_num_cars_hv, 1.0f);
+        atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_cum_vel_hv, trafficPersonVec[p].manual_v);
     }
+}
 
 
     trafficPersonVec[p].start_time_on_prev_edge = currentTime;
@@ -1201,8 +1223,19 @@ __global__ void kernel_trafficSimulation(
           }
         // LC 2.5 COST-BASED DISCRETIONARY LANE CHANGE
         if (!has_made_discretionary_lc && trafficPersonVec[p].numOfLaneInEdge > 0) {
-            const float alpha = 2.0f;
-            const float gamma = 1.0f;
+            float alpha; // Value of Time (as a speed loss multiplier)
+            float gamma; // Sensitivity / Hesitation to change lanes
+
+            if (trafficPersonVec[p].carType == 1) { // This person is an AV
+                alpha = 3.0f; // AVs are highly sensitive to speed loss
+                gamma = 1.5f; // AVs are less hesitant to make a rational choice
+            } else { // This person is an HV
+                alpha = 1.5f; // Humans are less sensitive to minor speed loss
+                gamma = 0.8f; // Humans are more hesitant and less likely to change
+            }
+
+            //const float alpha = 2.0f;
+            //const float gamma = 1.0f;
             ushort currentLaneIdx = trafficPersonVec[p].numOfLaneInEdge;
             const ushort tollLaneIdx = 0; 
 
@@ -1377,6 +1410,16 @@ __global__ void kernel_trafficSimulation(
             }
           }
         }// Mandatory
+
+        if (currentEdge < edgesData_d_size) {
+        atomicAdd(&total_steps[currentEdge], 1);
+
+        if (trafficPersonVec[p].numOfLaneInEdge == 0) {
+            atomicAdd(&toll_steps[currentEdge], 1);
+        }
+    }
+
+
       }//at least two lanes and not stopped by traffic light
     }
 
@@ -1745,7 +1788,9 @@ void b18SimulateTrafficCUDA(float currentTime,
     (numPeople, numIntersections, currentTime, mapToReadShift,
     mapToWriteShift, trafficPersonVec_d, indexPathVec_d, indexPathVec_d_size,
     edgesData_d, edgesData_d_size, laneMap_d, laneMap_d_size,
-    intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters, cost_lc_counter_d);
+    intersections_d, trafficLights_d, trafficLights_d_size, deltaTime, simParameters, cost_lc_counter_d,
+    total_vehicle_steps_d,
+    toll_lane_vehicle_steps_d);
   cudaDeviceSynchronize();
   gpuErrchk(cudaPeekAtLastError());
   peopleBench.stopMeasuring();
@@ -1753,4 +1798,19 @@ void b18SimulateTrafficCUDA(float currentTime,
 
 void b18GetLaneChangeCountCUDA(uint& host_count) {
     gpuErrchk(cudaMemcpy(&host_count, cost_lc_counter_d, sizeof(uint), cudaMemcpyDeviceToHost));
+}
+
+void b18GetTollProportionsCUDA(std::vector<uint>& toll_steps, std::vector<uint>& total_steps, size_t num_edges) {
+    if (num_edges == 0) return;
+
+    // 调整CPU端向量的大小以接收数据
+    toll_steps.resize(num_edges);
+    total_steps.resize(num_edges);
+
+    size_t size_in_bytes = num_edges * sizeof(uint);
+
+    // 从GPU显存拷贝数据到CPU内存
+    printf("> Copying toll lane usage statistics from GPU...\n");
+    gpuErrchk(cudaMemcpy(toll_steps.data(), toll_lane_vehicle_steps_d, size_in_bytes, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(total_steps.data(), total_vehicle_steps_d, size_in_bytes, cudaMemcpyDeviceToHost));
 }

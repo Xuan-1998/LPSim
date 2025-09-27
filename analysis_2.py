@@ -2,12 +2,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-import geopandas as gpd  # Moved import here to handle potential absence
+# import geopandas as gpd
+
+print("--- Script started. Loading libraries, please wait... ---")
 
 # --- 1. Configuration ---
 BASELINE_RESULTS_DIR = 'baseline_results'
-OPTIMIZED_RESULTS_DIR = 'results_More_Aggressive_Learning'
-#OPTIMIZED_RESULTS_DIR = 'optimization_results'
+SCENARIOS_TO_ANALYZE = [
+    "More_Aggressive_Learning_2",
+    "High_Revenue_Focus_2",
+    "High_Congestion_Focus_2",
+    "Aggressive_Learning_2",
+    # "Default_Params",
+    #'optimization_results'
+]
 NETWORK_GEOJSON_PATH = "network.geojson"
 EDGE_ID_COLUMN_IN_GEOJSON = "uniqueid"
 
@@ -265,6 +273,71 @@ def plot_spatial_distribution(baseline_dir: str, optimized_dir: str, geojson_pat
     print(f"SUCCESS: Final congestion reduction map saved to '{output_filename}'")
 
 
+def create_master_comparison_table(baseline_dir: str, scenario_names: list):
+    """
+    Generates a single comparison table summarizing all scenarios.
+    """
+    print("\n--- Generating Master Performance Comparison Table ---")
+    baseline_summary_file = os.path.join(baseline_dir, 'optimization_summary.csv')
+    if not os.path.exists(baseline_summary_file):
+        print(f"ERROR: Baseline summary file not found at '{baseline_summary_file}'. Aborting.")
+        return
+
+    baseline_series = pd.read_csv(baseline_summary_file).iloc[-1]
+
+    all_results = []
+
+    # First, add the baseline data for reference
+    all_results.append({
+        'Scenario': 'Baseline (No-Toll)',
+        'Total Revenue ($)': baseline_series['revenue'],
+        'Total Congestion (veh-sec)': baseline_series['congestion'],
+        'Revenue Change (%)': '---',
+        'Congestion Change (%)': '---'
+    })
+
+    # Loop through each scenario to get its final results
+    for name in scenario_names:
+        optimized_dir = f"results_{name}"
+        optimized_summary_file = os.path.join(optimized_dir, 'optimization_summary.csv')
+
+        if not os.path.exists(optimized_summary_file):
+            print(f"WARNING: Skipping scenario '{name}' because summary file was not found.")
+            continue
+
+        optimized_series = pd.read_csv(optimized_summary_file).iloc[-1]
+
+        # Calculate percentage changes
+        revenue_change = ((optimized_series['revenue'] - baseline_series['revenue']) / baseline_series['revenue']) * 100
+        congestion_change = ((optimized_series['congestion'] - baseline_series['congestion']) / baseline_series[
+            'congestion']) * 100
+
+        all_results.append({
+            'Scenario': name,
+            'Total Revenue ($)': optimized_series['revenue'],
+            'Total Congestion (veh-sec)': optimized_series['congestion'],
+            'Revenue Change (%)': f"+{revenue_change:.2f}%",
+            'Congestion Change (%)': f"{congestion_change:.2f}%"
+        })
+
+    if len(all_results) <= 1:
+        print("No optimized scenario data was found to compare.")
+        return
+
+    # Create and format the final DataFrame
+    comparison_df = pd.DataFrame(all_results)
+    comparison_df['Total Revenue ($)'] = comparison_df['Total Revenue ($)'].apply(
+        lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) else x)
+    comparison_df['Total Congestion (veh-sec)'] = comparison_df['Total Congestion (veh-sec)'].apply(
+        lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) else x)
+
+    print("\nSUCCESS: Master Performance Comparison Table:\n")
+    print(comparison_df.to_string(index=False))
+
+    output_filename = os.path.join(PLOTS_OUTPUT_DIR, 'MASTER_performance_comparison.csv')
+    comparison_df.to_csv(output_filename, index=False)
+    print(f"\nTable saved to '{output_filename}' for easy import into your paper.\n")
+
 # ==============================================================================
 # --- 3. Main Execution ---
 # ==============================================================================
@@ -278,19 +351,33 @@ def main():
     # --- NEW: Create the plots output directory if it doesn't exist ---
     os.makedirs(PLOTS_OUTPUT_DIR, exist_ok=True)
 
-    # 1. Generate convergence plots (separately)
-    plot_convergence(OPTIMIZED_RESULTS_DIR)
+    for scenario_name in SCENARIOS_TO_ANALYZE:
+        optimized_results_dir = f"results_{scenario_name}"
 
-    # 2. Generate performance comparison table
-    create_comparison_table(BASELINE_RESULTS_DIR, OPTIMIZED_RESULTS_DIR)
+        print("==========================================================")
+        print(f"  PROCESSING SCENARIO: {scenario_name}")
+        print("==========================================================")
 
-    # 3. Generate spatial distribution maps (final and per-iteration)
-    plot_spatial_distribution(
-        BASELINE_RESULTS_DIR,
-        OPTIMIZED_RESULTS_DIR,
-        NETWORK_GEOJSON_PATH,
-        EDGE_ID_COLUMN_IN_GEOJSON
-    )
+        if not os.path.isdir(optimized_results_dir):
+            print(f"WARNING: Directory '{optimized_results_dir}' not found. Skipping scenario.")
+            continue
+
+        # 1. Generate convergence plots for the current scenario
+        plot_convergence(optimized_results_dir)
+
+        # 2. Generate spatial distribution maps for the current scenario
+        plot_spatial_distribution(
+            BASELINE_RESULTS_DIR,
+            optimized_results_dir,
+            NETWORK_GEOJSON_PATH,
+            EDGE_ID_COLUMN_IN_GEOJSON
+        )
+
+        # 2. Generate performance comparison table
+        create_comparison_table(BASELINE_RESULTS_DIR, optimized_results_dir)
+
+        # 3. After processing all scenarios, create one master comparison table
+    create_master_comparison_table(BASELINE_RESULTS_DIR, SCENARIOS_TO_ANALYZE)
 
     print("\n=========================================")
     print("=== ANALYSIS COMPLETE ===")

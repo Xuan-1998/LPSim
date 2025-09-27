@@ -65,6 +65,7 @@ struct B18TrafficPerson {
   unsigned int color;
   float co;
   float gas;
+  uint8_t carType;
   // IDM
   float v;//current velocity
   float a;//acceleration

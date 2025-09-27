@@ -48,9 +48,14 @@ class B18TrafficLightRender {
 
 
 class B18TrafficSimulator {
+ private:
+    float av_penetration_rate_;
+    float av_toll_discount_;
 
  public:
-  B18TrafficSimulator(float deltaTime, RoadGraph *geoRoadGraph, const parameters & simParameters, LCUrbanMain *urbanMain = nullptr);
+  B18TrafficSimulator(float deltaTime, RoadGraph *geoRoadGraph, 
+    const parameters & simParameters, LCUrbanMain *urbanMain = nullptr, 
+    float av_penetration_rate = 0.0f, float av_toll_discount = 1.0f);
   ~B18TrafficSimulator();
 
   // init data
@@ -87,6 +92,8 @@ class B18TrafficSimulator {
 
   void saveResultsForPython(const std::string& output_filename, const std::shared_ptr<abm::Graph>& graph_, const float startTimeH, const float endTimeH);  
   void updateTollFeesFromFile(const std::string& toll_filepath, const std::shared_ptr<abm::Graph>& graph_);
+  void loadTollProportions(const std::string& filepath);
+  void saveTollProportions(const std::string& filepath);
 
 
   // Lanes
@@ -126,6 +133,9 @@ class B18TrafficSimulator {
   // Traffic lights
   std::vector<float> trafficLights;
   std::vector<B18IntersectionData> intersections;
+
+  // Toll proportion
+  std::vector<float> prev_iter_toll_proportion;
 
   // measurements
   std::vector<float> accSpeedPerLinePerTimeInterval;
