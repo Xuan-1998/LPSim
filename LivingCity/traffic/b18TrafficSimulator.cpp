@@ -212,8 +212,7 @@ void B18TrafficSimulator::simulateInGPU(const int numOfPasses, const float start
   laneMapCreation.startMeasuring();
   if (useSP) {
 	  createLaneMapSP(graph_);
-  } else {rementMins, const std::vector<std::array<abm::graph::vertex_t, 2>> & all_od_pairs,
-    const std::vector<fl
+  } else {
 	  createLaneMap();
   }
   laneMapCreation.stopAndEndBenchmark();
