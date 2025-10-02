@@ -221,6 +221,24 @@ void B18TrafficSimulator::updateEdgeImpedances(
   const std::shared_ptr<abm::Graph>& graph_,
   const int increment_index) {
 
+
+  printf("\n===== DEBUG: Checking initial state of edgesData in updateEdgeImpedances (Python Iteration %d) =====\n", increment_index + 1);
+  int checked_count = 0;
+  long total_cars_found = 0;
+  for (size_t i = 0; i < edgesData.size() && i < 1000; ++i) {
+      total_cars_found += edgesData[i].curr_iter_num_cars_hv;
+      if (edgesData[i].curr_iter_num_cars_hv > 0) {
+          printf("  -> FOUND DATA! edgesData[%zu]: num_cars_hv = %f, cum_vel_hv = %f\n",
+                 i, edgesData[i].curr_iter_num_cars_hv, edgesData[i].curr_cum_vel_hv);
+          checked_count++;
+      }
+  }
+  if (checked_count == 0) {
+      printf("  -> RESULT: All checked edges have 0 cars. It seems the state from the previous iteration was lost.\n");
+  }
+  printf("====================================================================================================\n\n");
+
+
   // This check ensures the proportion vector is initialized for the first run.
   // if (prev_iter_toll_proportion.size() != edgesData.size()) {
   //     prev_iter_toll_proportion.assign(edgesData.size(), 0.0f);

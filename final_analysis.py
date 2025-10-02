@@ -127,13 +127,20 @@ def analyze_sensitivity_to_penetration_rate(summary_df: pd.DataFrame):
     """
     print("\n--- (2/3) Generating Sensitivity Analysis Plots (vs. AV Penetration) ---")
 
+    sensitivity_df = summary_df[summary_df['scenario'] != BASELINE_NAME].copy()
+
+    # 2. 检查过滤后是否还有数据，避免没有 S* 场景时报错。
+    if sensitivity_df.empty:
+        print("WARNING: No sensitivity scenarios (e.g., S1, S2) found to analyze. Skipping this step.")
+        return
+
     # Extract eta and scenario type from the scenario name
-    summary_df['eta'] = summary_df['scenario'].str.extract(r'eta_(\d\.\d)').astype(float)
-    summary_df['scenario_type'] = summary_df['scenario'].str.split('_').str[0] + '_' + \
-                                  summary_df['scenario'].str.split('_').str[1]
+    sensitivity_df['eta'] = sensitivity_df['scenario'].str.extract(r'eta_(\d\.\d)').astype(float)
+    sensitivity_df['scenario_type'] = sensitivity_df['scenario'].str.split('_').str[0] + '_' + \
+                                  sensitivity_df['scenario'].str.split('_').str[1]
 
     # Get the final iteration for each scenario run
-    final_iter_df = summary_df.loc[summary_df.groupby('scenario')['iteration'].idxmax()]
+    final_iter_df = sensitivity_df.loc[sensitivity_df.groupby('scenario')['iteration'].idxmax()]
 
     metrics_to_plot = ['objective', 'revenue', 'congestion']
     for metric in metrics_to_plot:
