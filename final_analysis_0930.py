@@ -39,6 +39,8 @@ PLOTS_OUTPUT_DIR = "final_analysis_plots"
 NETWORK_GEOJSON_PATH = "network.geojson"
 EDGE_ID_COLUMN_IN_GEOJSON = "uniqueid"
 
+SIMULATION_DURATION_HR = 0.5
+WAYMO_REVENUE_PER_KM = 0.5
 
 # ==============================================================================
 # --- 2. Data Loading and Processing Utility ---
@@ -277,6 +279,172 @@ def plot_spatial_distribution(baseline_details_df: pd.DataFrame, optimized_dir: 
     print(f"SUCCESS: Spatial maps for {scenario_name} saved.")
 
 
+def generate_summary_metrics_and_table(final_details_df: pd.DataFrame, summary_df: pd.DataFrame):
+    """
+    Calculates all advanced metrics and generates the final summary table for the paper.
+    """
+    print("\n--- (1/3) Calculating Advanced Metrics and Generating Summary Table ---")
+
+    # We are interested in the results at eta=0.5
+    target_eta = 0.5
+    scenarios_to_analyze = [f'S1_Competition_eta_{target_eta}', f'S2_PartialCollab_eta_{target_eta}',
+                            f'S3_FullCollab_eta_{target_eta}']
+
+    all_metrics = []
+
+    for scenario in scenarios_to_analyze:
+        print(f"  - Processing scenario: {scenario}")
+        scenario_df = final_details_df[final_details_df['scenario'] == scenario].copy()
+
+        # --- Basic Calculations ---
+        # Convert length from meters to kilometers for VKT
+        scenario_df['length_km'] = scenario_df['length'] / 1000.0
+        # Get simulation duration in seconds
+        sim_duration_sec = SIMULATION_DURATION_HR * 3600
+
+        # --- Network Efficiency Metrics ---
+        # Vehicle-Kilometers Traveled (VKT)
+        vkt_hv = (scenario_df['final_flow_hv'] * sim_duration_sec * scenario_df['length_km']).sum()
+        vkt_av = (scenario_df['final_flow_av'] * sim_duration_sec * scenario_df['length_km']).sum()
+        total_vkt = vkt_hv + vkt_av
+
+        # Vehicle-Hours Traveled (VHT)
+        vht_hv = (scenario_df['final_flow_hv'] * sim_duration_sec * scenario_df['final_travel_time_hv'] / 3600).sum()
+        vht_av = (scenario_df['final_flow_av'] * sim_duration_sec * scenario_df['final_travel_time_av'] / 3600).sum()
+        total_vht = vht_hv + vht_av
+
+        # Average Travel Time (ATT) in minutes
+        total_vehicles = (scenario_df['final_flow_hv'] + scenario_df['final_flow_av']).sum() * sim_duration_sec
+        att_minutes = (total_vht * 60) / total_vehicles if total_vehicles > 0 else 0
+
+        # Congestion Index (CI)
+        free_flow_vht = ((scenario_df['final_flow_hv'] + scenario_df['final_flow_av']) * sim_duration_sec * scenario_df[
+            'free_flow_time'] / 3600).sum()
+        congestion_index = total_vht / free_flow_vht if free_flow_vht > 0 else 0
+
+        # --- Economic Metrics ---
+        # Get the final converged revenue from the summary dataframe
+        cintra_revenue = summary_df[summary_df['scenario'] == scenario]['revenue'].iloc[-1]
+
+        # Waymo's Profit
+        waymo_passenger_revenue = vkt_av * WAYMO_REVENUE_PER_KM
+
+        # Get gamma (discount) from scenario name
+        gamma = 0.8 if "S3" in scenario else 1.0
+        waymo_tolls_paid = (scenario_df['toll_fee'] * gamma * scenario_df['final_flow_av'] * sim_duration_sec).sum()
+        waymo_profit = waymo_passenger_revenue - waymo_tolls_paid
+
+        # Joint Profit
+        joint_profit = cintra_revenue + waymo_profit
+
+        all_metrics.append({
+            'Scenario': scenario,
+            "Cintra's Revenue ($)": cintra_revenue,
+            "Waymo's Net Profit ($)": waymo_profit,
+            "Joint Profit ($)": joint_profit,
+            "Average Travel Time (min)": att_minutes,
+            "Vehicle-Hours Traveled (veh-hr)": total_vht,
+            "Congestion Index (CI)": congestion_index
+        })
+
+    metrics_df = pd.DataFrame(all_metrics).set_index('Scenario').T
+
+    print("\n--- FINAL METRICS TABLE FOR PAPER (at eta=0.5) ---")
+    print(metrics_df.to_string())
+
+    output_path = os.path.join(PLOTS_OUTPUT_DIR, "final_metrics_summary_table.csv")
+    metrics_df.to_csv(output_path)
+    print(f"\nSUCCESS: Final metrics table saved to '{output_path}'")
+    return metrics_df
+
+
+# ==============================================================================
+# --- 4. NEW Heatmap Generation Function ---
+# ==============================================================================
+def generate_congestion_heatmaps(final_details_df: pd.DataFrame):
+    """
+    Generates and saves spatial congestion heatmaps for S1, S2, and S3 at eta=0.5.
+    """
+    print("\n--- (2/3) Generating Network Congestion Heatmaps ---")
+
+    if not GEOPANDAS_AVAILABLE:
+        print("  WARNING: Geopandas not installed. Skipping heatmap generation.")
+        return
+
+    try:
+        network_gdf = gpd.read_file(NETWORK_GEOJSON_PATH)
+    except Exception as e:
+        print(f"  ERROR: Could not read network GeoJSON file. Error: {e}")
+        return
+
+    target_eta = 0.5
+    scenarios_to_plot = [f'S1_Competition_eta_{target_eta}', f'S2_PartialCollab_eta_{target_eta}',
+                         f'S3_FullCollab_eta_{target_eta}']
+
+    # Define a realistic upper bound for congestion level for visualization
+    MAX_CONGESTION_CAP = 10.0
+
+    for scenario in scenarios_to_plot:
+        if scenario not in final_details_df['scenario'].unique():
+            print(f"  WARNING: Scenario '{scenario}' not found in results. Skipping.")
+            continue
+
+        print(f"\n--- Processing scenario: {scenario} ---")
+        scenario_df = final_details_df[final_details_df['scenario'] == scenario].copy()
+
+        # --- Calculate Congestion Level ---
+        total_flow = scenario_df['final_flow_hv'] + scenario_df['final_flow_av']
+        weighted_time_num = (scenario_df['final_travel_time_hv'] * scenario_df['final_flow_hv'] +
+                             scenario_df['final_travel_time_av'] * scenario_df['final_flow_av'])
+
+        avg_travel_time = np.divide(weighted_time_num, total_flow,
+                                    out=np.zeros_like(weighted_time_num, dtype=float),
+                                    where=(total_flow != 0))
+
+        mask_no_flow = avg_travel_time == 0
+        avg_travel_time[mask_no_flow] = scenario_df.loc[mask_no_flow, 'free_flow_time']
+
+        scenario_df['congestion_level'] = np.divide(avg_travel_time, scenario_df['free_flow_time'],
+                                                    out=np.ones_like(avg_travel_time, dtype=float),
+                                                    where=(scenario_df['free_flow_time'] > 0))
+
+        # --- THIS IS THE FINAL FIX: Cap the data to a realistic range ---
+        # Clip values to be between 1 (no congestion) and the defined max cap.
+        scenario_df['congestion_level'].clip(lower=1.0, upper=MAX_CONGESTION_CAP, inplace=True)
+        # --- END OF FIX ---
+
+        # The dynamic vmin/vmax logic will now work on the cleaned data
+        valid_congestion = scenario_df['congestion_level'].dropna()
+
+        if valid_congestion.min() == valid_congestion.max():
+            vmin = 1.0
+            vmax = valid_congestion.max() + 1.0  # Add a small margin
+        else:
+            vmin = valid_congestion.quantile(0.02)
+            vmax = valid_congestion.quantile(0.98)
+
+        vmin = max(vmin, 1.0)
+        if vmin >= vmax:
+            vmax = vmin * 1.2
+
+        # --- Plotting ---
+        plot_gdf = network_gdf.merge(scenario_df, left_on=EDGE_ID_COLUMN_IN_GEOJSON, right_on='uniqueid', how='left')
+        plot_gdf['congestion_level'].fillna(1.0, inplace=True)
+
+        fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+        plot_gdf.plot(column='congestion_level', ax=ax, legend=True, cmap='RdYlGn_r',
+                      vmin=vmin, vmax=vmax,
+                      legend_kwds={'label': "Congestion Level (Actual Time / Free-Flow Time)",
+                                   'orientation': "horizontal", 'pad': 0.05, 'shrink': 0.6})
+
+        ax.set_title(f'Network Congestion Heatmap\n({scenario})', fontsize=16)
+        ax.set_axis_off()
+        output_path = os.path.join(PLOTS_OUTPUT_DIR, f"heatmap_congestion_{scenario}.png")
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f"  SUCCESS: Congestion heatmap saved to '{output_path}'")
+
+
 def main():
     """Main function to execute all analysis and plotting tasks."""
     print(f"{'=' * 60}\n=== STARTING SENSITIVITY ANALYSIS VISUALIZATION ===\n{'=' * 60}\n")
@@ -290,9 +458,11 @@ def main():
         return
 
     # Sequentially execute each analysis task
-    analyze_equity_performance(final_details_df)
-    analyze_sensitivity_to_penetration_rate(summary_df)
-    generate_final_comparison_table(summary_df)
+    #analyze_equity_performance(final_details_df)
+    #analyze_sensitivity_to_penetration_rate(summary_df)
+    #generate_final_comparison_table(summary_df)
+    #generate_summary_metrics_and_table(final_details_df, summary_df)
+    generate_congestion_heatmaps(final_details_df)
 
     # --- NEW: Loop to generate spatial plots for all scenarios ---
     """if GEOPANDAS_AVAILABLE and os.path.exists(NETWORK_GEOJSON_PATH):

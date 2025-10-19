@@ -839,14 +839,14 @@ __global__ void kernel_trafficSimulation(
     if (elapsed_s > MINIMUM_NUMBER_OF_CARS_TO_MEASURE_SPEED) {
     trafficPersonVec[p].manual_v = edgesData[trafficPersonVec[p].prevEdge].length / elapsed_s;
 
-    if (trafficPersonVec[p].carType == 1) { // It's an AV
+      if (trafficPersonVec[p].carType == 1) { // It's an AV
         atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_iter_num_cars_av, 1.0f);
         atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_cum_vel_av, trafficPersonVec[p].manual_v);
-    } else { // It's an HV
+      } else { // It's an HV
         atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_iter_num_cars_hv, 1.0f);
         atomicAdd(&edgesData[trafficPersonVec[p].prevEdge].curr_cum_vel_hv, trafficPersonVec[p].manual_v);
+      }
     }
-}
 
 
     trafficPersonVec[p].start_time_on_prev_edge = currentTime;

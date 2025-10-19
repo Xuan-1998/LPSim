@@ -21,9 +21,9 @@ completing the S3_FullCollab scenario for eta = 0.7 and 1.0.
 BEST_PARAMS = {
     "THETA1_REVENUE_WEIGHT": 1.0,
     "THETA2_CONGESTION_WEIGHT": 0.0055,
-    "LEARNING_RATE": 0.05,
-    "MAX_TOLL_CHANGE": 11.0,
-    "INERTIA": 0.54
+    "LEARNING_RATE": 0.05913631090292247,
+    "MAX_TOLL_CHANGE": 11.422713140082822,
+    "INERTIA": 0.4306382031211081
 }
 
 # Define only the missing levels for your sensitivity analysis
@@ -84,7 +84,7 @@ def run_simulation():
     print(f"Executing C++ simulator...", flush=True)
     try:
         subprocess.run(
-            [SIMULATOR_EXECUTABLE], check=True,
+            [SIMULATOR_EXECUTABLE], check=True, capture_output=True,
             text=True, timeout=3600, cwd=SIMULATOR_WORKING_DIR
         )
         print("C++ Simulator executed successfully.", flush=True)
@@ -164,6 +164,10 @@ def run_single_experiment(exp_params: dict, MAX_ITERATIONS: int):
 
         for col in ['final_flow_hv', 'final_flow_av', 'final_travel_time_hv', 'final_travel_time_av']:
             iter_df[col] = iter_df[col].fillna(0)
+
+        last_iter_tt_filepath = os.path.join(SIMULATOR_WORKING_DIR, "last_iter_travel_times.csv")
+        results_df[['edge_id', 'final_travel_time_hv', 'final_travel_time_av']].to_csv(last_iter_tt_filepath,
+                                                                                       index=False)
 
         # --- Dynamic objective function calculation ---
         flow_hv = iter_df['final_flow_hv']

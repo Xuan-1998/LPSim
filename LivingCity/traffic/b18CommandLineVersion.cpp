@@ -17,6 +17,7 @@
 #include "../roadGraphB2018Loader.h"
 #include "accessibility.h"
 #include <stdexcept>
+#include <regex>
 
 #ifdef B18_RUN_WITH_GUI
 #include "b18TestSimpleRoadAndOD.h"
@@ -162,4 +163,15 @@ void B18CommandLineVersion::runB18Simulation() {
   }
 
 }
+
+int extract_iteration_from_filename(const std::string& filename) {
+    std::regex re("tolls_for_iter_(\\d+)\\.csv");
+    std::smatch match;
+    if (std::regex_search(filename, match, re) && match.size() > 1) {
+        return std::stoi(match.str(1));
+    }
+    return 0; 
+}
+
+
 }  // LC

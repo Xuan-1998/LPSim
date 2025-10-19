@@ -52,6 +52,7 @@ class B18TrafficSimulator {
     float av_penetration_rate_;
     float av_toll_discount_;
     int scenario_mode_;
+    std::map<unsigned int, float> edge_id_to_travel_time_map; 
 
  public:
   B18TrafficSimulator(float deltaTime, RoadGraph *geoRoadGraph, 
@@ -96,6 +97,7 @@ class B18TrafficSimulator {
   void updateTollFeesFromFile(const std::string& toll_filepath, const std::shared_ptr<abm::Graph>& graph_);
   void loadTollProportions(const std::string& filepath);
   void saveTollProportions(const std::string& filepath);
+  void loadTravelTimes(const std::string& filepath);
 
 
   // Lanes

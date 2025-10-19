@@ -222,7 +222,7 @@ def run_single_experiment(scenario_name: str, params: dict, max_iterations: int,
     if pd.isna(std_dev):
         std_dev = 0.0
 
-    STABILITY_PENALTY_FACTOR = 0.3
+    STABILITY_PENALTY_FACTOR = 2
     final_score = mean_objective - STABILITY_PENALTY_FACTOR * std_dev
 
     if converged_early:
