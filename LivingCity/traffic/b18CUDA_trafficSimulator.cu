@@ -1227,11 +1227,11 @@ __global__ void kernel_trafficSimulation(
             float gamma; // Sensitivity / Hesitation to change lanes
 
             if (trafficPersonVec[p].carType == 1) { // This person is an AV
-                alpha = 3.0f; // AVs are highly sensitive to speed loss
-                gamma = 1.5f; // AVs are less hesitant to make a rational choice
+                alpha = simParameters.lc_alpha_av; //3.0f; // AVs are highly sensitive to speed loss
+                gamma = simParameters.lc_gamma_av; //1.5f; // AVs are less hesitant to make a rational choice
             } else { // This person is an HV
-                alpha = 1.5f; // Humans are less sensitive to minor speed loss
-                gamma = 0.8f; // Humans are more hesitant and less likely to change
+                alpha = simParameters.lc_alpha_hv; //1.5f; // Humans are less sensitive to minor speed loss
+                gamma = simParameters.lc_gamma_hv; //0.8f; // Humans are more hesitant and less likely to change
             }
 
             //const float alpha = 2.0f;

@@ -101,8 +101,11 @@ void B18CommandLineVersion::runB18Simulation() {
     settings.value("a",1.955841144929).toDouble(),
     settings.value("b",9.698320475255).toDouble(),
     settings.value("T",1.840637908890).toDouble(),
-    settings.value("s_0",1.070462354045).toDouble()
-  };
+    settings.value("s_0",1.070462354045).toDouble(),
+    settings.value("LC_ALPHA_AV", 3.0f).toDouble(),
+    settings.value("LC_GAMMA_AV", 1.5f).toDouble(),
+    settings.value("LC_ALPHA_HV", 1.5f).toDouble(),
+    settings.value("LC_GAMMA_HV", 0.8f).toDouble(),};
 
 
   std::cout << "Simulation parameters: "
