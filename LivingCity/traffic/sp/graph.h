@@ -31,6 +31,7 @@ namespace abm {
     float length;
     float lanes;
     float max_speed_limit_mps; // meters per second
+    float toll_fee;
     abm::graph::weight_t weight;
   };
 
@@ -75,7 +76,7 @@ class Graph {
   //! \param[in] weight Weight of edge connecting vertex 1 and 2
   //! \param[in] edge_id ID of edge
   void add_edge(const graph::vertex_t vertex1, const graph::vertex_t vertex2, const float length, const float lanes,
-    const float max_speed_limit_mps, const graph::vertex_t edgeid);
+    const float max_speed_limit_mps, const float toll_fee, const graph::vertex_t edgeid);
   //! Update edge of a graph
   //! \param[in] vertex1 ID of vertex1
   //! \param[in] vertex2 ID of vertex2

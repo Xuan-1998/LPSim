@@ -69,3 +69,5 @@ RUN pip3 install -r requirements.txt
 
 # Check if CUDA is properly installed
 CMD nvidia-smi
+
+RUN pip3 install pandas

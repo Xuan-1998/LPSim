@@ -48,9 +48,17 @@ class B18TrafficLightRender {
 
 
 class B18TrafficSimulator {
+ private:
+    float av_penetration_rate_;
+    float av_toll_discount_;
+    int scenario_mode_;
+    std::map<unsigned int, float> edge_id_to_travel_time_map; 
 
  public:
-  B18TrafficSimulator(float deltaTime, RoadGraph *geoRoadGraph, const parameters & simParameters, LCUrbanMain *urbanMain = nullptr);
+  B18TrafficSimulator(float deltaTime, RoadGraph *geoRoadGraph, 
+    const parameters & simParameters, LCUrbanMain *urbanMain = nullptr, 
+    float av_penetration_rate = 0.0f, float av_toll_discount = 1.0f,
+    int scenario_mode = 2);
   ~B18TrafficSimulator();
 
   // init data
@@ -82,7 +90,15 @@ class B18TrafficSimulator {
     const bool useJohnsonRouting, const bool useSP, const std::shared_ptr<abm::Graph>& graph_,
     const parameters & simParameters, const int rerouteIncrementMins,
     const std::vector<std::array<abm::graph::vertex_t, 2>>& all_od_pairs,
-    const std::vector<float>& dep_times, const std::string & networkPathSP);
+    const std::vector<float>& dep_times, const std::string & networkPathSP,
+    const QString& tollFilePath);
+
+  void saveResultsForPython(const std::string& output_filename, const std::shared_ptr<abm::Graph>& graph_, const float startTimeH, const float endTimeH);  
+  void updateTollFeesFromFile(const std::string& toll_filepath, const std::shared_ptr<abm::Graph>& graph_);
+  void loadTollProportions(const std::string& filepath);
+  void saveTollProportions(const std::string& filepath);
+  void loadTravelTimes(const std::string& filepath);
+
 
   // Lanes
   std::vector<uint> edgeIdToLaneMapNum;
@@ -121,6 +137,9 @@ class B18TrafficSimulator {
   // Traffic lights
   std::vector<float> trafficLights;
   std::vector<B18IntersectionData> intersections;
+
+  // Toll proportion
+  std::vector<float> prev_iter_toll_proportion;
 
   // measurements
   std::vector<float> accSpeedPerLinePerTimeInterval;

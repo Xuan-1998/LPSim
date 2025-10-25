@@ -4,6 +4,7 @@
 
 inline void abm::Graph::add_edge(const graph::vertex_t vertex_from, const graph::vertex_t vertex_to,
   const float length, const float lanes, const float max_speed_limit_mps,
+  const float toll_fee,
   const graph::vertex_t edgeid = std::numeric_limits<abm::graph::vertex_t>::max()) {
   
   EdgeProperties newEdgeProperties;
@@ -11,6 +12,7 @@ inline void abm::Graph::add_edge(const graph::vertex_t vertex_from, const graph:
   newEdgeProperties.max_speed_limit_mps = max_speed_limit_mps;
   newEdgeProperties.lanes = lanes;
   newEdgeProperties.weight = length / max_speed_limit_mps;
+  newEdgeProperties.toll_fee = toll_fee;
 
   graph::vertex_t vertex1, vertex2;
   if (this->directed_) {
@@ -153,15 +155,15 @@ bool abm::Graph::read_graph_osm(const std::string& filename) {
   bool status = true;
   std::cout << "reading graph osm" << std::endl;
   try {
-    csvio::CSVReader<8> in(filename);
-    in.read_header(csvio::ignore_extra_column, "uniqueid", "osmid_u", "osmid_v", "length", "lanes", "speed_mph", "u", "v");
+    csvio::CSVReader<9> in(filename);
+    in.read_header(csvio::ignore_extra_column, "uniqueid", "osmid_u", "osmid_v", "length", "lanes", "speed_mph", "u", "v", "toll_fee");
     abm::graph::vertex_t nvertices = 0;
     float length, lanes, speed_mph;
+    float toll_fee; 
     abm::graph::vertex_t index = 0;
     abm::graph::edge_id_t edgeid;
     abm::graph::vertex_t osmid_v1, osmid_v2, v1, v2;
-    while (in.read_row(edgeid, osmid_v1, osmid_v2, length, lanes, speed_mph, v1, v2)) {
-      // todo: create a function for the following conversion
+    while (in.read_row(edgeid, osmid_v1, osmid_v2, length, lanes, speed_mph, v1, v2, toll_fee)) {
 	    float max_speed_limit_mps = ( speed_mph / 3600 ) * 1609.34; //convert from mph to meters/second
 
       //Don't add if there is already an edge with the same vertices
@@ -169,7 +171,7 @@ bool abm::Graph::read_graph_osm(const std::string& filename) {
         if (this->edge_ids_.size() <= v1){
           std::cout << v1 << " is bigger than the size, which is " << this->edge_ids_.size() << std::endl;
         }
-        this->add_edge(v1, v2, length, lanes, max_speed_limit_mps, edgeid);
+        this->add_edge(v1, v2, length, lanes, max_speed_limit_mps, toll_fee, edgeid);
       }
       ++nvertices;
 

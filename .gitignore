@@ -19,7 +19,11 @@ Makefile
 
 # Ignoring generated files and outputs
 *.csv
+!edges.csv
 *.bin
+*.log
+*.geojson
+*.gif
 
 # Benchmarking outputs
 *.png

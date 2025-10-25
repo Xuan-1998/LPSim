@@ -17,6 +17,7 @@
 #include "../roadGraphB2018Loader.h"
 #include "accessibility.h"
 #include <stdexcept>
+#include <regex>
 
 #ifdef B18_RUN_WITH_GUI
 #include "b18TestSimpleRoadAndOD.h"
@@ -35,16 +36,20 @@ void B18CommandLineVersion::runB18Simulation() {
   bool loadPrevPaths = settings.value("LOAD_PREV_PATHS", false).toBool();
   bool savePrevPaths = settings.value("SAVE_PREV_PATHS", false).toBool();
 
+  QString tollFilePath = settings.value("TOLL_FILE_PATH", "").toString();
 
   QString networkPath = settings.value("NETWORK_PATH").toString();
   const std::string networkPathSP = networkPath.toStdString();
 
   bool addRandomPeople = settings.value("ADD_RANDOM_PEOPLE", true).toBool();
-  int limitNumPeople = settings.value("LIMIT_NUM_PEOPLE", -1).toInt(); // -1
+  int limitNumPeople = settings.value("LIMIT_NUM_PEOPLE", 1000).toInt(); // -1
   int numOfPasses = settings.value("NUM_PASSES", 1).toInt();
   const float deltaTime = settings.value("TIME_STEP", .5).toFloat();
   const float startSimulationH = settings.value("START_HR", 5).toFloat();
   const float endSimulationH = settings.value("END_HR", 12).toFloat();
+  const float av_penetration_rate = settings.value("AV_PENETRATION_RATE", 0.0).toFloat(); 
+  const float av_toll_discount = settings.value("AV_TOLL_DISCOUNT", 1.0).toFloat();   
+  const int scenario_mode = settings.value("SCENARIO_MODE", 2).toInt(); 
   const bool showBenchmarks = settings.value("SHOW_BENCHMARKS", false).toBool();
   int rerouteIncrementMins = settings.value("REROUTE_INCREMENT", 30).toInt(); //in minutes
   std::string odDemandPath = settings.value("OD_DEMAND_FILENAME", "UAM_ground_od_file_200sample.csv").toString().toStdString();
@@ -57,7 +62,9 @@ void B18CommandLineVersion::runB18Simulation() {
                                             "LIMIT_NUM_PEOPLE", "NUM_PASSES",
                                             "TIME_STEP", "START_HR", "END_HR",
                                             "SHOW_BENCHMARKS", "REROUTE_INCREMENT",
-                                            "OD_DEMAND_FILENAME", "RUN_UNIT_TESTS"};
+                                            "OD_DEMAND_FILENAME", "RUN_UNIT_TESTS",
+                                            "TOLL_FILE_PATH", "AV_PENETRATION_RATE",
+                                            "AV_TOLL_DISCOUNT", "SCENARIO_MODE"};
 
   for (const auto inputedParameter: settings.childKeys()) {
     if (inputedParameter.at(0) != QChar('#') // it's a comment
@@ -94,8 +101,11 @@ void B18CommandLineVersion::runB18Simulation() {
     settings.value("a",1.955841144929).toDouble(),
     settings.value("b",9.698320475255).toDouble(),
     settings.value("T",1.840637908890).toDouble(),
-    settings.value("s_0",1.070462354045).toDouble()
-  };
+    settings.value("s_0",1.070462354045).toDouble(),
+    settings.value("LC_ALPHA_AV", 3.0f).toDouble(),
+    settings.value("LC_GAMMA_AV", 1.5f).toDouble(),
+    settings.value("LC_ALPHA_HV", 1.5f).toDouble(),
+    settings.value("LC_GAMMA_HV", 0.8f).toDouble(),};
 
 
   std::cout << "Simulation parameters: "
@@ -112,7 +122,7 @@ void B18CommandLineVersion::runB18Simulation() {
   Benchmarker loadNetwork("Load_network", true);
   Benchmarker loadODDemandData("Load_OD_demand_data", true);
   
-  B18TrafficSimulator b18TrafficSimulator(deltaTime, &cg.roadGraph, simParameters);
+  B18TrafficSimulator b18TrafficSimulator(deltaTime, &cg.roadGraph, simParameters, nullptr, av_penetration_rate, av_toll_discount, scenario_mode);
   
   const bool directed = true;
   const std::shared_ptr<abm::Graph>& street_graph = std::make_shared<abm::Graph>(directed, networkPathSP);
@@ -151,8 +161,20 @@ void B18CommandLineVersion::runB18Simulation() {
     b18TrafficSimulator.simulateInGPU(numOfPasses, startSimulationH, endSimulationH,
         useJohnsonRouting, useSP, street_graph, simParameters,
         rerouteIncrementMins, all_od_pairs_, dep_times,
-        networkPathSP);
+        networkPathSP,
+        tollFilePath); 
   }
 
 }
+
+int extract_iteration_from_filename(const std::string& filename) {
+    std::regex re("tolls_for_iter_(\\d+)\\.csv");
+    std::smatch match;
+    if (std::regex_search(filename, match, re) && match.size() > 1) {
+        return std::stoi(match.str(1));
+    }
+    return 0; 
+}
+
+
 }  // LC

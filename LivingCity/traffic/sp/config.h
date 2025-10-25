@@ -28,6 +28,11 @@ struct parameters{
     float b;
     float T;
     float s_0;
+
+    float lc_alpha_av; 
+    float lc_gamma_av;
+    float lc_alpha_hv;
+    float lc_gamma_hv;
 };
 
 #endif  // _ABM_CONFIG_H_
