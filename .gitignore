@@ -23,6 +23,7 @@ Makefile
 *.bin
 *.log
 *.geojson
+*.gif
 
 # Benchmarking outputs
 *.png

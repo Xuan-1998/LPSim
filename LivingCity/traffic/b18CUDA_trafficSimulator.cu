@@ -1802,14 +1802,9 @@ void b18GetLaneChangeCountCUDA(uint& host_count) {
 
 void b18GetTollProportionsCUDA(std::vector<uint>& toll_steps, std::vector<uint>& total_steps, size_t num_edges) {
     if (num_edges == 0) return;
-
-    // 调整CPU端向量的大小以接收数据
     toll_steps.resize(num_edges);
     total_steps.resize(num_edges);
-
     size_t size_in_bytes = num_edges * sizeof(uint);
-
-    // 从GPU显存拷贝数据到CPU内存
     printf("> Copying toll lane usage statistics from GPU...\n");
     gpuErrchk(cudaMemcpy(toll_steps.data(), toll_lane_vehicle_steps_d, size_in_bytes, cudaMemcpyDeviceToHost));
     gpuErrchk(cudaMemcpy(total_steps.data(), total_vehicle_steps_d, size_in_bytes, cudaMemcpyDeviceToHost));

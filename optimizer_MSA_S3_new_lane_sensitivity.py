@@ -26,21 +26,20 @@ BEST_PARAMS = {
     "INERTIA": 0.4306382031211081
 }
 
-# Define the different levels for your sensitivity analysis
 AV_PENETRATION_RATES = [0.0, 0.1, 0.3, 0.5, 0.7, 1.0]
 
 LANE_CHANGE_PARAMS = {
     "AV-Low_HV-Low": {
-        "LC_ALPHA_AV": 1.5, "LC_GAMMA_AV": 0.8, # 低敏感度、高犹豫度的AV
-        "LC_ALPHA_HV": 1.0, "LC_GAMMA_HV": 0.5, # 低敏感度、高犹豫度的HV
+        "LC_ALPHA_AV": 1.5, "LC_GAMMA_AV": 0.8, # AV with low sensitivity and high hesitation
+        "LC_ALPHA_HV": 1.0, "LC_GAMMA_HV": 0.5, # HV with low sensitivity and high hesitation
     },
     "AV-High_HV-Low": {
-        "LC_ALPHA_AV": 3.0, "LC_GAMMA_AV": 1.5, # 高敏感度、低犹豫度的AV (原始值)
-        "LC_ALPHA_HV": 1.0, "LC_GAMMA_HV": 0.5, # 低敏感度、高犹豫度的HV
+        "LC_ALPHA_AV": 3.0, "LC_GAMMA_AV": 1.5, # AV with high sensitivity and low hesitation (original values)
+        "LC_ALPHA_HV": 1.0, "LC_GAMMA_HV": 0.5, # HV with low sensitivity and high hesitation
     },
     "AV-High_HV-High": {
-        "LC_ALPHA_AV": 3.0, "LC_GAMMA_AV": 1.5, # 高敏感度、低犹豫度的AV (原始值)
-        "LC_ALPHA_HV": 2.0, "LC_GAMMA_HV": 1.0, # 高敏感度、低犹豫度的HV
+        "LC_ALPHA_AV": 3.0, "LC_GAMMA_AV": 1.5, # AV with high sensitivity and low hesitation (original values)
+        "LC_ALPHA_HV": 2.0, "LC_GAMMA_HV": 1.0, # HV with high sensitivity and low hesitation
     }
 }
 
@@ -55,21 +54,24 @@ for eta in AV_PENETRATION_RATES:
         "SCENARIO_MODE": 1,
         "AV_PENETRATION_RATE": eta,
         "AV_TOLL_DISCOUNT": 1.0,  # No discount
-        "objective_type": "lane_weighted",
-        **BEST_PARAMS  # Use the best hyperparameters
+        "objective_type": "flow_weighted_S1",
+        **BEST_PARAMS,
+        **LANE_CHANGE_PARAMS["AV-High_HV-Low"]
     })
 
 # --- SCENARIO 2 RUNS ---
 # C++ will use SCENARIO_MODE = 2 (routing considers tolls)
 for eta in AV_PENETRATION_RATES:
-    EXPERIMENTS.append({
-        "name": f"S2_PartialCollab_eta_{eta:.1f}",
-        "SCENARIO_MODE": 2,
-        "AV_PENETRATION_RATE": eta,
-        "AV_TOLL_DISCOUNT": 1.0,  # No discount
-        "objective_type": "lane_weighted",
-        **BEST_PARAMS
-    })
+    for lc_name, lc_params in LANE_CHANGE_PARAMS.items():
+        EXPERIMENTS.append({
+            "name": f"S2_PartialCollab_eta_{eta:.1f}",
+            "SCENARIO_MODE": 2,
+            "AV_PENETRATION_RATE": eta,
+            "AV_TOLL_DISCOUNT": 1.0,  # No discount
+            "objective_type": "flow_weighted_S2",
+            **BEST_PARAMS,
+            **lc_params
+        })
 
 # --- SCENARIO 3 RUNS ---
 # C++ will use SCENARIO_MODE = 2 (routing considers tolls)
@@ -77,13 +79,13 @@ for eta in AV_PENETRATION_RATES:
 for eta in AV_PENETRATION_RATES:
     for lc_name, lc_params in LANE_CHANGE_PARAMS.items():
         EXPERIMENTS.append({
-            "name": f"S3_eta_{eta:.1f}_{lc_name}",  # 创建描述性的实验名称
+            "name": f"S3_eta_{eta:.1f}_{lc_name}",
             "SCENARIO_MODE": 2,
             "AV_PENETRATION_RATE": eta,
             "AV_TOLL_DISCOUNT": 0.8,
             "objective_type": "flow_weighted_S3",
             **BEST_PARAMS,
-            **lc_params  # 将换道参数添加到实验配置中
+            **lc_params
         })
 
 # --- General Configuration ---
@@ -138,6 +140,7 @@ def update_tolls_tunable_MSA(iter_df: pd.DataFrame, params: dict, iteration_num:
     theta1 = params["THETA1_REVENUE_WEIGHT"]
     theta2 = params["THETA2_CONGESTION_WEIGHT"]
     learning_rate = params["LEARNING_RATE"]
+    max_toll_change = params["MAX_TOLL_CHANGE"]
     base_inertia = params["INERTIA"]
     step_size = base_inertia / (iteration_num / 5 + 1.0)
 
@@ -151,9 +154,6 @@ def update_tolls_tunable_MSA(iter_df: pd.DataFrame, params: dict, iteration_num:
     marginal_congestion_cost = theta2 * (avg_travel_time - iter_df['free_flow_time'])
     target_toll = marginal_congestion_cost
     gradient_step = learning_rate * theta1 * (target_toll - iter_df['toll_fee'])
-
-    # We apply max_toll_change here, which was missing in some previous versions
-    max_toll_change = params["MAX_TOLL_CHANGE"]
     constrained_gradient_step = gradient_step.clip(-max_toll_change, max_toll_change)
 
     old_toll = iter_df['toll_fee']
@@ -187,11 +187,10 @@ def run_single_experiment(exp_params: dict, MAX_ITERATIONS: int):
             "AV_PENETRATION_RATE": exp_params.get("AV_PENETRATION_RATE", 0.0),
             "AV_TOLL_DISCOUNT": exp_params.get("AV_TOLL_DISCOUNT", 1.0),
             "SCENARIO_MODE": exp_params.get("SCENARIO_MODE", 2),
-            # 添加新的换道参数
-            "LC_ALPHA_AV": exp_params.get("LC_ALPHA_AV"),
-            "LC_GAMMA_AV": exp_params.get("LC_GAMMA_AV"),
-            "LC_ALPHA_HV": exp_params.get("LC_ALPHA_HV"),
-            "LC_GAMMA_HV": exp_params.get("LC_GAMMA_HV")
+            "LC_ALPHA_AV": exp_params.get("LC_ALPHA_AV", 3.0),
+            "LC_GAMMA_AV": exp_params.get("LC_GAMMA_AV", 1.5),
+            "LC_ALPHA_HV": exp_params.get("LC_ALPHA_HV", 1.5),
+            "LC_GAMMA_HV": exp_params.get("LC_GAMMA_HV", 0.8)
         }
 
         toll_update_df = pd.DataFrame({'edge_id': current_tolls.index, 'toll_fee': current_tolls.values})
