@@ -3,7 +3,7 @@ numpy==1.22.0
 pandas==1.1.3
 Pillow==12.2.0
 psutil==5.7.2
-pytest==6.1.1
+pytest==9.0.3
 pytest-cov==2.10.1
 pytest-remotedata==0.3.2
 scipy==1.10.0
