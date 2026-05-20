@@ -1,360 +1,191 @@
-# LPSim (Large (Scale) Parallel (Computing) regional traffic Simulation)
+# LPSim — Large-scale Parallel traffic Simulation
 
-LPSim is a discrete time-driven simulation platform that enables microsimulation analysis for network traffic assignment for both cars and aircrafts. Its architecture incorporates a highly parallelized GPU implementation that provides efficient execution of large-scale simulations on demand and networks with hundreds of thousands of nodes and edges, as well as millions of trips. The computational performance of LPSim is assessed by testing the platform to simulate the entire Bay Area metropolitan region during morning hours, utilizing half-second time steps. The runtime for the nine-county Bay Area simulation, excluding routing and initialization, is just over within minutes depending on how many GPUs are available to be used. 
+LPSim is a GPU-accelerated, multi-GPU traffic microsimulator for HPC and AI research. It scales city-region networks with hundreds of thousands of nodes and millions of agents to run in minutes on commodity GPUs, and it is built to serve as a high-throughput environment for reinforcement-learning policies in mobility (dispatch, routing, pricing, vertiport siting).
 
-<img width="1200" alt="merged_image" src="https://github.com/Xuan-1998/LPSim/assets/58761221/1c41f659-aee0-4887-99e0-39b0133154ce">
+The platform underpins our ICML 2026 paper on regime-aware deep RL for ride-hailing dispatch, our T-RC 2024 paper on multi-GPU traffic assignment, and ongoing work on urban air mobility (UAM) integration.
 
+<img width="1200" alt="LPSim Bay Area" src="https://github.com/Xuan-1998/LPSim/assets/58761221/1c41f659-aee0-4887-99e0-39b0133154ce">
 
+---
 
+## Why LPSim
 
+- **City-scale, in minutes.** The full nine-county SF Bay Area network (≈220k nodes, ≈550k edges, millions of trips) runs in single-digit minutes on a small GPU cluster. Half-second time steps; discrete time-driven kernels.
+- **Multi-GPU by design.** The road network is partitioned across GPUs; each GPU advances its subgraph independently for many time steps before exchanging boundary state, amortizing communication over compute.
+- **HPC-friendly.** Single-source CUDA, OpenMP for host parallelism, CSR graph layout, contraction-hierarchies routing via [Pandana](https://github.com/UDST/pandana) — works on a workstation, scales to a node, scales to multi-node.
+- **AI/RL-ready.** Stateful, fast resets and deterministic rollouts make LPSim usable as a closed-loop environment for deep RL on dispatch, routing, and matching problems at metropolitan scale.
 
-The concept of implementing a multi-GPU simulation can be elucidated as follows: initially, the network will undergo partitioning into distinct GPU units, following which, the simulation of individuals will be executed independently within separate GPUs for multiple time-steps, prior to any communication between these subunits.
+![multi-GPU partitioning](https://github.com/Xuan-1998/LPSim/assets/58761221/a8ddbab9-8e17-405e-b392-28044c1d917a)
 
+---
 
+## Quick start (Docker)
 
-![simulation drawio](https://github.com/Xuan-1998/LPSim/assets/58761221/a8ddbab9-8e17-405e-b392-28044c1d917a)
-
-
-## Initial checks
+The Docker image bundles CUDA 12.4, Qt5, Boost, Pandana, and all build deps. This is the recommended path.
 
 ```bash
-sudo apt update
-sudo apt install qtchooser
-sudo apt-get install qt5-default
-sudo apt-get install libglew-dev
-sudo apt-get install build-essential
-sudo apt-get install libfontconfig1
-sudo apt-get install mesa-common-dev
-sudo apt-get install wget
-sudo apt-get install pciutils
-sudo apt install git
-```
-
-## Dependencies
-
- - Boost 1.59 
- ```bash 
- wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz
- sudo tar xf boost_1_59_0.tar.gz -C /usr/local
- ```
- 
- - CUDA (used versions: 9.0 in Ubuntu) (If you are using Google Cloud Platform, please follow these [instructions](https://cloud.google.com/compute/docs/gpus/install-drivers-gpu#ubuntu-driver-steps))
- - g++ (used versions: 6.4.0 in Ubuntu)
- - Qt5 (used versions: 5.9.5 in Ubuntu)
- - qmake (used versions: 3.1 in Ubuntu)
- - Python (used versions: 3.6.5 in Ubuntu)
- - pytest (used versions: 6.1.1 in Ubuntu) 
- - pytest-cov (used versions: 2.10.1 in Ubuntu) 
- - pytest-remotedata (used versions: 0.3.2 in Ubuntu) 
- - psutil (used versions: 5.7.2 in Ubuntu) 
- - xlwt (used versions: 1.3.0 in Ubuntu)
-
-## Installation & Compilation
-
-### Manual installation
-
-Once the necessary dependencies are installed, you can use the following lines to make sure the
-correct versions of each one are used:
-```bash
-export PATH=/usr/local/cuda-9.0/bin:$PATH
-export LIBRARY_PATH=/usr/local/cuda-9.0/lib64:$LIBRARY_PATH 
-export LD_LIBRARY_PATH=/usr/local/cuda-9.0/lib64:$LD_LIBRARY_PATH 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/{YOUR_USERNAME}/pandana/src
-```
-
-You can also add the `export` lines at the end of your user's `~/.bashrc` to
-avoid re-entering them in each session.
-
-Clone the repo in your home directory with:
-```bash
-git clone git@github.com:Xuan-1998/LPSim.git ~/LPSim && cd ~/LPSim
-```
-
-Clone the [Pandana repository](https://github.com/UDST/pandana) to your home directory stay on the `main` branch, since LPSim now uses a fast contraction hierarchies framework for shortest path routing. Previously implemented shortest path frameworks include Johnson's all pairs shortest path and a parallelized Dijkstra's priority queue.
-
-Create `Makefile` and compile with:
-```bash
-sudo qmake LivingCity/LivingCity.pro
-```
-
-Importantly, because LPSim uses a shared library from Pandana, a Pandana makefile must be created (to create a shared object file) and the LPSim makefile must be modified.
-
-Pandana `Makefile`:
-
-1. Create Makefile in `pandana/src/` containing the following:
-
-```# Makefile for pandana C++ contraction hierarchy library
-
-CC = gcc  # C compiler
-CXX = g++
-CPPFLAGS = -DLINUX -DMAC -std=c++0x -c -fPIC -g -O3 -Wall -pedantic -fopenmp  # C flags
-LDFLAGS = -shared   # linking flags
-RM = rm -f   # rm command
-TARGET_LIB = libchrouting.so  # target lib
-
-SRCS =  accessibility.cpp graphalg.cpp contraction_hierarchies/src/libch.cpp
-
-OBJS = $(SRCS:.cpp=.o)
-
-.PHONY: all
-all: ${TARGET_LIB}
-
-$(TARGET_LIB): $(OBJS)
-        $(CXX) ${LDFLAGS} -o $@ $^
-
-.PHONY: clean
-clean:
-        -${RM} ${TARGET_LIB} ${OBJS}
-```
-2. Run `make`.
-
-LPSim `Makefile`:
-
-1. Add `-I/home/{YOUR_USERNAME}/pandana/src` to `INCPATH`.
-2. Add `-L/home/{YOUR_USERNAME}/pandana/src -lchrouting` to `LIBS`.
-3. Run `sudo make -j`.
-
-
-### Run with Docker
-
-1.  Make sure that you have Docker, its NVidia container toolkit and the necessary permissions:
-```bash
-sudo apt install docker.io
-sudo groupadd docker
-sudo usermod -aG docker {YOUR_USERNAME}
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-sudo systemctl restart docker
-sudo apt-get install -y nvidia-container-toolkit
-```
-
-2. You also need to check the status of NVIDIA GPU on your instance or local machine
-```bash
-nvidia-smi
-```
-If error occurs e.g. on GCloud, you can check and install the correct NVIDIA driver version for your GPU on https://www.nvidia.cn/Download/index.aspx.
-
-3. You can pull and run it
-```bash
+# Prerequisites: Docker + NVIDIA Container Toolkit + a working `nvidia-smi`
 docker pull yibo123/lpsim:cuda12.4
 
-docker run -it --rm --gpus all \
-    -v "$PWD":/lpsim \
-    -w /lpsim \
-    lpsim:cuda12.4 bash
-```
+git clone https://github.com/Xuan-1998/LPSim.git && cd LPSim
+docker run -it --rm --gpus all -v "$PWD":/lpsim -w /lpsim yibo123/lpsim:cuda12.4 bash
 
-4. Once inside the container, compile and run
-```bash
+# inside the container
 qmake LivingCity/LivingCity.pro
-make
-cd LivingCity
-./LivingCity
+make -j
+cd LivingCity && ./LivingCity
 ```
 
-## Data
+If `nvidia-smi` does not work on the host, install the matching NVIDIA driver before running the container.
 
-Before running everything, you need the appropriate data:
+---
 
-1. Network
-2. Demand
+## Manual build (Ubuntu 22.04+)
 
-The networks currently reside in `LPSim/LivingCity/berkeley_2018`, and the default directory is the full SF Bay Area network in `new_full_network/`. This contains the `nodes.csv` and `edges.csv` files to create the network.
+Tested on Ubuntu 22.04 / 24.04 with CUDA 12.3+, GCC 11+, Qt 5.15. Older versions (CUDA 9, GCC 6.4, Qt 5.9.5) still build but are no longer the supported path.
 
-The demand is not in `new_full_network/`, but needs to reside there in order to run it. Please contact [Pavan Yedavalli](pavyedav@gmail.com) to procure real or sample demands.
+```bash
+# system deps
+sudo apt update && sudo apt install -y \
+    build-essential git wget pciutils \
+    qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools \
+    libglew-dev libfontconfig1 mesa-common-dev \
+    libboost-all-dev libopencv-dev
+```
 
-## Running
+```bash
+# CUDA toolkit on PATH (adjust 12.3 to your installed version)
+export PATH=/usr/local/cuda-12.3/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64:$LD_LIBRARY_PATH
+```
 
-If you wish to edit the microsimulation configuration, modify `LPSim/LivingCity/command_line_options.ini`, which contains the following:
+Pandana (CH routing backend) needs a shared library:
 
-```[General]
-GUI=false
-USE_CPU=false
+```bash
+git clone https://github.com/UDST/pandana.git ~/pandana
+cd ~/pandana/src
+# Use the bundled PandanaMakefile from this repo, or write your own:
+make -f /path/to/LPSim/PandanaMakefile
+
+export LD_LIBRARY_PATH=$HOME/pandana/src:$LD_LIBRARY_PATH
+```
+
+Build LPSim:
+
+```bash
+cd ~/LPSim
+qmake LivingCity/LivingCity.pro
+# If the generated Makefile doesn't pick up Pandana headers/libs, add:
+#   INCPATH += -I$(HOME)/pandana/src
+#   LIBS    += -L$(HOME)/pandana/src -lchrouting
+make -j$(nproc)
+cd LivingCity && ./LivingCity
+```
+
+---
+
+## Configuration
+
+Edit `LivingCity/command_line_options.ini`:
+
+```ini
+[General]
 NETWORK_PATH=berkeley_2018/new_full_network/
-USE_JOHNSON_ROUTING=false
 USE_SP_ROUTING=true
 USE_PREV_PATHS=true
-LIMIT_NUM_PEOPLE=256000
-ADD_RANDOM_PEOPLE=false
 NUM_PASSES=1
 TIME_STEP=0.5
 START_HR=5
 END_HR=12
 ```
 
-Here, you can modify the:
+| Key | Meaning |
+|---|---|
+| `NETWORK_PATH` | Directory containing `nodes.csv`, `edges.csv`, demand. |
+| `USE_SP_ROUTING` | Use the CH (Pandana) shortest-path routing. Keep `true`. |
+| `USE_PREV_PATHS` | Reuse cached paths from a prior run. `false` on the first run. |
+| `NUM_PASSES` | Number of simulation passes per run. |
+| `TIME_STEP` | Simulation time step in seconds. `0.5` is the validated default. |
+| `START_HR`, `END_HR` | Simulation window, 24-hour clock. |
 
-1. `GUI` - deprecated. Do not touch.
-2. `USE_CPU` - deprecated. Do not touch.
-3. `NETWORK_PATH` - specific path to the network files. Default is `berkeley_2018/new_full_network/`.
-4. `USE_JOHNSON_ROUTING` - uses Johnson's all pairs shortest path routing. This should always be set to `false`.
-5. `USE_SP_ROUTING` - uses new SP routing framework. This should always be set to `true`.
-6. `USE_PREV_PATHS` - uses paths already produced and saved to file. Set to `false` if running for the first time. Set to `true` if the simulation was already run and it was saved to file. 
-7. `LIMIT_NUM_PEOPLE` - deprecated. Do not touch.
-8. `ADD_RANDOM_PEOPLE` - deprecated. Do not touch.
-9. `NUM_PASSES` - the number of times the simulation is run. Set to 1.
-10. `TIME_STEP` - timestep. Default is .5 seconds.
-11. `START_HR` - start hour of the simulation. Default is 5am.
-12. `END_HR` - end hour of the simulation. Default is 12pm.
+`GUI`, `USE_CPU`, `USE_JOHNSON_ROUTING`, `LIMIT_NUM_PEOPLE`, `ADD_RANDOM_PEOPLE` are legacy flags. Leave at defaults.
 
-Run with:
-```bash
-cd LivingCity
-./LivingCity
-```
+---
+
+## Data
+
+The repo ships network files (`nodes.csv`, `edges.csv`) for several Bay Area subnetworks under `LivingCity/berkeley_2018/`. The default is `new_full_network/` (full nine-county region).
+
+Demand files (OD matrices) are not redistributable here. Contact [Pavan Yedavalli](mailto:pavyedav@gmail.com) for sample or real demand files.
+
+---
+
+## RL / closed-loop usage
+
+LPSim exposes its simulator as a callable kernel-loop, which is convenient as a high-throughput environment for RL policies operating on city-scale fleets. The Python workflow under `optimizer_*MSA_S3*.py` and `final_analysis_0930.py` is the entry point used by our ICML 2026 work; treat those as reference integrations.
+
+If you build a new RL/optimization pipeline on top of LPSim, please cite the relevant paper(s) below.
+
+---
 
 ## Development
 
-Should you wish to make any changes, please create a new branch. In addition, once the original Makefile is created, you can simply run `sudo make -j` from the `LPSim/` directory to compile any new changes.
-
-If necessary, you can checkout a different existing branch from main (`edge_speeds_over_time`, for instance):
 ```bash
-git checkout edge_speeds_over_time
+git checkout -b my-feature
+# edit, build, test
+sh LivingCity/runAllTests.sh
 ```
 
 ### Debugging
-For debugging we recommend `cuda-memcheck ./LivingCity` for out-of-bounds memory bugs in the CUDA section and `cuda-gdb` for more advanced features such as breakpoints.
 
-In order to use `cuda-gdb`, `LPSim/Makefile` must be modified by adding the flag `-G` to enable debugging and changing `-O3` to `-O` to avoid optimizations that restrict the use of the debugger.
-
-For example, to enable debugging at `LivingCity/traffic/b18CUDA_trafficSimulator.cu`,  its compilation at the line `LPSim/Makefile:1756`:
-<pre>
-/usr/local/cuda-9.0/bin/nvcc -m64 <b>-O3</b> -arch=sm_50 -c --compiler-options -f
-no-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp -I/u
-sr/include/opencv2/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/home/
-<b>{YOUR_USERNAME}</b>/LPSim/LivingCity/glew/include/ -I/usr/local/cuda-9.0/include  -L/opt/l
-ocal/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lcudart -lcuda -g -lgomp
-LivingCity/traffic/b18CUDA_trafficSimulator.cu -o
-${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o
-</pre>
-
-must be modified to:
-<pre>
-/usr/local/cuda-9.0/bin/nvcc -m64 <b>-O</b> -arch=sm_50 -c --compiler-options -f
-no-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp -I/u
-sr/include/opencv2/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/home/
-<b>{YOUR_USERNAME}</b>/LPSim/LivingCity/glew/include/ -I/usr/local/cuda-9.0/include  -L/opt/l
-ocal/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lcudart -lcuda -g <b>-G</b>
--lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o
-${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o
-</pre>
-
-After this modification, `sudo make clean` and `sudo make -j` must be run.
-
-Please keep in mind that this alteration slows the program down. For more information about `cuda-gdb`, please refer to the official [Website](https://docs.nvidia.com/cuda/cuda-gdb/index.html) and [Documentation](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwiBgbqg9fzrAhUMIrkGHby9Db8QFjADegQIAxAB&url=https%3A%2F%2Fdeveloper.download.nvidia.com%2Fcompute%2FDevZone%2Fdocs%2Fhtml%2FC%2Fdoc%2Fcuda-gdb.pdf&usg=AOvVaw3J9Il2vHkkxtcX83EHC3-z).
-
-### Testing
-In order to run all tests you should first move to `LPSim/LivingCity`
 ```bash
-cd LivingCity
-```
-and then run 
-```bash
-sh runAllTests.sh
+cuda-memcheck ./LivingCity        # OOB / illegal memory
+cuda-gdb ./LivingCity             # breakpoints, stepping
 ```
 
-### Benchmarking / profiling
-In order to obtain a profiling of each component of the simulation, you should run
+For `cuda-gdb`, recompile with `-G` and `-O` (instead of `-O3`) in `Makefile`. This makes the program substantially slower; only do it for the kernel(s) under investigation.
+
+### Profiling
+
 ```bash
-python3 LivingCity/benchmarking/runBenchmarks.py
+nsys profile -o lpsim ./LivingCity         # timeline
+ncu --set full -o lpsim ./LivingCity       # per-kernel metrics
+# legacy:
+nvprof --print-summary ./LivingCity
 ```
 
-If you wish to specify the name of the benchmark outputs and/or the number of iterations, just run:
+### Benchmarking
+
 ```bash
-python3 LivingCity/benchmarking/runBenchmarks.py --name={name_of_benchmark} --runs={number_of_iterations_to_run}
+python3 LivingCity/benchmarking/runBenchmarks.py --name=baseline --runs=5
 ```
-The script will run LivingCity the specified number of times while polling the system resources. For each component, its resource and time consumption will be saved into a `csv` file, a plot and a `xls` file in `LPSim/LivingCity/benchmarking/`. The profiling of each version is encouraged to be stored in [here](https://docs.google.com/spreadsheets/d/14KCUY8vLp9HoLuelYC5DmZwKI7aLsiaNFp7e6Z8bVBU/edit?usp=sharing).
 
+Outputs CSV / xls / plot under `LivingCity/benchmarking/`.
 
+---
 
+## Citing LPSim
 
-## Record GPU usage
-nvidia-smi -l 1 >> logfile.txt
+If LPSim contributes to your work, please cite the relevant paper:
 
-## Docker
-docker pull your-dockerhub-username/lpsim:latest
+**Multi-GPU traffic assignment (TR-C 2024)**
+Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2024). *Large scale multi-GPU based parallel traffic simulation for accelerated traffic assignment and propagation.* Transportation Research Part C: Emerging Technologies, 169, 104873. [link](https://www.sciencedirect.com/science/article/pii/S0968090X24003942)
 
-docker run -it your-dockerhub-username/lpsim:latest /bin/bash
+**Deep RL for ride-hailing dispatch (ICML 2026)**
+Tang, Y., Cui, K., Park, J. H., Zhao, Y., Jiang, X., He, H., Yu, J., Koutsopoulos, H., & Zhao, J. (2026). *RAST-MoE-RL: A Regime-Aware Spatio-Temporal MoE Framework for Deep Reinforcement Learning in Ride-Hailing.* ICML 2026. [arXiv:2512.13727](https://arxiv.org/abs/2512.13727)
 
-## multiple GPUs
-![One_GPU_VS_Multiple drawio](https://github.com/Xuan-1998/LPSim/assets/58761221/6b9c36c0-488d-47a5-ab9e-d3bf0609bde4)
+**Urban Air Mobility integration (Journal of Air Transportation 2023)**
+Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., & Sengupta, R. (2023). *Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey.* [link](https://arc.aiaa.org/doi/10.2514/1.D0431)
 
-/usr/local/cuda-12.3/bin/nvcc -m64 -O2 -arch=sm_80 -c --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr -I/usr/include/opencv4/ -I/opt/local/include/ -I/usr/local/boost_1_59_0/ -I/lpsim/LivingCity/glew/include/ -I/usr/include/pandana/src -I/usr/local/cuda-12.3/include  -L/opt/local/lib -lopencv_imgcodecs -lopencv_core -lopencv_imgproc -lm -ldl -L/usr/include/pandana/src -lchrouting -lcudart -lcuda -lgomp LivingCity/traffic/b18CUDA_trafficSimulator.cu -o ${OBJECTS_DIR}b18CUDA_trafficSimulator_cuda.o
+**Vertiport siting (TRR 2024)**
+Jiang, X., Cao, S., Mo, B., Cao, J., Yang, H., Tang, Y., Hansen, M., Zhao, J., & Sengupta, R. (2024). *Simulation-Based Optimization for Vertiport Location Selection: A Surrogate Model With Machine Learning Method.* Transportation Research Record. [link](https://journals.sagepub.com/doi/full/10.1177/03611981241277755)
 
-## Running on gcloud
-curl https://raw.githubusercontent.com/GoogleCloudPlatform/compute-gpu-installation/main/linux/install_gpu_driver.py --output install_gpu_driver.py
+---
 
-sudo python3 install_gpu_driver.py
+## Contributors
 
-## look at GPU usage:
-
-nvidia-smi --loop-ms=1000 --filename=output_gpuusage.txt
-
-while true; do nvidia-smi >> output_gpu.txt; sleep 10; done
-
-
-
-## profiling
-
-run docker with:
-
-docker run -it --rm --privileged --gpus all -v "$PWD":/LPSim -w /LPSim gcr.io/blissful-jet-303616/LPSim:latest  bash
-
-then:
-
-nvprof --print-summary  ./LivingCity >>  profile_g3.txt 2>&1 (summary)
-
-nvprof --print-gpu-trace  ./LivingCity >> output_g3.txt 2>&1 (breakdown)
-
-nvprof --metrics flop_count_sp,flop_count_dp ./LivingCity >> output_g3.txt 2>&1  (flop ratio)
-
-
-
-
-
-## Acknowledgments
-
-This repository and code have been developed and maintained by Xuan Jiang, Jiaying Li, Yibo Zhao, Chonghe Jiang, Xin Peng, Johan Agerup, Yuhan Tang, and Raja Sengupta. This work is based on Pavan Yedavalli's [Microsimulation analysis for network traffic assignment project](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
-
-If this code is used in any shape or form for your project, please cite this paper accordingly:
-
-Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2024). Large scale multi-GPU based parallel traffic simulation for accelerated traffic assignment and propagation. Transportation Research Part C: Emerging Technologies, 169, 104873. Available: [https://www.sciencedirect.com/science/article/pii/S0968090X24003942](https://www.sciencedirect.com/science/article/pii/S0968090X24003942)
-
-Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., Sengupta, R. (2023). Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey. *Journal of Air Transportation*, 1-11. Available: [https://arc.aiaa.org/doi/10.2514/1.D0431](https://arc.aiaa.org/doi/10.2514/1.D0431)
-
-Jiang, X., Cao, S., Mo, B., Cao, J., Yang, H., Tang, Y., Hansen, M., Zhao, J. and Sengupta, R., 2024. Simulation-Based Optimization for Vertiport Location Selection: A Surrogate Model With Machine Learning Method. Transportation Research Record, p.03611981241277755. Available: [https://journals.sagepub.com/doi/full/10.1177/03611981241277755](https://journals.sagepub.com/doi/full/10.1177/03611981241277755)
-
-
-
-
-Thank you!
-
+LPSim is developed and maintained by Xuan Jiang, Jiaying Li, Yibo Zhao, Chonghe Jiang, Xin Peng, Johan Agerup, Yuhan Tang, Hao Zheng, and Raja Sengupta. The simulator is built on top of Pavan Yedavalli's [microsimulation analysis for network traffic assignment](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=HRLwH5oAAAAJ&citation_for_view=HRLwH5oAAAAJ:2osOgNQ5qMEC).
 
 ## License
 
-This project is licensed under the MIT License.
-
-MIT License
-
-Copyright (c) 2024 Xuan Jiang, Jiaying Li, Chonghe Jiang, Dingyi Zhuang, Jinhua Zhao, Raja Sengupta
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
-
+MIT — see [LICENSE](LICENSE).

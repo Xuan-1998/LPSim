@@ -1,33 +1,48 @@
+# Build outputs
 /build/
-/LivingCity/*.dll
 /x64
 /LivingCity/obj
 /LivingCity/GeneratedFiles
 /LivingCity/screenshots
 /LivingCity/noAvail*
+/LivingCity/*.dll
 *.pdb
 *.sdf
 *.opensdf
 *.exe
 *.ilk
-/LivingCity/berkeley_2018
+
+# Compiled simulator binary and debug artifacts
 /LivingCity/LivingCity
+/LivingCity/core
+core
+core.*
+*.o
+*.a
+*.so
 
-*.swp  # Vim swap files
+# qmake / Make
+Makefile
 .qmake.stash
-Makefile
 
-# Ignoring generated files and outputs
-*.csv
-*.bin
-
-# Benchmarking outputs
-*.png
-*.txt
-*.xls
-*.json
-
-# Swap files
+# Editor / OS junk
 *.swp
+*.swo
+*~
+.DS_Store
+.idea/
+.vscode/
 
-Makefile
+# Python
+__pycache__/
+*.pyc
+
+# Demand data (large, contact authors per README)
+/LivingCity/berkeley_2018
+
+# Benchmarking outputs (regenerated per run)
+LivingCity/benchmarking/*.csv
+LivingCity/benchmarking/*.png
+LivingCity/benchmarking/*.txt
+LivingCity/benchmarking/*.xls
+LivingCity/benchmarking/*.json
