@@ -1,5 +1,6 @@
 #include "graph.h"
 #include <string>
+#include <fstream>
 #include <cassert>
 
 inline void abm::Graph::add_edge(const graph::vertex_t vertex_from, const graph::vertex_t vertex_to,
@@ -148,38 +149,80 @@ bool abm::Graph::read_graph_matrix_market(const std::string& filename) {
   return status;
 }
 */
-// Read MatrixMarket graph file format
+// Read graph edges from CSV — supports both the 8-column format
+// (uniqueid, osmid_u, osmid_v, length, lanes, speed_mph, u, v)
+// and the legacy 6-column format (uniqueid, u, v, length, lanes, speed_mph).
 bool abm::Graph::read_graph_osm(const std::string& filename) {
   bool status = true;
   std::cout << "reading graph osm" << std::endl;
+
+  // Detect format from header
+  std::ifstream probe(filename);
+  std::string headerLine;
+  std::getline(probe, headerLine);
+  probe.close();
+  bool hasOsmidColumns = (headerLine.find("osmid_u") != std::string::npos);
+
   try {
-    csvio::CSVReader<8> in(filename);
-    in.read_header(csvio::ignore_extra_column, "uniqueid", "osmid_u", "osmid_v", "length", "lanes", "speed_mph", "u", "v");
     abm::graph::vertex_t nvertices = 0;
     float length, lanes, speed_mph;
     abm::graph::vertex_t index = 0;
     abm::graph::edge_id_t edgeid;
-    abm::graph::vertex_t osmid_v1, osmid_v2, v1, v2;
-    while (in.read_row(edgeid, osmid_v1, osmid_v2, length, lanes, speed_mph, v1, v2)) {
-      // todo: create a function for the following conversion
-	    float max_speed_limit_mps = ( speed_mph / 3600 ) * 1609.34; //convert from mph to meters/second
+    abm::graph::vertex_t v1, v2;
 
-      //Don't add if there is already an edge with the same vertices
-      if (edges_.find(std::make_pair(v1, v2)) == edges_.end()) {
-        if (this->edge_ids_.size() <= v1){
-          std::cout << v1 << " is bigger than the size, which is " << this->edge_ids_.size() << std::endl;
+    if (hasOsmidColumns) {
+      csvio::CSVReader<8> in(filename);
+      in.read_header(csvio::ignore_extra_column, "uniqueid", "osmid_u", "osmid_v", "length", "lanes", "speed_mph", "u", "v");
+      abm::graph::vertex_t osmid_v1, osmid_v2;
+      while (in.read_row(edgeid, osmid_v1, osmid_v2, length, lanes, speed_mph, v1, v2)) {
+        float max_speed_limit_mps = (speed_mph / 3600.0f) * 1609.34f;
+        if (edges_.find(std::make_pair(v1, v2)) == edges_.end()) {
+          this->add_edge(v1, v2, length, lanes, max_speed_limit_mps, edgeid);
         }
-        this->add_edge(v1, v2, length, lanes, max_speed_limit_mps, edgeid);
+        ++nvertices;
+        edge_vertex_map_[v1] = index;
+        ++index;
       }
-      ++nvertices;
+    } else {
+      // Legacy 6-column format: u/v are osmids that need mapping to sequential indices.
+      // Build osmid→index map from nodeIndex_to_osmid_ (populated by read_vertices)
+      std::unordered_map<abm::graph::vertex_t, abm::graph::vertex_t> osmid_to_idx;
+      for (size_t i = 0; i < nodeIndex_to_osmid_.size(); i++) {
+        abm::graph::vertex_t osmid = nodeIndex_to_osmid_[i];
+        if (osmid != 0) {
+          osmid_to_idx[osmid] = i;
+        }
+      }
+      std::cout << "Built osmid->index map with " << osmid_to_idx.size() << " entries" << std::endl;
 
-      //map edge vertex ids to smaller values
-      edge_vertex_map_[v1] = index;
-      //std::cout << "v1 map = " << edge_vertex_map_[v1] << "\n";
-      ++index;
+      csvio::CSVReader<6> in(filename);
+      in.read_header(csvio::ignore_extra_column, "uniqueid", "u", "v", "length", "lanes", "speed_mph");
+      abm::graph::vertex_t raw_v1, raw_v2;
+      while (in.read_row(edgeid, raw_v1, raw_v2, length, lanes, speed_mph)) {
+        // Map osmid to sequential index if needed
+        v1 = raw_v1;
+        v2 = raw_v2;
+        if (v1 >= this->edge_ids_.size() && osmid_to_idx.count(raw_v1)) {
+          v1 = osmid_to_idx[raw_v1];
+        }
+        if (v2 >= this->edge_ids_.size() && osmid_to_idx.count(raw_v2)) {
+          v2 = osmid_to_idx[raw_v2];
+        }
+        if (v1 >= this->edge_ids_.size() || v2 >= this->edge_ids_.size()) {
+          continue; // skip edges with unmappable vertices
+        }
+        float max_speed_limit_mps = (speed_mph / 3600.0f) * 1609.34f;
+        if (edges_.find(std::make_pair(v1, v2)) == edges_.end()) {
+          this->add_edge(v1, v2, length, lanes, max_speed_limit_mps, edgeid);
+        }
+        ++nvertices;
+        edge_vertex_map_[v1] = index;
+        ++index;
+      }
     }
+
     std::cout << "total edges = " << index << "\n";
-    this-> max_edge_id_=index;
+    this->max_edge_id_ = index;
     this->assign_nvertices(nvertices);
     std::cout << "# of edges: " << this->edges_.size() << "\n";
 
@@ -192,36 +235,56 @@ bool abm::Graph::read_graph_osm(const std::string& filename) {
 }
 
 bool abm::Graph::read_vertices(const std::string& filename) {
-	QVector2D minBox(FLT_MAX, FLT_MAX);
-	QVector2D maxBox(-FLT_MAX, -FLT_MAX);
-	  float scale = 1.0f;
-	  float sqSideSz = std::max<float>(maxBox.x() - minBox.x(),
-				    maxBox.y() - minBox.y()) * scale * 0.5f; // half side
-	  QVector3D centerV(-minBox.x(), -minBox.y(), 0);
-	  QVector3D centerAfterSc(-sqSideSz, -sqSideSz, 0);
+  QVector2D minBox(FLT_MAX, FLT_MAX);
+  QVector2D maxBox(-FLT_MAX, -FLT_MAX);
+  float scale = 1.0f;
+  float sqSideSz = std::max<float>(maxBox.x() - minBox.x(),
+                                   maxBox.y() - minBox.y()) * scale * 0.5f;
+  QVector3D centerV(-minBox.x(), -minBox.y(), 0);
+  QVector3D centerAfterSc(-sqSideSz, -sqSideSz, 0);
   bool status = true;
-  csvio::CSVReader<6> in(filename);
-  in.read_header(csvio::ignore_extra_column, "osmid", "x", "y", "ref", "highway", "index");
+
+  // Detect whether the CSV has an "index" column by reading the header line
+  std::ifstream probe(filename);
+  std::string headerLine;
+  std::getline(probe, headerLine);
+  probe.close();
+  bool hasIndex = (headerLine.find("index") != std::string::npos);
+
   float lat, lon;
   abm::graph::vertex_t nodeIndex, osmid;
   std::string ref, highway;
 
-  while (in.read_row(osmid, lat, lon, ref, highway, nodeIndex)) {
-    //std::cout << "osmid = " << osmid << "\n";
-    //std::cout << "nodeIndex = " << nodeIndex << "\n";
-
-    this->nodeIndex_to_osmid_[nodeIndex] = osmid;
-    QVector3D pos(lat, lon, 0);
-    pos += centerV;//center
-    pos *= scale;
-    pos += centerAfterSc;
-    pos.setX(pos.x() * -1.0f); // seems vertically rotated
-    vertices_data_[nodeIndex] = pos;
+  if (hasIndex) {
+    csvio::CSVReader<6> in(filename);
+    in.read_header(csvio::ignore_extra_column, "osmid", "x", "y", "ref", "highway", "index");
+    while (in.read_row(osmid, lat, lon, ref, highway, nodeIndex)) {
+      this->nodeIndex_to_osmid_[nodeIndex] = osmid;
+      QVector3D pos(lat, lon, 0);
+      pos += centerV;
+      pos *= scale;
+      pos += centerAfterSc;
+      pos.setX(pos.x() * -1.0f);
+      vertices_data_[nodeIndex] = pos;
+    }
+  } else {
+    // No index column — assign sequential indices based on row order
+    csvio::CSVReader<5> in(filename);
+    in.read_header(csvio::ignore_extra_column, "osmid", "x", "y", "ref", "highway");
+    abm::graph::vertex_t autoIndex = 0;
+    while (in.read_row(osmid, lat, lon, ref, highway)) {
+      nodeIndex = autoIndex++;
+      this->nodeIndex_to_osmid_[nodeIndex] = osmid;
+      QVector3D pos(lat, lon, 0);
+      pos += centerV;
+      pos *= scale;
+      pos += centerAfterSc;
+      pos.setX(pos.x() * -1.0f);
+      vertices_data_[nodeIndex] = pos;
+    }
   }
-  
+
   std::cout << "# of vertices: " << vertices_data_.size() << "\n";
-
-
   return status;
 }
 

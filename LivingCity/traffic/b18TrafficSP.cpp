@@ -1,6 +1,8 @@
 #include "b18TrafficSP.h"
 
 #include <boost/graph/exterior_property.hpp>
+#include <fstream>
+#include <algorithm>
 #include "src/linux_host_memory_logger.h"
 #include "roadGraphB2018Loader.h"
 #include "accessibility.h"
@@ -92,29 +94,50 @@ void B18TrafficSP::read_od_pairs_from_structure(
   }
 }
 
-// Read OD pairs file format
+// Read OD pairs file format — supports both:
+//   New format: dep_time, origin, destination
+//   Legacy format: SAMPN, PERNO, origin, destination (dep_time generated uniformly)
 std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::read_od_pairs_from_file(
   const std::string& filename,
   const float startSimulationH,
   const float endSimulationH,
   const int nagents) {
   std::vector<std::array<abm::graph::vertex_t, 2>> od_pairs;
-  csvio::CSVReader<3> in(filename);
-  in.read_header(csvio::ignore_extra_column, "dep_time", "origin", "destination");
+
+  // Detect format
+  std::ifstream probe(filename);
+  std::string headerLine;
+  std::getline(probe, headerLine);
+  probe.close();
+  bool hasDepTime = (headerLine.find("dep_time") != std::string::npos);
+
   abm::graph::vertex_t v1, v2;
-  abm::graph::weight_t weight;
-  float dep_time;
   int count_outside_filter = 0;
-  while (in.read_row(dep_time, v1, v2)) {
-    if (dep_time >= startSimulationH * 3600 && dep_time < endSimulationH * 3600){
-      std::array<abm::graph::vertex_t, 2> od = {v1, v2};
-      od_pairs.emplace_back(od);
-      RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2)); //there is only one person for each OD pair
-    } else {
-      count_outside_filter++;
+
+  if (hasDepTime) {
+    csvio::CSVReader<3> in(filename);
+    in.read_header(csvio::ignore_extra_column, "dep_time", "origin", "destination");
+    float dep_time;
+    while (in.read_row(dep_time, v1, v2)) {
+      if (dep_time >= startSimulationH * 3600 && dep_time < endSimulationH * 3600) {
+        od_pairs.push_back({v1, v2});
+        RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2));
+      } else {
+        count_outside_filter++;
+      }
+    }
+  } else {
+    // Legacy format — all trips are within the simulation window
+    csvio::CSVReader<4> in(filename);
+    in.read_header(csvio::ignore_extra_column, "SAMPN", "PERNO", "origin", "destination");
+    int sampn, perno;
+    while (in.read_row(sampn, perno, v1, v2)) {
+      od_pairs.push_back({v1, v2});
+      RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2));
     }
   }
-  if (count_outside_filter > 0){
+
+  if (count_outside_filter > 0) {
     std::cout << "WARNING: Filtering " << count_outside_filter << " trips outside the input time range." << std::endl;
   }
   RoadGraphB2018::totalNumPeople = RoadGraphB2018::demandB2018.size();
@@ -123,25 +146,53 @@ std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::read_od_pairs_fro
   return od_pairs;
 }
 
-// Read OD pairs file format
+// Read departure times — generates uniform distribution if dep_time column missing
 std::vector<float> B18TrafficSP::read_dep_times(
   const std::string& filename,
   const float startSimulationH,
   const float endSimulationH) {
   std::vector<float> dep_time_vec;
-  csvio::CSVReader<1> in(filename);
-  in.read_header(csvio::ignore_extra_column, "dep_time");
-  float dep_time;
-  int count_outside_filter = 0;
-  while (in.read_row(dep_time)) {
-    if (dep_time >= startSimulationH * 3600 && dep_time < endSimulationH * 3600){
-      dep_time_vec.emplace_back(dep_time);
-    } else {
-      count_outside_filter++;
+
+  std::ifstream probe(filename);
+  std::string headerLine;
+  std::getline(probe, headerLine);
+  probe.close();
+  bool hasDepTime = (headerLine.find("dep_time") != std::string::npos);
+
+  if (hasDepTime) {
+    csvio::CSVReader<1> in(filename);
+    in.read_header(csvio::ignore_extra_column, "dep_time");
+    float dep_time;
+    int count_outside_filter = 0;
+    while (in.read_row(dep_time)) {
+      if (dep_time >= startSimulationH * 3600 && dep_time < endSimulationH * 3600) {
+        dep_time_vec.emplace_back(dep_time);
+      } else {
+        count_outside_filter++;
+      }
     }
-  }
-  if (count_outside_filter > 0) {
-    std::cout << "WARNING: Filtering " << count_outside_filter << " trips outside the input time range." << std::endl;
+    if (count_outside_filter > 0) {
+      std::cout << "WARNING: Filtering " << count_outside_filter << " trips outside the input time range." << std::endl;
+    }
+  } else {
+    // No dep_time column — generate uniform departure times across the window
+    // Count lines to know how many trips there are
+    std::ifstream countFile(filename);
+    std::string line;
+    std::getline(countFile, line); // skip header
+    int numTrips = 0;
+    while (std::getline(countFile, line)) {
+      if (!line.empty()) numTrips++;
+    }
+    countFile.close();
+    float startSec = startSimulationH * 3600.0f;
+    float endSec = endSimulationH * 3600.0f;
+    float step = (endSec - startSec) / std::max(numTrips, 1);
+    for (int i = 0; i < numTrips; i++) {
+      dep_time_vec.emplace_back(startSec + step * i);
+    }
+    std::cout << "Generated " << numTrips << " synthetic departure times in ["
+              << startSimulationH << "h, " << endSimulationH << "h)" << std::endl;
   }
   return dep_time_vec;
 }

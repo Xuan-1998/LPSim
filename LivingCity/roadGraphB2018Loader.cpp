@@ -127,8 +127,9 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
   const int indexX = headers.indexOf("x");
   const int indexY = headers.indexOf("y");
   const int indexHigh = headers.indexOf("highway");
-  const int indexNodeIndex = headers.indexOf("index"); // the normalized index used to identify nodes across the code
+  const int indexNodeIndex = headers.indexOf("index"); // optional: sequential if missing
 
+  uint64_t autoIndex = 0;
   while (!stream.atEnd()) {
     line = stream.readLine();
     QStringList fields = line.split(',', QString::SkipEmptyParts);
@@ -140,8 +141,10 @@ void RoadGraphB2018::loadB2018RoadGraph(RoadGraph &inRoadGraph, QString networkP
 
     float x = fields[indexX].toFloat();
     float y = fields[indexY].toFloat();
-    //qDebug() << "x " << x << " y " << y;
-    uint64_t nodeIndex = fields[indexNodeIndex].toLongLong();
+    uint64_t nodeIndex = (indexNodeIndex >= 0 && indexNodeIndex < fields.size())
+                         ? fields[indexNodeIndex].toLongLong()
+                         : autoIndex;
+    autoIndex++;
     nodeIndexToVertexLoc[nodeIndex] = QVector2D(x, y);
     updateMinMax2(QVector2D(x, y), minBox, maxBox);
 
@@ -378,12 +381,9 @@ void RoadGraphB2018::loadABMGraph(
   std::cout << nodeFileName << " as nodes file\n";
 
   auto start = high_resolution_clock::now();
-  //EDGES
-  graph_->read_graph_osm(edgeFileName);
-  //printf("# of edges: %d\n", graph_->nedges());
-  
-  //NODES
+  // Load vertices first so the osmid→index map is available for edge loading
   graph_->read_vertices(nodeFileName);
+  graph_->read_graph_osm(edgeFileName);
   
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<milliseconds>(stop - start);
