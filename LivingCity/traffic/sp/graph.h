@@ -47,17 +47,30 @@ class Graph {
   explicit Graph(bool directed, std::string networkPath) {
     this->directed_ = directed;
 
-    // --- we get the max vertex id
+    // --- we get the max vertex id (or count lines if no index column)
     const std::string& nodeFileName = networkPath + "nodes.csv";
-    csvio::CSVReader<1> inMaxVertexIndex(nodeFileName);
-    inMaxVertexIndex.read_header(csvio::ignore_extra_column, "index");
     abm::graph::vertex_t osmid, nodeIndex;
     std::string ref;
     std::string highway;
     float lat, lon;
     abm::graph::vertex_t maxVertexIndexFound = 0;
-    while (inMaxVertexIndex.read_row(nodeIndex)) {
-      maxVertexIndexFound = std::max(nodeIndex, maxVertexIndexFound);
+    {
+      std::ifstream probe(nodeFileName);
+      std::string hdr;
+      std::getline(probe, hdr);
+      if (hdr.find("index") != std::string::npos) {
+        csvio::CSVReader<1> inMaxVertexIndex(nodeFileName);
+        inMaxVertexIndex.read_header(csvio::ignore_extra_column, "index");
+        while (inMaxVertexIndex.read_row(nodeIndex)) {
+          maxVertexIndexFound = std::max(nodeIndex, maxVertexIndexFound);
+        }
+      } else {
+        // No index column — count rows to determine max vertex id
+        std::string line;
+        while (std::getline(probe, line)) {
+          if (!line.empty()) maxVertexIndexFound++;
+        }
+      }
     }
     this->edge_ids_ = std::vector<tsl::robin_map<graph::vertex_t, graph::edge_id_t>>(maxVertexIndexFound+1);
     this->nodeIndex_to_osmid_ = std::vector<graph::vertex_t>(maxVertexIndexFound+1);
