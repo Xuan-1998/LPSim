@@ -117,6 +117,9 @@ uint halfLaneMap;
 uint *halfLaneMap_n = nullptr;
 float startTime;
 
+// Persistent per-GPU CUDA streams (created once, reused every timestep)
+cudaStream_t *gpuStreams = nullptr;
+
 // Ghost-zone migration buffers (device-side)
 uint **vehicleToCopy_d = nullptr;
 uint **copyCursor_d = nullptr;
@@ -413,12 +416,18 @@ void b18InitCUDA_n(
     gpuErrchk(cudaStreamSynchronize(streams[i]));
     gpuErrchk(cudaStreamDestroy(streams[i]));
     printMemoryUsage();
-
   }
-      
+  delete[] streams;
+
+  // Create persistent per-GPU streams for the simulation loop
+  gpuStreams = new cudaStream_t[ngpus];
+  for (int i = 0; i < ngpus; i++) {
+    cudaSetDevice(i);
+    gpuErrchk(cudaStreamCreateWithFlags(&gpuStreams[i], cudaStreamNonBlocking));
+  }
+
   cudaError_t error = cudaGetLastError();
   printf("CUDA error: %s\n", cudaGetErrorString(error));
-  delete[] streams;
 }
 
 void b18InitCUDA(
@@ -671,6 +680,7 @@ void b18FinishCUDA(void) {
   cudaFree(trafficVehicleVec_d);
   for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
+    if (gpuStreams) cudaStreamDestroy(gpuStreams[i]);
     cudaFree(indexPathVec_d[i]);
     cudaFree(edgesData_d[i]);
     cudaFree(laneMap_d[i]);
@@ -722,6 +732,8 @@ void b18FinishCUDA(void) {
   delete[] trafficLights_d;
   delete[] vehicles_vec;
   delete[] trafficVehicleVec_d_gpus;
+  delete[] gpuStreams;
+  gpuStreams = nullptr;
 }
 void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, std::vector<LC::B18EdgeData> &edgesData) {
   // Gather vehicles from all GPU partitions back to host
@@ -2196,28 +2208,30 @@ void b18SimulateTrafficCUDA(float currentTime,
   int threadsPerBlock) {
   intersectionBench.startMeasuring();
 
-  // Phase 1: Double-buffer flip and lane map clear (all GPUs concurrently)
+  // Phase 1: Async double-buffer flip + lane map clear (all GPUs in parallel)
+  // Using persistent per-GPU streams allows all memsets to execute concurrently.
   for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
     if (readFirstMapC) {
       mapToReadShift_n[i] = 0;
       mapToWriteShift_n[i] = halfLaneMap_n[i];
-      gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap_n[i]], 0xFF,
-                            halfLaneMap_n[i] * sizeof(unsigned char)));
+      gpuErrchk(cudaMemsetAsync(&laneMap_d[i][halfLaneMap_n[i]], 0xFF,
+                                 halfLaneMap_n[i] * sizeof(unsigned char), gpuStreams[i]));
     } else {
       mapToReadShift_n[i] = halfLaneMap_n[i];
       mapToWriteShift_n[i] = 0;
-      gpuErrchk(cudaMemset(&laneMap_d[i][0], 0xFF,
-                            halfLaneMap_n[i] * sizeof(unsigned char)));
+      gpuErrchk(cudaMemsetAsync(&laneMap_d[i][0], 0xFF,
+                                 halfLaneMap_n[i] * sizeof(unsigned char), gpuStreams[i]));
     }
   }
   readFirstMapC = !readFirstMapC;
 
-  // Phase 2: Intersection signal update (all GPUs, no inter-GPU dependency)
+  // Phase 2: Intersection signal update (launched on per-GPU streams, overlaps with memset)
   for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
     if (numIntersections_n[i] > 0) {
-      kernel_intersectionOneSimulation<<<(numIntersections_n[i] + 511) / 512, 512>>>(
+      kernel_intersectionOneSimulation<<<(numIntersections_n[i] + 511) / 512, 512,
+                                          0, gpuStreams[i]>>>(
           numIntersections_n[i], currentTime, intersections_d[i], trafficLights_d[i]);
       gpuErrchk(cudaPeekAtLastError());
     }
@@ -2226,14 +2240,14 @@ void b18SimulateTrafficCUDA(float currentTime,
 
   peopleBench.startMeasuring();
 
-  // Phase 3: Traffic simulation kernel — each GPU processes its partition
+  // Phase 3: Traffic simulation kernel on per-GPU streams (all GPUs run concurrently)
   for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
     int numPeople_gpu = vehicles_vec[i]->size();
     if (numPeople_gpu == 0) continue;
     LC::B18TrafficVehicle *vehicles_ptr = thrust::raw_pointer_cast(vehicles_vec[i]->data());
     kernel_trafficSimulation<<<(numPeople_gpu + threadsPerBlock - 1) / threadsPerBlock,
-                               threadsPerBlock>>>(
+                               threadsPerBlock, 0, gpuStreams[i]>>>(
         i, numPeople_gpu, currentTime, mapToReadShift_n[i], mapToWriteShift_n[i],
         vehicles_ptr, indexPathVec_d[i], indexPathVec_d_size,
         edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i],
@@ -2247,7 +2261,7 @@ void b18SimulateTrafficCUDA(float currentTime,
   // Barrier: wait for all simulation kernels before reading back cursors
   for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
-    gpuErrchk(cudaDeviceSynchronize());
+    gpuErrchk(cudaStreamSynchronize(gpuStreams[i]));
   }
 
   // Phase 4: Read back migration cursors and ghost-lane data from all GPUs
