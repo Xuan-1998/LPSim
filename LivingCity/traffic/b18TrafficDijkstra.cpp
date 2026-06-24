@@ -43,7 +43,7 @@ typedef default_assignment_associative_property_map<PredecessorMap> PredecessorM
 
 void B18TrafficDijstra::calculateSeveralPeopleRoute(
   LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-  std::vector<B18TrafficPerson> &trafficPersonVec,
+  std::vector<B18TrafficVehicle> &trafficPersonVec,
   std::vector<uint> &indexPathVec,
   uint &currIndexPath,
   std::vector<uint> &peopleStartInInter,
@@ -191,7 +191,7 @@ void B18TrafficDijstra::calculateSeveralPeopleRoute(
 
 void B18TrafficDijstra::generateRoutesMulti(
   LC::RoadGraph::roadBGLGraph_BI &roadGraph,
-  std::vector<B18TrafficPerson> &trafficPersonVec,
+  std::vector<B18TrafficVehicle> &trafficPersonVec,
   std::vector<uint>& indexPathVec,  
   std::map<RoadGraph::roadGraphEdgeDesc_BI, uint> &edgeDescToLaneMapNum,
   int weigthMode,

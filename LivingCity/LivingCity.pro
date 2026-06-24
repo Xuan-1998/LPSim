@@ -9,9 +9,10 @@ unix {
 	# -L/Developer/NVIDIA/CUDA-7.5/lib -lcudart -lcublas -lgomp
     INCLUDEPATH += \
       /usr/include/opencv4/ \
-      /opt/local/include/ \ 
+      /opt/local/include/ \
       /usr/local/boost_1_59_0/ \
-      $$PWD/glew/include/
+      $$PWD/glew/include/ \
+      $$PWD/../src/
 
     exists("/usr/include/pandana/src") {
       INCLUDEPATH += /usr/include/pandana/src
@@ -180,38 +181,42 @@ win32{
 unix {
   # Cuda sources
   CUDA_SOURCES += traffic/b18CUDA_trafficSimulator.cu
-  # Path to cuda toolkit install
-  exists("/usr/local/cuda-11.2") {
+
+  # Auto-detect CUDA toolkit (prefer 12.x, fall back to symlink)
+  exists("/usr/local/cuda-12.4") {
+    CUDA_DIR = /usr/local/cuda-12.4
+    message("Found CUDA 12.4 installation.")
+  } else:exists("/usr/local/cuda-12.3") {
+    CUDA_DIR = /usr/local/cuda-12.3
+    message("Found CUDA 12.3 installation.")
+  } else:exists("/usr/local/cuda") {
+    CUDA_DIR = /usr/local/cuda
+    message("Using CUDA at /usr/local/cuda (symlink).")
+  } else:exists("/usr/local/cuda-11.2") {
     CUDA_DIR = /usr/local/cuda-11.2
-    message("Found CUDA 11.2 installation, using CUDA 11.2.")
+    message("Found CUDA 11.2 installation.")
   } else {
-    exists("/usr/local/cuda-10.1") {
-      CUDA_DIR = /usr/local/cuda-10.1
-      message("Found CUDA 10.1 installation, using CUDA 10.1.")
-    } else {
-      CUDA_DIR = /usr/local/cuda-9.0
-      message("CUDA 11.2 or 10.1 not found, defaulting to 9.0 instead.")
-    }
+    error("No CUDA toolkit found. Install CUDA 12.x and ensure /usr/local/cuda-12.x exists.")
   }
-  #CUDA_DIR = /usr/local/cuda-11.2
+
   INCLUDEPATH += $$CUDA_DIR/include
   QMAKE_LIBDIR += $$CUDA_DIR/lib64
-  # GPU architecture
+
+  # GPU architecture (sm_80 = A100, sm_89 = L40/4090, sm_90 = H100/H200)
   CUDA_ARCH = sm_80
+
   # NVCC flags
-  NVCCFLAGS = --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr
-  # Path to libraries
+  NVCCFLAGS = --compiler-options -fno-strict-aliasing -use_fast_math \
+              --ptxas-options=-v -Xcompiler -fopenmp --expt-relaxed-constexpr
+
   LIBS += -lcudart -lcuda -lgomp
   QMAKE_CXXFLAGS += -fopenmp -w
-  #LIBS += -fopenmp
-  # join the includes in a line
-  CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
-  cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -O2 -arch=$$CUDA_ARCH -c $$NVCCFLAGS $$CUDA_INC $$LIBS ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
-  cuda.dependcy_type = TYPE_C
-  cuda.depend_command = $$CUDA_DIR/bin/nvcc -O2 -M $$CUDA_INC $$NVCCFLAGS      ${QMAKE_FILE_NAME}
 
+  CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
+  cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -O2 -arch=$$CUDA_ARCH -c \
+                  $$NVCCFLAGS $$CUDA_INC $$LIBS ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+  cuda.dependency_type = TYPE_C
   cuda.input = CUDA_SOURCES
   cuda.output = ${OBJECTS_DIR}${QMAKE_FILE_BASE}_cuda.o
-  # Tell Qt that we want add more stuff to the Makefile
   QMAKE_EXTRA_COMPILERS += cuda
 }

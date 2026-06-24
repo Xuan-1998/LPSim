@@ -316,17 +316,17 @@ void b18InitCUDA_n(
         // gpuErrchk(cudaMemcpy(vertexIdToPar_d[i], vertexIdToPar.data(), vertexIdToPar.size()*sizeof(int), cudaMemcpyHostToDevice));
 
         gpuErrchk(cudaMemcpyAsync(vertexIdToPar_d[i], vertexIdToPar.data(), vertexIdToPar.size()*sizeof(int), cudaMemcpyHostToDevice, streams[i]));
-        gpuErrchk(cudaMalloc((void **) &vehicleToCopy_d[i], buffer_size*sizeof(uint)*2)); 
-        gpuErrchk(cudaMalloc((void **) &vehicleToRemove_d[i], buffer_size*sizeof(uint))); 
+        gpuErrchk(cudaMalloc((void **) &vehicleToCopy_d[i], kVehicleMigrationBufferSize*sizeof(uint)*2)); 
+        gpuErrchk(cudaMalloc((void **) &vehicleToRemove_d[i], kVehicleMigrationBufferSize*sizeof(uint))); 
         gpuErrchk(cudaMalloc((void **)&removeCursor_d[i], sizeof(uint))); 
         gpuErrchk(cudaMemset(removeCursor_d[i], 0, sizeof(uint)));
         gpuErrchk(cudaMalloc((void **)&copyCursor_d[i], sizeof(uint))); 
         gpuErrchk(cudaMemset(copyCursor_d[i], 0, sizeof(uint)));
-        gpuErrchk(cudaMalloc((void **) &ghostLaneBuffer_d[i], buffer_lane_size*sizeof(uint)*4)); 
+        gpuErrchk(cudaMalloc((void **) &ghostLaneBuffer_d[i], kGhostLaneBufferSize*sizeof(uint)*4)); 
         gpuErrchk(cudaMalloc((void **)&ghostLaneCursor_d[i], sizeof(uint))); 
         gpuErrchk(cudaMemset(ghostLaneCursor_d[i], 0, sizeof(uint)));   
-        gpuErrchk(cudaMalloc((void **) &laneToUpdateIndex_d[i], buffer_lane_size*sizeof(uint)));
-        gpuErrchk(cudaMalloc((void **) &laneToUpdateValues_d[i], buffer_lane_size*sizeof(uint)));            
+        gpuErrchk(cudaMalloc((void **) &laneToUpdateIndex_d[i], kGhostLaneBufferSize*sizeof(uint)));
+        gpuErrchk(cudaMalloc((void **) &laneToUpdateValues_d[i], kGhostLaneBufferSize*sizeof(uint)));            
       }
       
       }
@@ -1698,7 +1698,7 @@ __global__ void kernel_trafficSimulation(
           }
         }
       }  
-      trafficVehicleVec[p].active == 2;
+      trafficVehicleVec[p].active = 2;
     }
     trafficVehicleVec[p].indexPathCurr++;
     trafficVehicleVec[p].LC_stateofLaneChanging = 0;

@@ -46,7 +46,7 @@ struct Demand {
 }  // namespace
 
 void B18TestSimpleRoadAndOD::generateTest(RoadGraph &inRoadGraph,
-    std::vector<B18TrafficPerson> &trafficPersonVec,
+    std::vector<B18TrafficVehicle> &trafficPersonVec,
     float startTimeH, float endTimeH, LCGLWidget3D *glWidget3D) {
   printf(">>loadTestRoadGraph\n");
   printf(">>Remove\n");
