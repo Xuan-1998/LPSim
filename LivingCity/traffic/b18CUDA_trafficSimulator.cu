@@ -766,9 +766,17 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, std::
 }
 
 
+ // Read lane map through the read-only data cache (__ldg) to reduce
+ // global memory traffic. The lane map read-buffer is never written during
+ // the kernel (writes go to the other half via double-buffering), so using
+ // the texture/LDG path is safe and avoids polluting L1 with write traffic.
+ __device__ __forceinline__ uchar ldg_lane(const uchar* laneMap, uint pos) {
+   return __ldg(&laneMap[pos]);
+ }
+
  __device__ void calculateGapsLC(
    uint mapToReadShift,
-   uchar* laneMap,
+   const uchar* __restrict__ laneMap,
    uchar trafficLightState,
    uint laneToCheck,
    ushort numLinesEdge,
@@ -785,27 +793,25 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, std::
    uchar laneChar;
    bool found = false;
 
-   // CHECK FORWARD
-   //printf("initShift %u numOfCells %u\n",initShift,numOfCells);
-   for (ushort b = initShift - 1; (b < numOfCells) && (!found); b++) { //NOTE -1 to make sure there is none in at the same level
+   // CHECK FORWARD — scan ahead for the nearest vehicle
+   for (ushort b = initShift - 1; (b < numOfCells) && (!found); b++) {
      const uint posToSample = mapToReadShift +
       kMaxMapWidthM * (laneToCheck +
       (((int) (b / kMaxMapWidthM)) * numLinesEdge)) + b % kMaxMapWidthM;
      assert(posToSample < laneMap_d_size);
-     laneChar = laneMap[posToSample];
+     laneChar = ldg_lane(laneMap, posToSample);
 
      if (laneChar != 0xFF) {
-       gap_a = ((float) b - initShift); //m
-       v_a = laneChar; //laneChar is in 3*ms (to save space in array)
+       gap_a = ((float) b - initShift);
+       v_a = laneChar;
        found = true;
        break;
      }
    }
 
    if (!found) {
-     if (trafficLightState == 0x00) { //red
-       //found=true;
-       gap_a = gap_b = 1000.0f; //force to change to the line without vehicle
+     if (trafficLightState == 0x00) {
+       gap_a = gap_b = 1000.0f;
        v_a = v_b = 0xFF;
        return;
      }
@@ -815,26 +821,22 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, std::
      gap_a = 1000.0f;
    }
 
-   // CHECK BACKWARDS
+   // CHECK BACKWARDS — scan behind for the nearest vehicle
    found = false;
-
-   //printf("2initShift %u numOfCells %u\n",initShift,numOfCells);
-   for (int b = initShift + 1; (b >= 0) && (!found); b--) {  // NOTE +1 to make sure there is none in at the same level
-     //laneChar = laneMap[mapToReadShift + maxWidth * (laneToCheck) + b];
+   for (int b = initShift + 1; (b >= 0) && (!found); b--) {
      const uint posToSample = mapToReadShift +
       kMaxMapWidthM * (laneToCheck +
       (((int) (b / kMaxMapWidthM)) * numLinesEdge)) + b % kMaxMapWidthM;
      assert(posToSample < laneMap_d_size);
-     laneChar = laneMap[posToSample];
+     laneChar = ldg_lane(laneMap, posToSample);
      if (laneChar != 0xFF) {
-       gap_b = ((float) initShift - b); //m
-       v_b = laneChar; //laneChar is in 3*ms (to save space in array)
+       gap_b = ((float) initShift - b);
+       v_b = laneChar;
        found = true;
        break;
      }
    }
 
-   //printf("3initShift %u numOfCells %u\n",initShift,numOfCells);
    if (!found) {
      gap_b = 1000.0f;
    }
@@ -1108,20 +1110,20 @@ __global__ void kernel_trafficSimulation(
   float currentTime,
   uint mapToReadShift,
   uint mapToWriteShift,
-  LC::B18TrafficVehicle *trafficVehicleVec,
-  uint *indexPathVec,
+  LC::B18TrafficVehicle * __restrict__ trafficVehicleVec,
+  const uint * __restrict__ indexPathVec,
   uint indexPathVec_d_size,
-  LC::B18EdgeData* edgesData,
+  LC::B18EdgeData * __restrict__ edgesData,
   uint edgesData_d_size,
-  uchar *laneMap,
+  uchar * __restrict__ laneMap,
   uint laneMap_d_size,
-  uint *laneMapper,
+  const uint * __restrict__ laneMapper,
   LC::B18IntersectionData *intersections,
   uchar *trafficLights,
   uint trafficLights_d_size,
   float deltaTime,
   const parameters simParameters,
-  int* vertexIdToPar_d,
+  const int * __restrict__ vertexIdToPar_d,
   uint* vehicleToCopy,
   uint* vehicleToremove,
   uint* copyCursor,
@@ -1444,32 +1446,22 @@ __global__ void kernel_trafficSimulation(
   ushort numOfCells = ceil((edgesData[currentEdge_d].length - intersectionClearance)); //intersectionClearance hardcoded to 7.8f - why?
 
   for (ushort b = byteInLine + 1; (b < numOfCells) && (!found) && (numCellsCheck > 0); b++, numCellsCheck--) {
-    // ShiftRead + WIDTH * (width number * # lanes + # laneInEdge) + b  TODO(pavan): WHAT IS THIS?
-    //TODO(pavan): double check what mapToReadShift is printing out
     assert(trafficVehicleVec[p].indexPathCurr < indexPathVec_d_size);
     const uint posToSample = mapToReadShift +
-      kMaxMapWidthM *(currentEdge_d +
+      kMaxMapWidthM * (currentEdge_d +
       (((int) (byteInLine / kMaxMapWidthM)) * edgesData[currentEdge_d].numLines) +
       trafficVehicleVec[p].numOfLaneInEdge) + b % kMaxMapWidthM;
-    // const uint posToSample = mapToReadShift +
-    //   kMaxMapWidthM *(currentEdge_d +
-    //   (ceil(edgesData[currentEdge_d].length / kMaxMapWidthM) * trafficVehicleVec[p].numOfLaneInEdge + trafficVehicleVec[p].numOfLaneInEdge)) + b % kMaxMapWidthM;
     assert(posToSample < laneMap_d_size);
-    laneChar = laneMap[posToSample];
+    laneChar = ldg_lane(laneMap, posToSample);
 
-    //TODO(pavan): Is this clause for when it is not at the intersection yet but it has found a car in front of it?
     if (laneChar != 0xFF) {
-      s = ((float) (b - byteInLine)); //m
-      delta_v = trafficVehicleVec[p].v - (laneChar / 3.0f); //laneChar is in 3*ms (to save space in array)
+      s = ((float) (b - byteInLine));
+      delta_v = trafficVehicleVec[p].v - (laneChar / 3.0f);
       found = true;
-      // printf("found1");
-      // if(trafficVehicleVec[p].id==33){
-      //       printf("%u %u %f \n",posToSample,laneMap[posToSample],currentTime);
-      //     }
-      noFirstInLaneBeforeSign = true; 
+      noFirstInLaneBeforeSign = true;
       break;
     }
-  } 
+  }
 
   // NEXT LINE
   // e) MOVING ALONG IN THE NEXT EDGE
@@ -1489,18 +1481,14 @@ __global__ void kernel_trafficSimulation(
       ushort numOfCells = ceil(edgesData[nextEdge_d].length);
 
       for (ushort b = 0; (b < numOfCells) && (!found) && (numCellsCheck > 0); b++, numCellsCheck--) {
-        const uint posToSample = mapToReadShift + kMaxMapWidthM * (nextEdge_d + nextEdgeLaneToBe) + b; // b18 not changed since we check first width
+        const uint posToSample = mapToReadShift + kMaxMapWidthM * (nextEdge_d + nextEdgeLaneToBe) + b;
         assert(posToSample < laneMap_d_size);
-        laneChar = laneMap[posToSample];
+        laneChar = ldg_lane(laneMap, posToSample);
 
         if (laneChar != 0xFF) {
-          s = ((float) (b)); //m
-          delta_v = trafficVehicleVec[p].v - (laneChar / 3.0f);  // laneChar is in 3*ms (to save space in array)
+          s = ((float) (b));
+          delta_v = trafficVehicleVec[p].v - (laneChar / 3.0f);
           found = true;
-          // printf("found2");
-          // if(trafficVehicleVec[p].id==33){
-          //   printf("%u %u %f \n",posToSample,laneMap[posToSample],currentTime);
-          // }
           break;
         }
       }
