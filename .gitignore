@@ -46,3 +46,6 @@ LivingCity/benchmarking/*.png
 LivingCity/benchmarking/*.txt
 LivingCity/benchmarking/*.xls
 LivingCity/benchmarking/*.json
+Makefile
+.qmake.stash
+LivingCity/obj/

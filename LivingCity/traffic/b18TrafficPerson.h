@@ -17,6 +17,7 @@ struct B18TrafficVehicle {
   int id;
   unsigned int init_intersection;
   unsigned int end_intersection;
+  unsigned int window_flag = 0;
   float time_departure;
   float dist_traveled = 0;
   float last_time_simulated = 0;
@@ -38,6 +39,7 @@ struct B18TrafficVehicle {
   unsigned short nextEdgeNextInters;
   float nextEdgeLength;
   float nextEdgemaxSpeedMperSec;
+  float travel_time[500];
   ///////////////////////////
   unsigned int indexPathInit;
   unsigned int indexPathCurr;
@@ -48,6 +50,7 @@ struct B18TrafficVehicle {
   unsigned int currentEdge;
   unsigned int nextEdge;
   unsigned int prevEdge;
+  unsigned int curEdge;
   float start_time_on_prev_edge;
   float end_time_on_prev_edge;
   float manual_v;

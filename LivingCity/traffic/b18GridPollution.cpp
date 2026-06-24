@@ -23,7 +23,7 @@ void B18GridPollution::initPollution(LCUrbanMain *_clientMain) {
 }//
 
 void B18GridPollution::addValueToGrid(float currTime,
-                                      std::vector<B18TrafficPerson> &trafficPersonVec,
+                                      std::vector<B18TrafficVehicle> &trafficPersonVec,
                                       std::vector<uint> &indexPathVec,
                                       RoadGraph *simRoadGraph,
                                       LCUrbanMain *_clientMain,

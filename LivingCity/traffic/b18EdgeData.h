@@ -35,6 +35,7 @@ struct B18EdgeData {
   float length;
   float maxSpeedMperSec;
   uint nextIntersMapped;
+  uint prevIntersMapped;
   float curr_cum_vel = 0;
   float curr_iter_num_cars = 0;
 };
@@ -43,8 +44,9 @@ struct B18IntersectionData {
   ushort state;
   ushort stateLine;
   ushort totalInOutEdges;
-  uint edge[24];// up to six arms intersection
+  uint edge[28];// up to six arms intersection
   float nextEvent;
+  bool isVertiport;
 };
 }
 
