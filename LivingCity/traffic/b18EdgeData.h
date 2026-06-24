@@ -28,11 +28,6 @@ const uint kMaskLaneMap = 0x007FFFFF;
 
 namespace LC {
 
-struct LNode {
-    int data;
-    LNode* next;
-};
-
 struct B18EdgeData {
   ushort numLines;
   uint prevInters;
@@ -42,16 +37,14 @@ struct B18EdgeData {
   uint nextIntersMapped;
   float curr_cum_vel = 0;
   float curr_iter_num_cars = 0;
-  LNode* waitingList;
 };
 
 struct B18IntersectionData {
   ushort state;
   ushort stateLine;
   ushort totalInOutEdges;
-  uint edge[28];// up to six arms intersection
-  float nextEvent; // This is for switching the traffic lights
-  float nextEventForVertiport;
+  uint edge[24];// up to six arms intersection
+  float nextEvent;
 };
 }
 
