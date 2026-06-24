@@ -70,32 +70,45 @@ inline void printMemoryUsage() {
   printf("GPU memory usage: used = %.0f, free = %.0f MB, total = %.0f MB\n", used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0, total_db / 1024.0 / 1024.0);
 }
 ////////////////////////////////
-// VARIABLES on device(s)
-// intermediate variable for each gpu?
+// Multi-GPU device state
+//
+// Each GPU holds a partition of the road network (edges, intersections,
+// lane map) plus the vehicles currently travelling in that partition.
+// Vehicles crossing partition boundaries are migrated via the ghost-zone
+// protocol (copy + remove buffers).
+
+__constant__ bool calculatePollution = true;
+__constant__ float cellSize = 1.0f;
+
+static constexpr int kVehicleMigrationBufferSize = 10000;
+static constexpr int kGhostLaneBufferSize = 100000;
+
+// Unified Managed Memory pointer for the full vehicle array (host-visible)
 LC::B18TrafficVehicle *trafficVehicleVec_d;
-// GPU i traffic person vector, i in (0, ..., ngpus)
+
 int ngpus;
-thrust::device_vector<LC::B18TrafficVehicle>** vehicles_vec = nullptr;
 int num_people_gpu;
+
+// Per-GPU device arrays (indexed by GPU ordinal)
+thrust::device_vector<LC::B18TrafficVehicle> **vehicles_vec = nullptr;
 LC::B18TrafficVehicle **trafficVehicleVec_d_gpus = nullptr;
 uint **indexPathVec_d = nullptr;
 uint indexPathVec_d_size;
 LC::B18EdgeData **edgesData_d = nullptr;
-uint *edgesData_d_size= nullptr;
-uint *laneMap_d_size= nullptr;
-uint * trafficLights_d_size= nullptr;
+uint *edgesData_d_size = nullptr;
+uint *laneMap_d_size = nullptr;
+uint *trafficLights_d_size = nullptr;
 uint accSpeedPerLinePerTimeInterval_d_size;
 uint numVehPerLinePerTimeInterval_d_size;
-size_t *size_gpu_part= nullptr;
-__constant__ bool calculatePollution = true;
-__constant__ float cellSize = 1.0f;
+size_t *size_gpu_part = nullptr;
 
-uchar **laneMap_d= nullptr;
+uchar **laneMap_d = nullptr;
 uchar **laneMap_d_gpus = nullptr;
-uint** laneIdMapper= nullptr;
-uint** laneIdMapper_d = nullptr;
-int** vertexIdToPar_d = nullptr;
-bool readFirstMapC=true;
+uint **laneIdMapper = nullptr;
+uint **laneIdMapper_d = nullptr;
+int **vertexIdToPar_d = nullptr;
+
+bool readFirstMapC = true;
 uint mapToReadShift;
 uint *mapToReadShift_n = nullptr;
 uint mapToWriteShift;
@@ -103,8 +116,8 @@ uint *mapToWriteShift_n = nullptr;
 uint halfLaneMap;
 uint *halfLaneMap_n = nullptr;
 float startTime;
-const int buffer_size=10000; 
-const int buffer_lane_size=100000; 
+
+// Ghost-zone migration buffers (device-side)
 uint **vehicleToCopy_d = nullptr;
 uint **copyCursor_d = nullptr;
 uint **vehicleToRemove_d = nullptr;
@@ -116,15 +129,12 @@ uint **ghostLaneCursor_d = nullptr;
 uint *ghostLaneCursor = nullptr;
 uint **laneToUpdateIndex_d = nullptr;
 uint **laneToUpdateValues_d = nullptr;
-LC::B18IntersectionData **intersections_d  = nullptr;
-uchar **trafficLights_d  = nullptr;
-// std::map<int,std::vector<LC::B18TrafficVehicle> >personToCopy;
-// std::map<int,std::vector<int> >personToRemove;//eg: 1->{1,3,5},2->{9},3->{} (gpuIndex->personList)
 
+LC::B18IntersectionData **intersections_d = nullptr;
+uchar **trafficLights_d = nullptr;
 
-
-float* accSpeedPerLinePerTimeInterval_d;
-float* numVehPerLinePerTimeInterval_d;
+float *accSpeedPerLinePerTimeInterval_d;
+float *numVehPerLinePerTimeInterval_d;
 void b18InitCUDA_n(
   int num_gpus,
   bool firstInitialization,
@@ -657,71 +667,90 @@ void b18updateStructuresCUDA_n(const std::vector<int>& vertexIdToPar,std::vector
     delete[] streams;
 }
 
-void b18FinishCUDA(void){
+void b18FinishCUDA(void) {
   cudaFree(trafficVehicleVec_d);
-  for(int i=0; i < ngpus; i++){
+  for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
-    cudaFree(indexPathVec_d);
-    cudaFree(edgesData_d);
-    cudaFree(laneMap_d);
-    cudaFree(intersections_d);
-    cudaFree(trafficLights_d);
-    cudaFree(accSpeedPerLinePerTimeInterval_d);
-    cudaFree(numVehPerLinePerTimeInterval_d);
+    cudaFree(indexPathVec_d[i]);
+    cudaFree(edgesData_d[i]);
+    cudaFree(laneMap_d[i]);
+    cudaFree(intersections_d[i]);
+    cudaFree(trafficLights_d[i]);
+    cudaFree(vertexIdToPar_d[i]);
+    cudaFree(vehicleToCopy_d[i]);
+    cudaFree(copyCursor_d[i]);
+    cudaFree(vehicleToRemove_d[i]);
+    cudaFree(removeCursor_d[i]);
+    cudaFree(ghostLaneBuffer_d[i]);
+    cudaFree(ghostLaneCursor_d[i]);
+    cudaFree(laneToUpdateIndex_d[i]);
+    cudaFree(laneToUpdateValues_d[i]);
+    cudaFree(laneIdMapper_d[i]);
+    delete vehicles_vec[i];
+    delete[] trafficVehicleVec_d_gpus[i];
+    delete[] laneIdMapper[i];
   }
-}
-bool compareById(const LC::B18TrafficVehicle& a, const LC::B18TrafficVehicle& b) {
-    return a.id < b.id;
-}
+  cudaFree(accSpeedPerLinePerTimeInterval_d);
+  cudaFree(numVehPerLinePerTimeInterval_d);
 
-void sortTrafficPersonsById(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec) {
-    
+  delete[] indexPathVec_d;
+  delete[] edgesData_d;
+  delete[] edgesData_d_size;
+  delete[] laneMap_d;
+  delete[] laneMap_d_size;
+  delete[] laneMap_d_gpus;
+  delete[] trafficLights_d_size;
+  delete[] size_gpu_part;
+  delete[] laneIdMapper;
+  delete[] laneIdMapper_d;
+  delete[] vertexIdToPar_d;
+  delete[] mapToReadShift_n;
+  delete[] mapToWriteShift_n;
+  delete[] halfLaneMap_n;
+  delete[] vehicleToCopy_d;
+  delete[] copyCursor_d;
+  delete[] vehicleToRemove_d;
+  delete[] removeCursor_d;
+  delete[] copyCursor;
+  delete[] removeCursor;
+  delete[] ghostLaneBuffer_d;
+  delete[] ghostLaneCursor_d;
+  delete[] ghostLaneCursor;
+  delete[] laneToUpdateIndex_d;
+  delete[] laneToUpdateValues_d;
+  delete[] intersections_d;
+  delete[] trafficLights_d;
+  delete[] vehicles_vec;
+  delete[] trafficVehicleVec_d_gpus;
 }
-void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, std::vector<LC::B18EdgeData> &edgesData){
-  // copy back people
-  int vehicle_size=0;
-  for(int i=0; i < ngpus; i++){
-    cudaSetDevice(i);
-    vehicle_size+=vehicles_vec[i]->size();
+void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, std::vector<LC::B18EdgeData> &edgesData) {
+  // Gather vehicles from all GPU partitions back to host
+  int totalVehicles = 0;
+  for (int i = 0; i < ngpus; i++) {
+    totalVehicles += vehicles_vec[i]->size();
   }
-  trafficVehicleVec.resize(vehicle_size);
-  // std::cout<<"size of vehicles_vec: "<<vehicle_size<<std::endl;
-  int indexCursor=0;
-  for(int i=0; i < ngpus; i++){
+
+  trafficVehicleVec.resize(totalVehicles);
+  int cursor = 0;
+  for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
-    thrust::copy(vehicles_vec[i]->begin(), vehicles_vec[i]->end(), trafficVehicleVec.begin()+indexCursor);
-    indexCursor+=vehicles_vec[i]->size();
+    thrust::copy(vehicles_vec[i]->begin(), vehicles_vec[i]->end(),
+                 trafficVehicleVec.begin() + cursor);
+    cursor += vehicles_vec[i]->size();
   }
-  
-  // for(int i = 0; i < ngpus; i++){
-  //     for (int j = 0; j < size_gpu_part[i]/sizeof(LC::B18TrafficVehicle); j++) {
-  //     trafficVehicleVec_d[indexCursor++] = trafficVehicleVec_d_gpus[i][j];
-  //   }
-  // }
-  // trafficVehicleVec.clear();
-  // trafficVehicleVec.resize(indexCursor);
-  // // cudaMemcpy(trafficVehicleVec.data(),trafficVehicleVec_d,indexCursor*sizeof(LC::B18TrafficVehicle),cudaMemcpyDeviceToHost);//cudaMemcpyHostToDevice
-  // memcpy( trafficVehicleVec.data(),trafficVehicleVec_d, indexCursor*sizeof(LC::B18TrafficVehicle));
+
+  // Sort by ID then deduplicate ghost copies in O(n log n) using
+  // std::unique instead of the O(n^2) erase-in-loop pattern
   std::sort(trafficVehicleVec.begin(), trafficVehicleVec.end(),
-        [](const LC::B18TrafficVehicle& a, const LC::B18TrafficVehicle& b) {
-            return a.id < b.id;
-        }
-    );
+      [](const LC::B18TrafficVehicle &a, const LC::B18TrafficVehicle &b) {
+        return a.id < b.id;
+      });
 
-  // merge replicate
-    for (size_t i = 0; i < trafficVehicleVec.size(); ++i) {
-        if (i + 1 < trafficVehicleVec.size() && trafficVehicleVec[i].id == trafficVehicleVec[i + 1].id) {
-            if (trafficVehicleVec[i] == trafficVehicleVec[i + 1]) {
-                // If equal, then merge
-                trafficVehicleVec.erase(trafficVehicleVec.begin() + i + 1);
-                --i;
-            } else {
-                throw std::runtime_error("Error: Found different instances with the same id.");
-            }
-        }
-    }
-
-
+  auto newEnd = std::unique(trafficVehicleVec.begin(), trafficVehicleVec.end(),
+      [](const LC::B18TrafficVehicle &a, const LC::B18TrafficVehicle &b) {
+        return a.id == b.id;
+      });
+  trafficVehicleVec.erase(newEnd, trafficVehicleVec.end());
 }
 
 
@@ -2166,178 +2195,184 @@ void b18SimulateTrafficCUDA(float currentTime,
   int numBlocks,
   int threadsPerBlock) {
   intersectionBench.startMeasuring();
-  const uint numStepsTogether = 12; //change also in density (10 per hour)
-  // 1. CHANGE MAP: set map to use and clean the other
-  // cudaStream_t streams[ngpus];
-  for(int i = 0; i < ngpus; i++){
-    // cudaStreamCreate(&streams[i]);
+
+  // Phase 1: Double-buffer flip and lane map clear (all GPUs concurrently)
+  for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
-    if (readFirstMapC==true) {
-      mapToReadShift_n[i]=0;
-      mapToWriteShift_n[i]=halfLaneMap_n[i];
-      gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap_n[i]], -1, halfLaneMap_n[i]*sizeof(unsigned char)));//clean second half
-    } 
-    else {
-      mapToReadShift_n[i]=halfLaneMap_n[i];
-      mapToWriteShift_n[i]=0;
-      gpuErrchk(cudaMemset(&laneMap_d[i][0], -1, halfLaneMap_n[i]*sizeof(unsigned char)));//clean first half
+    if (readFirstMapC) {
+      mapToReadShift_n[i] = 0;
+      mapToWriteShift_n[i] = halfLaneMap_n[i];
+      gpuErrchk(cudaMemset(&laneMap_d[i][halfLaneMap_n[i]], 0xFF,
+                            halfLaneMap_n[i] * sizeof(unsigned char)));
+    } else {
+      mapToReadShift_n[i] = halfLaneMap_n[i];
+      mapToWriteShift_n[i] = 0;
+      gpuErrchk(cudaMemset(&laneMap_d[i][0], 0xFF,
+                            halfLaneMap_n[i] * sizeof(unsigned char)));
     }
   }
-  readFirstMapC=!readFirstMapC;//next iteration invert use
-//  cudaError_t error = cudaGetLastError();
-//         printf("CUDA error: %s\n", cudaGetErrorString(error));
-  // Simulate intersections.
-  for(int i = 0; i < ngpus; i++){
+  readFirstMapC = !readFirstMapC;
+
+  // Phase 2: Intersection signal update (all GPUs, no inter-GPU dependency)
+  for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
-    if(numIntersections_n[i]>0){
-      kernel_intersectionOneSimulation << < ceil(numIntersections_n[i] / 512.0f), 512 >> > (numIntersections_n[i], currentTime, intersections_d[i], trafficLights_d[i]);
+    if (numIntersections_n[i] > 0) {
+      kernel_intersectionOneSimulation<<<(numIntersections_n[i] + 511) / 512, 512>>>(
+          numIntersections_n[i], currentTime, intersections_d[i], trafficLights_d[i]);
       gpuErrchk(cudaPeekAtLastError());
     }
   }
   intersectionBench.stopMeasuring();
-  
-  peopleBench.startMeasuring();
-  // Simulate people.
-  // #pragma omp parallel for
-        // for(int i = 0; i < 2; i++) {
-  
-  //printf("Number of people per GPU : %i ", numPeople_gpu);
 
-  std::vector<std::vector<int>> ToCopy(ngpus);
-  std::vector<std::vector<int>> ToRemove(ngpus);
-  std::vector<std::vector<int>> ghostLaneBuffer(ngpus);
-  for(int i = 0; i < ngpus; i++){
+  peopleBench.startMeasuring();
+
+  // Phase 3: Traffic simulation kernel — each GPU processes its partition
+  for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
     int numPeople_gpu = vehicles_vec[i]->size();
-    LC::B18TrafficVehicle* vehicles_ptr = thrust::raw_pointer_cast((*vehicles_vec[i]).data());
-    if(numPeople_gpu>0){
-      kernel_trafficSimulation <<<  ceil(numPeople_gpu/ 384.0f), threadsPerBlock>> >
-      (i,numPeople_gpu, currentTime, mapToReadShift_n[i],
-      mapToWriteShift_n[i],vehicles_ptr, indexPathVec_d[i], indexPathVec_d_size,
-      edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i], laneIdMapper_d[i],
-      intersections_d[i], trafficLights_d[i], trafficLights_d_size[i], deltaTime, simParameters,
-      vertexIdToPar_d[i],vehicleToCopy_d[i],vehicleToRemove_d[i],copyCursor_d[i],removeCursor_d[i],ghostLaneBuffer_d[i],ghostLaneCursor_d[i]);
-    }
+    if (numPeople_gpu == 0) continue;
+    LC::B18TrafficVehicle *vehicles_ptr = thrust::raw_pointer_cast(vehicles_vec[i]->data());
+    kernel_trafficSimulation<<<(numPeople_gpu + threadsPerBlock - 1) / threadsPerBlock,
+                               threadsPerBlock>>>(
+        i, numPeople_gpu, currentTime, mapToReadShift_n[i], mapToWriteShift_n[i],
+        vehicles_ptr, indexPathVec_d[i], indexPathVec_d_size,
+        edgesData_d[i], edgesData_d_size[i], laneMap_d[i], laneMap_d_size[i],
+        laneIdMapper_d[i], intersections_d[i], trafficLights_d[i],
+        trafficLights_d_size[i], deltaTime, simParameters, vertexIdToPar_d[i],
+        vehicleToCopy_d[i], vehicleToRemove_d[i], copyCursor_d[i],
+        removeCursor_d[i], ghostLaneBuffer_d[i], ghostLaneCursor_d[i]);
     gpuErrchk(cudaPeekAtLastError());
-    }
-    // std::ofstream outFile("gpu_usage_sim_time.txt", std::ios::app);
-    
-    // auto realTime = std::chrono::system_clock::now();
-    // std::time_t t = std::chrono::system_clock::to_time_t(realTime);
-    // outFile <<currentTime<<","<< std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << std::endl;
-    // outFile.close();
-    for(int i = 0; i < ngpus; i++){
+  }
+
+  // Barrier: wait for all simulation kernels before reading back cursors
+  for (int i = 0; i < ngpus; i++) {
     cudaSetDevice(i);
     gpuErrchk(cudaDeviceSynchronize());
-    }
-    std::vector<int> currentLoc(ngpus,0);//current target copy beginning index of vehicles_vec
-    int commu_times=0;
-    int lane_update_size=0;
-    for(int i = 0; i < ngpus; i++){
-      cudaSetDevice(i);
-      currentLoc[i]=vehicles_vec[i]->size();
-      gpuErrchk(cudaMemcpy(&copyCursor[i], copyCursor_d[i], sizeof(int), cudaMemcpyDeviceToHost));
-      gpuErrchk(cudaMemcpy(&removeCursor[i], removeCursor_d[i], sizeof(int), cudaMemcpyDeviceToHost));
-      gpuErrchk(cudaMemcpy(&ghostLaneCursor[i], ghostLaneCursor_d[i], sizeof(int), cudaMemcpyDeviceToHost));
+  }
+
+  // Phase 4: Read back migration cursors and ghost-lane data from all GPUs
+  std::vector<std::vector<int>> ToCopy(ngpus);
+  std::vector<std::vector<int>> ToRemove(ngpus);
+  std::vector<std::vector<int>> ghostLaneBuf(ngpus);
+  std::vector<int> currentLoc(ngpus);
+  int totalMigrations = 0;
+  int totalLaneUpdates = 0;
+
+  for (int i = 0; i < ngpus; i++) {
+    cudaSetDevice(i);
+    currentLoc[i] = vehicles_vec[i]->size();
+    gpuErrchk(cudaMemcpy(&copyCursor[i], copyCursor_d[i], sizeof(uint), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(&removeCursor[i], removeCursor_d[i], sizeof(uint), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(&ghostLaneCursor[i], ghostLaneCursor_d[i], sizeof(uint), cudaMemcpyDeviceToHost));
+
+    if (copyCursor[i] > 0) {
       ToCopy[i].resize(copyCursor[i]);
+      gpuErrchk(cudaMemcpy(ToCopy[i].data(), vehicleToCopy_d[i],
+                            copyCursor[i] * sizeof(uint), cudaMemcpyDeviceToHost));
+    }
+    if (removeCursor[i] > 0) {
       ToRemove[i].resize(removeCursor[i]);
-      ghostLaneBuffer[i].resize(ghostLaneCursor[i]);
-      gpuErrchk(cudaMemcpy(ToCopy[i].data(), vehicleToCopy_d[i], copyCursor[i] * sizeof(int), cudaMemcpyDeviceToHost));
-      gpuErrchk(cudaMemcpy(ToRemove[i].data(), vehicleToRemove_d[i], removeCursor[i] * sizeof(int), cudaMemcpyDeviceToHost));
-      gpuErrchk(cudaMemcpy(ghostLaneBuffer[i].data(), ghostLaneBuffer_d[i], ghostLaneCursor[i]*sizeof(int), cudaMemcpyDeviceToHost));
-      if(copyCursor[i]>0||removeCursor[i]>0){
-        commu_times+=copyCursor[i]/2+removeCursor[i];
-      }
-      lane_update_size+=ghostLaneCursor[i]/4;
+      gpuErrchk(cudaMemcpy(ToRemove[i].data(), vehicleToRemove_d[i],
+                            removeCursor[i] * sizeof(uint), cudaMemcpyDeviceToHost));
     }
-  
-    if(lane_update_size>0){
-      std::vector<std::vector<int>> laneToUpdateIndex(ngpus);
-    std::vector<std::vector<int>> laneToUpdateValues(ngpus);
-    for(int i = 0;i < ngpus;i++){
-      for(int j = 0; j < ghostLaneCursor[i]; j+=4){
-        if(i==j)continue;
-      // target position, value
-      int targetGpuIndex=ghostLaneBuffer[i][j];
-      int targetPosition=ghostLaneBuffer[i][j+1]+laneIdMapper[targetGpuIndex][ghostLaneBuffer[i][j+2]]*kMaxMapWidthM+mapToWriteShift_n[targetGpuIndex];
-      laneToUpdateIndex[targetGpuIndex].push_back(targetPosition);
-      laneToUpdateValues[targetGpuIndex].push_back(ghostLaneBuffer[i][j+3]);
-      }
+    if (ghostLaneCursor[i] > 0) {
+      ghostLaneBuf[i].resize(ghostLaneCursor[i]);
+      gpuErrchk(cudaMemcpy(ghostLaneBuf[i].data(), ghostLaneBuffer_d[i],
+                            ghostLaneCursor[i] * sizeof(uint), cudaMemcpyDeviceToHost));
     }
-    for(int i = 0;i < ngpus;i++){
-      uint updateSize=laneToUpdateIndex[i].size();
-      if(updateSize>0){
-        cudaSetDevice(i);
-        gpuErrchk(cudaMemcpy(laneToUpdateIndex_d[i], laneToUpdateIndex[i].data(), updateSize*sizeof(int), cudaMemcpyHostToDevice));
-        gpuErrchk(cudaMemcpy(laneToUpdateValues_d[i], laneToUpdateValues[i].data(), updateSize*sizeof(int), cudaMemcpyHostToDevice));
-        int blockNum = (laneToUpdateIndex[i].size()+ threadsPerBlock - 1) / threadsPerBlock;
-        updateLaneMap<<<blockNum, threadsPerBlock>>>(laneMap_d[i], updateSize, laneMap_d_size[i],laneToUpdateIndex_d[i],laneToUpdateValues_d[i]);
-        gpuErrchk(cudaPeekAtLastError());
-      }
-    }
+    totalMigrations += copyCursor[i] / 2 + removeCursor[i];
+    totalLaneUpdates += ghostLaneCursor[i] / 4;
   }
-  if(commu_times>0){
-      std::ofstream outFile("commu_times.txt", std::ios::app);
-      outFile << commu_times << "\n";
-      outFile.close();
-    // select vehicles to be copied
-    std::vector<std::vector<int>> indicesToCopy(ngpus*ngpus);
-    std::vector<int> targetLoc(ngpus*ngpus, -1);// target copy beginning index of vehicles_vec, i-j -> i*ngpus+j
-    
-    // for(int i = 0; i < ngpus; i++){
-    // cudaSetDevice(i);
-    // gpuErrchk(cudaDeviceSynchronize());
-    // }
-    for(int i = 0;i < ngpus;i++){
-      for(int j = 0; j < ngpus; j++){
-        if(i==j)continue;
-        // copy from gpu[i] to gpu[j]
-        targetLoc[i*ngpus+j]=currentLoc[j];   
-        for(int k=0;k<copyCursor[i];k+=2){
-            if(ToCopy[i][k+1] == j){
-              indicesToCopy[i*ngpus+j].push_back(ToCopy[i][k]);
-            }
-        }
-        currentLoc[j] += indicesToCopy[i*ngpus+j].size();       
+
+  // Phase 5: Apply ghost-zone lane updates across partitions
+  if (totalLaneUpdates > 0) {
+    std::vector<std::vector<int>> laneUpdateIdx(ngpus);
+    std::vector<std::vector<int>> laneUpdateVal(ngpus);
+
+    for (int i = 0; i < ngpus; i++) {
+      for (int j = 0; j < (int)ghostLaneCursor[i]; j += 4) {
+        int targetGpu = ghostLaneBuf[i][j];
+        int laneOffset = ghostLaneBuf[i][j + 1];
+        uint globalEdge = ghostLaneBuf[i][j + 2];
+        int value = ghostLaneBuf[i][j + 3];
+        int targetPos = laneOffset + laneIdMapper[targetGpu][globalEdge] * kMaxMapWidthM
+                        + mapToWriteShift_n[targetGpu];
+        laneUpdateIdx[targetGpu].push_back(targetPos);
+        laneUpdateVal[targetGpu].push_back(value);
       }
     }
-    for(int i = 0;i < ngpus;i++){
+
+    for (int i = 0; i < ngpus; i++) {
+      uint updateSize = laneUpdateIdx[i].size();
+      if (updateSize == 0) continue;
       cudaSetDevice(i);
-      vehicles_vec[i]->resize(currentLoc[i]);   
+      gpuErrchk(cudaMemcpy(laneToUpdateIndex_d[i], laneUpdateIdx[i].data(),
+                            updateSize * sizeof(uint), cudaMemcpyHostToDevice));
+      gpuErrchk(cudaMemcpy(laneToUpdateValues_d[i], laneUpdateVal[i].data(),
+                            updateSize * sizeof(uint), cudaMemcpyHostToDevice));
+      updateLaneMap<<<(updateSize + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock>>>(
+          laneMap_d[i], updateSize, laneMap_d_size[i],
+          laneToUpdateIndex_d[i], laneToUpdateValues_d[i]);
+      gpuErrchk(cudaPeekAtLastError());
     }
-    std::vector<std::thread> copy_threads;
-    for (int i = 0; i < ngpus; ++i)
-    for (int j = 0; j < ngpus; ++j) {
-      if(i!=j && targetLoc[i*ngpus+j]!=-1&&indicesToCopy[i*ngpus+j].size()>0)
-        copy_threads.emplace_back(copy_task, i,j,std::ref(indicesToCopy[i*ngpus+j]),targetLoc[i*ngpus+j]); 
-    }
-    for (auto& t : copy_threads) {
-        t.join();
-    }
-     std::vector<std::thread> threads;
-    for (int i = 0; i < ngpus; ++i) {
-      if(ToRemove[i].size()>0)
-        threads.emplace_back(remove_task, i,std::ref(ToRemove[i])); 
-    }
-    for (auto& t : threads) {
-        t.join();
-    }
-    
   }
 
+  // Phase 6: Vehicle migration across GPU partitions
+  if (totalMigrations > 0) {
+    // Build per-pair copy lists: indicesToCopy[src * ngpus + dst]
+    std::vector<std::vector<int>> indicesToCopy(ngpus * ngpus);
+    std::vector<int> targetLoc(ngpus * ngpus, -1);
 
-  for(int i = 0; i < ngpus; i++){
-    cudaSetDevice(i); 
-    gpuErrchk(cudaMemset(copyCursor_d[i], 0, sizeof(int)));
-    gpuErrchk(cudaMemset(removeCursor_d[i], 0, sizeof(int)));
-    gpuErrchk(cudaMemset(ghostLaneCursor_d[i], 0, sizeof(int)));
+    for (int i = 0; i < ngpus; i++) {
+      for (int j = 0; j < ngpus; j++) {
+        if (i == j) continue;
+        targetLoc[i * ngpus + j] = currentLoc[j];
+        for (int k = 0; k < (int)copyCursor[i]; k += 2) {
+          if (ToCopy[i][k + 1] == j) {
+            indicesToCopy[i * ngpus + j].push_back(ToCopy[i][k]);
+          }
+        }
+        currentLoc[j] += indicesToCopy[i * ngpus + j].size();
+      }
+    }
+
+    // Resize destination vectors to accommodate incoming vehicles
+    for (int i = 0; i < ngpus; i++) {
+      cudaSetDevice(i);
+      vehicles_vec[i]->resize(currentLoc[i]);
+    }
+
+    // Perform cross-GPU copies in parallel (one thread per src-dst pair)
+    std::vector<std::thread> copyThreads;
+    for (int i = 0; i < ngpus; i++) {
+      for (int j = 0; j < ngpus; j++) {
+        if (i == j) continue;
+        if (indicesToCopy[i * ngpus + j].empty()) continue;
+        copyThreads.emplace_back(copy_task, i, j,
+            std::ref(indicesToCopy[i * ngpus + j]), targetLoc[i * ngpus + j]);
+      }
+    }
+    for (auto &t : copyThreads) t.join();
+
+    // Remove migrated-out vehicles from their source GPUs
+    std::vector<std::thread> removeThreads;
+    for (int i = 0; i < ngpus; i++) {
+      if (!ToRemove[i].empty()) {
+        removeThreads.emplace_back(remove_task, i, std::ref(ToRemove[i]));
+      }
+    }
+    for (auto &t : removeThreads) t.join();
   }
 
-     
+  // Phase 7: Reset device-side cursors for next time step
+  for (int i = 0; i < ngpus; i++) {
+    cudaSetDevice(i);
+    gpuErrchk(cudaMemset(copyCursor_d[i], 0, sizeof(uint)));
+    gpuErrchk(cudaMemset(removeCursor_d[i], 0, sizeof(uint)));
+    gpuErrchk(cudaMemset(ghostLaneCursor_d[i], 0, sizeof(uint)));
+  }
+
   peopleBench.stopMeasuring();
-
-        // }
-
 }
 
 
