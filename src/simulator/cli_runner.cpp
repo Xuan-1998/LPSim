@@ -1,5 +1,7 @@
 #pragma once
 #include <QString>
+#include <QDir>
+#include <QFile>
 #include <string>
 
 #include "cli_runner.h"
@@ -24,8 +26,15 @@ namespace LC {
 using namespace std::chrono;
 
 void B18CommandLineVersion::runB18Simulation() {
-  QSettings settings(QCoreApplication::applicationDirPath() + "/command_line_options.ini",
-      QSettings::IniFormat);
+  // Look for config in CWD/data/ first, then next to binary (legacy)
+  QString configPath = QDir::currentPath() + "/data/command_line_options.ini";
+  if (!QFile::exists(configPath)) {
+    configPath = QCoreApplication::applicationDirPath() + "/command_line_options.ini";
+  }
+  if (!QFile::exists(configPath)) {
+    configPath = QDir::currentPath() + "/command_line_options.ini";
+  }
+  QSettings settings(configPath, QSettings::IniFormat);
   const int ngpus = settings.value("NUM_GPUS", 1).toInt();
   bool useCPU = settings.value("USE_CPU", false).toBool();
   bool useJohnsonRouting = settings.value("USE_JOHNSON_ROUTING", false).toBool();
