@@ -90,7 +90,7 @@ Edit `LivingCity/command_line_options.ini`:
 
 ```ini
 [General]
-NETWORK_PATH=berkeley_2018/new_full_network/
+NETWORK_PATH=data/networks/sf_bay_area/
 USE_SP_ROUTING=true
 USE_PREV_PATHS=true
 NUM_PASSES=1
@@ -114,7 +114,7 @@ END_HR=12
 
 ## Data
 
-The repo ships network files (`nodes.csv`, `edges.csv`) for several Bay Area subnetworks under `LivingCity/berkeley_2018/`. The default is `new_full_network/` (full nine-county region).
+The repo ships network files (`nodes.csv`, `edges.csv`) for several Bay Area subnetworks under `LivingCity/data/networks/`. The default is `sf_bay_area/` (full nine-county SF Bay Area region).
 
 Demand files (OD matrices) are not redistributable here. Contact [Pavan Yedavalli](mailto:pavyedav@gmail.com) for sample or real demand files.
 
