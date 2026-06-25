@@ -10,8 +10,6 @@
 #include <string>
 // using namespace std;  // Commented to avoid conflicts with Boost Geometry
 
-#include "Geometry/client_geometry.h"
-#include "bTraffic/bTrafficIntersection.h"
 #include "lpsim/global.h"
 #include "network_loader.h"
 

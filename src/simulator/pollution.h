@@ -28,14 +28,14 @@ class B18GridPollution {
   float gridSize;
   int gridNumSide;
 
-  void initPollution(LCUrbanMain *clientMain);
+  void initPollution(void *clientMain);
   int initialized;
 
   void addValueToGrid(float currTime,
                       std::vector<B18TrafficVehicle> &trafficPersonVec,
                       std::vector<uint> &indexPathVec,
                       RoadGraph *simRoadGraph,
-                      LCUrbanMain *clientMain,
+                      void *clientMain,
                       std::map<uint, RoadGraph::roadGraphEdgeDesc_BI> &laneMapNumToEdgeDesc);
   void renderPollution(int valueToRender);
 
@@ -43,10 +43,10 @@ class B18GridPollution {
   std::vector<float> lastPersonValue;
   std::vector<float> timeStamp;
   float maxValue;
-  LCUrbanMain *clientMain;
+  void *clientMain;
 
   void saveToFile(QString fileName);
-  void loadSimSave(QString fileName, LCUrbanMain *clientMain);
+  // void loadSimSave(QString fileName, void *clientMain); // GUI-only
 };
 }
 

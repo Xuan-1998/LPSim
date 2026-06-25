@@ -5,7 +5,6 @@
 
 #ifdef B18_RUN_WITH_GUI
 #include <QApplication>
-#include "LC_UrbanMain.h"
 #else
 #include "qcoreapplication.h"
 #endif

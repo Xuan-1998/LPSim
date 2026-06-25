@@ -37,7 +37,7 @@ include_directories(
 # Source files
 file(GLOB SIMULATOR_SRC src/simulator/*.cpp)
 file(GLOB SIMULATOR_CUDA src/simulator/*.cu)
-file(GLOB ROUTING_SRC src/routing/*.cpp src/routing/sp/*.cc)
+file(GLOB ROUTING_SRC src/routing/*.cpp src/routing/sp/graph.cc)
 file(GLOB IO_SRC src/io/*.cpp src/io/RoadGraph/*.cpp)
 file(GLOB MISC_SRC src/misctools/*.cpp)
 

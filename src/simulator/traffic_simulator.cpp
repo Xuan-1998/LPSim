@@ -9,7 +9,6 @@
 #include "lpsim/global.h"
 #ifdef B18_RUN_WITH_GUI
 #include "../LC_GLWidget3D.h"
-#include "../LC_UrbanMain.h"
 #endif
 #include <thread>
 
