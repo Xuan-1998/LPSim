@@ -270,10 +270,10 @@ const bool gaussianDistribution = false; // true = file; false = gaussian.
 float sampleFileDistribution() {
   // Initialized.
   if (fileDistributionInitialized == false) {
-    QFile inputFile("berkeley_2018/HtoW_trips.csv");
+    QFile inputFile("data/networks/sf_bay_area/HtoW_trips.csv");
 
     if (!inputFile.open(QIODevice::ReadOnly)) {
-      printf("for fileDistributionInitialized must exist file berkeley_2018/HtoW_trips.csv\n");
+      printf("for fileDistributionInitialized must exist file data/networks/sf_bay_area/HtoW_trips.csv\n");
       exit(-1);
     }
 
