@@ -6,7 +6,7 @@
 #pragma once
 
 #include "../RoadGraph/roadGraph.h"
-#include "b18TrafficPerson.h"
+#include "lpsim/vehicle.h"
 
 namespace LC {
 

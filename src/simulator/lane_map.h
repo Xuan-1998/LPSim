@@ -12,9 +12,9 @@
 #define LC_B18_TRAFFIC_LANEMAP_H
 
 
-#include "../misctools/misctools.h"
+#include "misctools/misctools.h"
 #include "RoadGraph/roadGraph.h"
-#include "b18EdgeData.h"
+#include "lpsim/edge_data.h"
 #include "traffic/sp/graph.h"
 #include "traffic/sp/config.h"
 

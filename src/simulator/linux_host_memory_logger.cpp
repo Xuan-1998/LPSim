@@ -1,4 +1,4 @@
-#include "linux_host_memory_logger.h"
+#include "lpsim/linux_host_memory_logger.h"
 
 #include <stdexcept>
 #include <cstdlib>

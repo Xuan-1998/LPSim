@@ -11,9 +11,9 @@
 #ifndef LC_B18_TRAFFIC_DIKKSTRA_H
 #define LC_B18_TRAFFIC_DIKKSTRA_H
 
-#include "../misctools/misctools.h"
+#include "misctools/misctools.h"
 
-#include "b18TrafficPerson.h"
+#include "lpsim/vehicle.h"
 #include "RoadGraph/roadGraph.h"
 
 namespace LC {

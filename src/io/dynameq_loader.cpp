@@ -31,8 +31,8 @@
 #include "LC_UrbanMain.h"
 #include "LC_GLWidget3D.h"
 
-#include "roadGraphDynameqLoader.h"
-#include "global.h"
+#include "dynameq_loader.h"
+#include "lpsim/global.h"
 #include "bTraffic/bTrafficIntersection.h"
 
 

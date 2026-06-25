@@ -1,4 +1,4 @@
-#include "b18TrafficDijkstra.h"
+#include "dijkstra.h"
 
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 

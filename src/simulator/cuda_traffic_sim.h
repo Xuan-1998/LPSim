@@ -9,8 +9,8 @@
 #ifndef B18_TRAFFIC_SIMULATION_H
 #define B18_TRAFFIC_SIMULATION_H
 
-#include "b18TrafficPerson.h"
-#include "b18EdgeData.h"
+#include "lpsim/vehicle.h"
+#include "lpsim/edge_data.h"
 #include <vector>
 
 

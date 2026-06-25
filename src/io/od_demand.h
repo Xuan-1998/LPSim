@@ -11,19 +11,19 @@
 #ifndef LC_B18_PM_TRAFFIC_PERSON_H
 #define LC_B18_PM_TRAFFIC_PERSON_H
 
-#include "../misctools/misctools.h"
+#include "misctools/misctools.h"
 
 #include <QtGlobal>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-#include "b18TrafficPerson.h"
+#include "lpsim/vehicle.h"
 #include "RoadGraph/roadGraph.h"
 #include "sp/graph.h"
 
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #ifdef B18_RUN_WITH_GUI
-#include "../VBOPeopleJobInfoLayer.h"
+
 #endif
 #include <random>
 

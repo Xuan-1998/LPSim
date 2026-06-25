@@ -4,11 +4,11 @@
 *		@author igarciad
 ************************************************************************************************/
 
-#include "b18TestSimpleRoadAndOD.h"
+#include "test_simple_road.h"
 
 #include "../Geometry/client_geometry.h"
 #include "../LC_GLWidget3D.h"
-#include "b18TrafficOD.h"
+#include "od_demand.h"
 #include "../global.h"
 
 

@@ -1,7 +1,7 @@
 
 
 #pragma once
-#include "b18TrafficSimulator.h"
+#include "traffic_simulator.h"
 #include <assert.h>
 
 #include "src/benchmarker.h"
@@ -13,13 +13,13 @@
 #endif
 #include <thread>
 
-#include "b18TrafficDijkstra.h"
-#include "b18TrafficJohnson.h"
-#include "b18TrafficSP.h"
-#include "b18CUDA_trafficSimulator.h"
-#include "roadGraphB2018Loader.h"
+#include "dijkstra.h"
+#include "johnson.h"
+#include "shortest_path.h"
+#include "cuda_traffic_sim.h"
+#include "network_loader.h"
 #include <thread>
-#include "accessibility.h"
+#include "lpsim/accessibility.h"
 #include <math.h>
 
 

@@ -12,7 +12,7 @@
 #endif
 
 // Include accessibility.h (which will define the Pandana macros)
-#include "accessibility.h"
+#include "lpsim/accessibility.h"
 
 // Now undefine them again to allow proper OpenMP header inclusion
 #ifdef omp_get_thread_num

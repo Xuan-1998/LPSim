@@ -1,4 +1,4 @@
-#include "b18GridPollution.h"
+#include "pollution.h"
 
 #include "../global.h"
 #ifdef B18_RUN_WITH_GUI

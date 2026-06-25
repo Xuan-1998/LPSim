@@ -19,14 +19,14 @@
 #include <vector>
 
 #include "src/benchmarker.h"
-#include "src/linux_host_memory_logger.h"
-#include "b18TrafficPerson.h"
+#include "lpsim/linux_host_memory_logger.h"
+#include "lpsim/vehicle.h"
 #include "../RoadGraph/roadGraph.h"
 #include "sp/graph.h"
 //#include "sp/external/csv.h"
 #include "omp.h"
 
-#include "sp/config.h"
+#include "config.h"
 #include "sp/mpi_wrapper.h"
 
 namespace LC {

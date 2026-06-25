@@ -40,7 +40,7 @@
 #endif//BOOST_TYPEOF_SILENT
 
 #include "common.h"
-#include "global.h"
+#include "lpsim/global.h"
 
 #include "polygon_3D.h"
 #include "bounding_box.h"

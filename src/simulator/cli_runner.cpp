@@ -2,21 +2,21 @@
 #include <QString>
 #include <string>
 
-#include "b18CommandLineVersion.h"
+#include "cli_runner.h"
 
 #include "src/benchmarker.h"
 
-#include "roadGraphB2018Loader.h"
+#include "network_loader.h"
 #include "qcoreapplication.h"
 
 #include "sp/graph.h"
 #include "traffic/b18TrafficSP.h"
 #include "../roadGraphB2018Loader.h"
-#include "accessibility.h"
+#include "lpsim/accessibility.h"
 #include <stdexcept>
 
 #ifdef B18_RUN_WITH_GUI
-#include "b18TestSimpleRoadAndOD.h"
+#include "test_simple_road.h"
 #endif
 
 namespace LC {

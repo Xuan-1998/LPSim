@@ -7,18 +7,18 @@
 #define LC_B18_TRAFFIC_SIMULATOR_H
 // #define ngpus 2
 // const int ngpus = 2;
-#include "../misctools/misctools.h"
+#include "misctools/misctools.h"
 
-#include "b18TrafficOD.h"
-#include "b18TrafficLaneMap.h"
+#include "od_demand.h"
+#include "lane_map.h"
 
 #ifdef B18_RUN_WITH_GUI
-#include "../VBOPeopleJobInfoLayer.h"
-#include "../VBORenderManager.h"
+
+
 #endif
 
-#include "b18GridPollution.h"
-#include "accessibility.h"
+#include "pollution.h"
+#include "lpsim/accessibility.h"
 
 
 namespace LC {

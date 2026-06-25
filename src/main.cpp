@@ -1,7 +1,7 @@
 #define BOOST_TT_HAS_OPERATOR_HPP_INCLUDED
 
-#include "benchmarker.h"
-#include "linux_host_memory_logger.h"
+#include "lpsim/benchmarker.h"
+#include "lpsim/linux_host_memory_logger.h"
 
 #ifdef B18_RUN_WITH_GUI
 #include <QApplication>

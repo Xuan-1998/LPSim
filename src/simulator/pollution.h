@@ -10,7 +10,7 @@
 #ifndef LC_B18_GRID_POLLUTION_H
 #define LC_B18_GRID_POLLUTION_H
 
-#include "b18TrafficPerson.h"
+#include "lpsim/vehicle.h"
 #include "RoadGraph/roadGraph.h"
 
 
