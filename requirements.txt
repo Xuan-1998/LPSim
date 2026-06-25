@@ -6,10 +6,6 @@ psutil==5.7.2
 pytest==9.0.3
 pytest-cov==2.10.1
 pytest-remotedata==0.3.2
-scipy==1.10.0
-scipy==1.10.0
 seaborn==0.11.0
 termcolor==1.1.0
-tqdm==4.48.2
-xlwt==1.3.0
-xlwt==1.3.0
+tqdm>=4.66.3
