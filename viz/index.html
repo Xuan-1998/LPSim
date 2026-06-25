@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LPSim: City-Scale Traffic Visualizer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        #container { width: 100vw; height: 100vh; position: relative; }
+        #info-panel {
+            position: absolute; top: 10px; left: 10px; z-index: 1;
+            background: rgba(0,0,0,0.8); color: #fff; padding: 15px;
+            border-radius: 8px; max-width: 300px; font-size: 13px;
+        }
+        #info-panel h2 { margin: 0 0 8px 0; font-size: 16px; color: #4fc3f7; }
+        #info-panel .stat { margin: 4px 0; }
+        #info-panel .stat span { color: #81c784; font-weight: bold; }
+        #legend { position: absolute; bottom: 20px; left: 10px; z-index: 1;
+            background: rgba(0,0,0,0.8); color: #fff; padding: 10px;
+            border-radius: 6px; font-size: 11px; }
+        .legend-item { display: flex; align-items: center; margin: 3px 0; }
+        .legend-color { width: 30px; height: 4px; margin-right: 8px; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="info-panel">
+        <h2>LPSim Traffic Visualizer</h2>
+        <div class="stat">Network: <span id="stat-edges">loading...</span> edges</div>
+        <div class="stat">Speed range: <span id="stat-speed">0-70</span> mph</div>
+        <div class="stat">Status: <span id="stat-status">connecting...</span></div>
+    </div>
+    <div id="legend">
+        <div class="legend-item"><div class="legend-color" style="background: #d32f2f"></div>Slow (0-15 mph)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #ff9800"></div>Medium (15-35 mph)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #4caf50"></div>Fast (35-55 mph)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #2196f3"></div>Highway (55+ mph)</div>
+    </div>
+
+    <script>
+    const {DeckGL, GeoJsonLayer, ArcLayer} = deck;
+
+    function speedToColor(speed_mph) {
+        if (speed_mph < 15) return [211, 47, 47, 200];
+        if (speed_mph < 35) return [255, 152, 0, 180];
+        if (speed_mph < 55) return [76, 175, 80, 160];
+        return [33, 150, 243, 200];
+    }
+
+    function speedToWidth(speed_mph, lanes) {
+        return Math.max(1, lanes * 0.8);
+    }
+
+    async function init() {
+        const response = await fetch('/api/network');
+        const networkData = await response.json();
+
+        document.getElementById('stat-edges').textContent = networkData.features.length.toLocaleString();
+        document.getElementById('stat-status').textContent = 'ready';
+
+        // Compute center from data
+        let sumLon = 0, sumLat = 0, count = 0;
+        for (const f of networkData.features.slice(0, 1000)) {
+            const coords = f.geometry.coordinates[0];
+            sumLon += coords[0];
+            sumLat += coords[1];
+            count++;
+        }
+
+        const deckgl = new DeckGL({
+            container: 'container',
+            mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+            initialViewState: {
+                longitude: sumLon / count,
+                latitude: sumLat / count,
+                zoom: 10,
+                pitch: 45,
+                bearing: -10
+            },
+            controller: true,
+            layers: [
+                new GeoJsonLayer({
+                    id: 'network',
+                    data: networkData,
+                    lineWidthScale: 3,
+                    lineWidthMinPixels: 1,
+                    getLineColor: f => speedToColor(f.properties.speed_mph),
+                    getLineWidth: f => speedToWidth(f.properties.speed_mph, f.properties.lanes),
+                    pickable: true,
+                    autoHighlight: true,
+                    highlightColor: [255, 255, 0, 128],
+                })
+            ],
+            getTooltip: ({object}) => object && {
+                html: `<b>Edge ${object.properties.id}</b><br/>
+                       Speed limit: ${object.properties.speed_mph} mph<br/>
+                       Lanes: ${object.properties.lanes}<br/>
+                       Length: ${object.properties.length.toFixed(0)}m`,
+                style: {
+                    backgroundColor: '#1a1a2e',
+                    color: '#fff',
+                    fontSize: '12px',
+                    padding: '8px',
+                    borderRadius: '4px'
+                }
+            }
+        });
+    }
+
+    init();
+    </script>
+</body>
+</html>
