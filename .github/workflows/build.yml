@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+    branches: [multi-gpu-multimode]
+  pull_request:
+    branches: [multi-gpu-multimode]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: yibo123/lpsim:cuda12.4
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          rm -rf .qmake.stash Makefile LivingCity/obj
+          mkdir -p LivingCity/obj
+          qmake LivingCity/LivingCity.pro
+
+      - name: Build
+        run: make -j$(nproc)
+
+      - name: Verify binary
+        run: |
+          test -f LivingCity/LivingCity
+          file LivingCity/LivingCity | grep -q ELF
+          echo "Build successful: $(ls -lh LivingCity/LivingCity | awk '{print $5}')"
