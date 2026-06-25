@@ -1,7 +1,0 @@
-<RCC>
-  <qresource prefix="newPrefix">
-    <file>data/icons/labels.png</file>
-    <file>data/icons/2D.png</file>
-    <file>data/icons/3D.png</file>
-  </qresource>
-</RCC>
