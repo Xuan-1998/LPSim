@@ -127,13 +127,39 @@ std::vector<std::array<abm::graph::vertex_t, 2>> B18TrafficSP::read_od_pairs_fro
       }
     }
   } else {
-    // Legacy format — all trips are within the simulation window
+    // Legacy format — origin/destination are osmids, remap to sequential indices.
+    std::unordered_map<abm::graph::vertex_t, abm::graph::vertex_t> osmid_to_idx;
+    std::string dir = filename.substr(0, filename.find_last_of('/') + 1);
+    std::ifstream nodesFile(dir + "nodes.csv");
+    if (nodesFile.is_open()) {
+      std::string line;
+      std::getline(nodesFile, line); // skip header
+      abm::graph::vertex_t idx = 0;
+      while (std::getline(nodesFile, line)) {
+        if (line.empty()) continue;
+        abm::graph::vertex_t osmid = std::stoull(line.substr(0, line.find(',')));
+        osmid_to_idx[osmid] = idx++;
+      }
+      nodesFile.close();
+    }
+
     csvio::CSVReader<4> in(filename);
     in.read_header(csvio::ignore_extra_column, "SAMPN", "PERNO", "origin", "destination");
     int sampn, perno;
-    while (in.read_row(sampn, perno, v1, v2)) {
+    abm::graph::vertex_t raw_v1, raw_v2;
+    int skipped = 0;
+    while (in.read_row(sampn, perno, raw_v1, raw_v2)) {
+      v1 = osmid_to_idx.count(raw_v1) ? osmid_to_idx[raw_v1] : raw_v1;
+      v2 = osmid_to_idx.count(raw_v2) ? osmid_to_idx[raw_v2] : raw_v2;
+      if (!osmid_to_idx.empty() && (v1 >= osmid_to_idx.size() || v2 >= osmid_to_idx.size())) {
+        skipped++;
+        continue;
+      }
       od_pairs.push_back({v1, v2});
       RoadGraphB2018::demandB2018.push_back(DemandB2018(1, v1, v2));
+    }
+    if (skipped > 0) {
+      std::cout << "Skipped " << skipped << " OD pairs with unmappable osmid vertices." << std::endl;
     }
   }
 
