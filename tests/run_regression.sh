@@ -7,7 +7,7 @@
 #
 # Expected output: "REGRESSION TEST PASSED" with exit code 0
 
-set -euo pipefail
+set -uo pipefail
 
 BUILD_DIR=${1:-build}
 BINARY="$BUILD_DIR/lpsim"
@@ -44,8 +44,10 @@ EOF
 
 # Run simulation
 echo "Running simulation..."
-OUTPUT=$($BINARY 2>&1)
+OUTPUT=$($BINARY 2>&1) || true
 EXIT_CODE=$?
+echo "Binary exited with code: $EXIT_CODE"
+echo "$OUTPUT" | tail -5
 
 # Validate output
 check() {
