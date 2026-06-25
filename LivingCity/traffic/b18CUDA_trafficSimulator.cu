@@ -766,12 +766,11 @@ void b18GetDataCUDA(std::vector<LC::B18TrafficVehicle>& trafficVehicleVec, std::
 }
 
 
- // Read lane map through the read-only data cache (__ldg) to reduce
- // global memory traffic. The lane map read-buffer is never written during
- // the kernel (writes go to the other half via double-buffering), so using
- // the texture/LDG path is safe and avoids polluting L1 with write traffic.
+ // Inline helper for lane map reads. We rely on __restrict__ qualifiers on
+ // the kernel parameters to hint the compiler that read/write regions don't
+ // alias, enabling hardware-level caching optimizations.
  __device__ __forceinline__ uchar ldg_lane(const uchar* laneMap, uint pos) {
-   return __ldg(&laneMap[pos]);
+   return laneMap[pos];
  }
 
  __device__ void calculateGapsLC(
