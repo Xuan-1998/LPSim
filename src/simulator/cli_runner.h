@@ -9,8 +9,7 @@
 
 #pragma once
 
-#include "traffic/b18TrafficSimulator.h"
-#include "Geometry/client_geometry.h"
+#include "traffic_simulator.h"
 
 namespace LC {
 

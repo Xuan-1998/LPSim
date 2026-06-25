@@ -23,19 +23,23 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/lpsim
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/simulator
+    ${CMAKE_SOURCE_DIR}/src/routing
     ${CMAKE_SOURCE_DIR}/src/routing/sp
     ${CMAKE_SOURCE_DIR}/src/io
     ${CMAKE_SOURCE_DIR}/src/io/RoadGraph
     ${CMAKE_SOURCE_DIR}/src/misctools
     ${PANDANA_INCLUDE}
+    /usr/local/boost_1_59_0
+    /usr/include
 )
 
 # Source files
 file(GLOB SIMULATOR_SRC src/simulator/*.cpp)
+file(GLOB SIMULATOR_CUDA src/simulator/*.cu)
 file(GLOB ROUTING_SRC src/routing/*.cpp src/routing/sp/*.cc)
 file(GLOB IO_SRC src/io/*.cpp src/io/RoadGraph/*.cpp)
 file(GLOB MISC_SRC src/misctools/*.cpp)
-set(CUDA_SRC src/simulator/b18CUDA_trafficSimulator.cu)
 
 # Main executable
 add_executable(lpsim
@@ -45,7 +49,7 @@ add_executable(lpsim
     ${ROUTING_SRC}
     ${IO_SRC}
     ${MISC_SRC}
-    ${CUDA_SRC}
+    ${SIMULATOR_CUDA}
 )
 
 target_link_libraries(lpsim PRIVATE

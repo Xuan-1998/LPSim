@@ -4,14 +4,14 @@
 
 #include "cli_runner.h"
 
-#include "src/benchmarker.h"
+#include "lpsim/benchmarker.h"
 
 #include "network_loader.h"
 #include "qcoreapplication.h"
 
 #include "sp/graph.h"
-#include "traffic/b18TrafficSP.h"
-#include "../roadGraphB2018Loader.h"
+#include "shortest_path.h"
+#include "network_loader.h"
 #include "lpsim/accessibility.h"
 #include <stdexcept>
 
@@ -48,7 +48,7 @@ void B18CommandLineVersion::runB18Simulation() {
   std::string partitionsPath = settings.value("PARTITION_FILENAME", "partitions.txt").toString().toStdString();
   const bool runUnitTests = settings.value("RUN_UNIT_TESTS", false).toBool();
 
-  ClientGeometry cg;
+  RoadGraph roadGraph;
   std::vector<std::string> allParameters = {"GUI", "USE_CPU", "USE_JOHNSON_ROUTING",
                                             "USE_SP_ROUTING", "USE_PREV_PATHS",
                                             "NETWORK_PATH", "ADD_RANDOM_PEOPLE",
@@ -108,7 +108,7 @@ void B18CommandLineVersion::runB18Simulation() {
   Benchmarker loadNetwork("Load_network", true);
   Benchmarker loadODDemandData("Load_OD_demand_data", true);
   
-  B18TrafficSimulator b18TrafficSimulator(deltaTime, &cg.roadGraph, simParameters);
+  B18TrafficSimulator b18TrafficSimulator(deltaTime, &roadGraph, simParameters);
   
   const bool directed = true;
   const std::shared_ptr<abm::Graph>& street_graph = std::make_shared<abm::Graph>(directed, networkPathSP);
@@ -156,7 +156,7 @@ void B18CommandLineVersion::runB18Simulation() {
     std::cout << "startTime: " << startTimeMins << ", endTime: " << endTimeMins << std::endl;
     b18TrafficSimulator.createB2018PeopleSP(startSimulationH, endSimulationH, limitNumPeople, addRandomPeople, street_graph, dep_times);
   } else {
-    RoadGraphB2018::loadB2018RoadGraph(cg.roadGraph, networkPath);
+    RoadGraphB2018::loadB2018RoadGraph(roadGraph, networkPath);
     b18TrafficSimulator.createB2018People(startSimulationH, endSimulationH, limitNumPeople, addRandomPeople, useSP);
   }
 

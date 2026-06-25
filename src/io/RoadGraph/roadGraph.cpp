@@ -33,7 +33,7 @@
 ************************************************************************************************/
 //#include "stdafx.h"
 #include "roadGraph.h"
-#include "../global.h"
+#include "lpsim/global.h"
 //#include "client_global_variables.h"
 
 #define FBO_LENGTH 4096

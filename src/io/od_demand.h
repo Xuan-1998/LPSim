@@ -14,8 +14,8 @@
 #include "misctools/misctools.h"
 
 #include <QtGlobal>
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+// #include "opencv2/highgui/highgui.hpp"
+// #include "opencv2/imgproc/imgproc.hpp"
 
 #include "lpsim/vehicle.h"
 #include "RoadGraph/roadGraph.h"
@@ -34,8 +34,8 @@ class B18TrafficOD {
   B18TrafficOD(const parameters & inputSimParameters);
   ~B18TrafficOD();
 
-  cv::Mat *peopleDistribution;
-  cv::Mat *jobDistribution;
+  // cv::Mat *peopleDistribution; // removed: GUI-only
+  // cv::Mat *jobDistribution; // removed: GUI-only
   const parameters simParameters;
 
   void randomVehicle(int p, B18TrafficVehicle &vehicle, QVector3D housePos3D,

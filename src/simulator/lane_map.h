@@ -15,8 +15,8 @@
 #include "misctools/misctools.h"
 #include "RoadGraph/roadGraph.h"
 #include "lpsim/edge_data.h"
-#include "traffic/sp/graph.h"
-#include "traffic/sp/config.h"
+#include "sp/graph.h"
+#include "config.h"
 
 namespace LC {
 

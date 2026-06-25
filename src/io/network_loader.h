@@ -7,8 +7,8 @@
 
 #include "RoadGraph/roadGraph.h"
 #include <QString>
-#include "traffic/b18TrafficSP.h"
-#include "traffic/sp/graph.h"
+#include "shortest_path.h"
+#include "sp/graph.h"
 
 namespace LC {
 

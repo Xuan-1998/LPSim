@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/benchmarker.h"
+#include "lpsim/benchmarker.h"
 #include "lpsim/linux_host_memory_logger.h"
 #include "lpsim/vehicle.h"
 #include "../RoadGraph/roadGraph.h"

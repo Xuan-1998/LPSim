@@ -10,7 +10,7 @@
 #include "qcoreapplication.h"
 #endif
 #include <QDebug>
-#include "traffic/b18CommandLineVersion.h"
+#include "cli_runner.h"
 
 // NOTE: Check command_line_options for default options.
 
