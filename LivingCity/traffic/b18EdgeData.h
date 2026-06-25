@@ -44,9 +44,16 @@ struct B18IntersectionData {
   ushort state;
   ushort stateLine;
   ushort totalInOutEdges;
-  uint edge[28];// up to six arms intersection
+  uint edge[28];
   float nextEvent;
   bool isVertiport;
+
+  // Vertiport capacity modeling (only active when isVertiport == true)
+  ushort vertiportPadCapacity;    // max simultaneous takeoff/landing pads
+  ushort vertiportCurrentOccupancy; // vehicles currently on pads
+  ushort vertiportQueueLength;    // vehicles waiting for a pad
+  float  vertiportTurnoverTimeSec;  // time per takeoff/landing operation
+  float  vertiportLastDepartureTime; // for spacing enforcement
 };
 }
 

@@ -2003,7 +2003,15 @@ __global__ void kernel_intersectionOneSimulation(
   // if(blockIdx.x>218)printf("blockIdx: %d",blockIdx.x);
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i<numIntersections){//CUDA check (inside margins)
-    const float deltaEvent = 20.0f; /// !!!!
+    // Vertiport capacity management: release pads after turnover time
+    if (intersections[i].isVertiport && intersections[i].vertiportCurrentOccupancy > 0) {
+      if (currentTime - intersections[i].vertiportLastDepartureTime >= intersections[i].vertiportTurnoverTimeSec) {
+        intersections[i].vertiportCurrentOccupancy--;
+        intersections[i].vertiportLastDepartureTime = currentTime;
+      }
+    }
+
+    const float deltaEvent = 20.0f;
     if (currentTime > intersections[i].nextEvent && intersections[i].totalInOutEdges > 0) {
 
       uint edgeOT = intersections[i].edge[intersections[i].state];
@@ -2027,8 +2035,19 @@ __global__ void kernel_intersectionOneSimulation(
           uchar numLinesI = edgeIT >> 24;
 
           for (int nL = 0; nL < numLinesI; nL++) {
-            if (intersections[i].isVertiport) trafficLights[edgeINum + nL] = 0x00;
-            else trafficLights[edgeINum + nL] = 0xFF;
+            if (intersections[i].isVertiport) {
+              // Vertiport: only green if pad capacity available
+              bool padAvailable = (intersections[i].vertiportCurrentOccupancy <
+                                   intersections[i].vertiportPadCapacity);
+              trafficLights[edgeINum + nL] = padAvailable ? 0xFF : 0x00;
+              if (padAvailable) {
+                intersections[i].vertiportCurrentOccupancy++;
+                intersections[i].vertiportQueueLength =
+                    max((int)intersections[i].vertiportQueueLength - 1, 0);
+              }
+            } else {
+              trafficLights[edgeINum + nL] = 0xFF;
+            }
           }
 
           break;
