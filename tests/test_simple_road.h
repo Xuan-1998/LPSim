@@ -1,0 +1,31 @@
+
+/************************************************************************************************
+*		@desc Class to create simple road and OD demmand (for simple testing)
+*		@author igarciad
+************************************************************************************************/
+#pragma once
+
+#include "../RoadGraph/roadGraph.h"
+#include "lpsim/vehicle.h"
+
+namespace LC {
+
+class LCGLWidget3D;
+
+/**
+* RoadGraph.
+**/
+class B18TestSimpleRoadAndOD {
+
+ public:
+
+  /**
+  * Generate test: Road+People+OD
+  **/
+   static void generateTest(RoadGraph &inRoadGraph, std::vector<B18TrafficVehicle> &trafficPersonVec,
+     float startTimeH, float endTimeH, LCGLWidget3D *glWidget3D);
+ private:
+
+};
+
+}

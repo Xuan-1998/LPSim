@@ -49,3 +49,5 @@ LivingCity/benchmarking/*.json
 Makefile
 .qmake.stash
 LivingCity/obj/
+LivingCity/
+build/
