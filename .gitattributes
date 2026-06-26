@@ -1,0 +1,4 @@
+notebooks/ linguist-vendored
+data/ linguist-vendored
+docs/network.json linguist-generated
+docs/trips.json linguist-generated
