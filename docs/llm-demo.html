@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LPSim: LLM Fleet Dispatcher Demo</title>
+    <title>LPSim: LLM-Driven Autonomous Fleet Dispatch</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
@@ -9,139 +9,208 @@
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'SF Mono', 'Fira Code', monospace; background: #0a0a1e; color: #e0e0e0; overflow: hidden; }
-        #map { width: 65vw; height: 100vh; position: absolute; left: 0; top: 0; }
-        #sidebar { position: absolute; right: 0; top: 0; width: 35vw; height: 100vh; background: #0d1117; border-left: 1px solid #21262d; overflow-y: auto; padding: 20px; }
-        h1 { font-size: 18px; color: #4fc3f7; margin: 0 0 4px; font-weight: 600; }
-        .subtitle { font-size: 11px; color: #607d8b; margin-bottom: 16px; }
-        .section { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-        .section h3 { font-size: 12px; color: #8b949e; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .state-item { background: #0d1117; padding: 8px; border-radius: 6px; text-align: center; }
-        .state-item .val { font-size: 20px; color: #4fc3f7; font-weight: 600; }
-        .state-item .lbl { font-size: 9px; color: #607d8b; margin-top: 2px; }
-        .llm-chat { background: #0d1117; border-radius: 6px; padding: 10px; margin-top: 8px; max-height: 180px; overflow-y: auto; font-size: 11px; line-height: 1.5; }
-        .msg { margin: 6px 0; padding: 6px 10px; border-radius: 6px; }
-        .msg.system { background: #1c2128; color: #8b949e; border-left: 3px solid #4fc3f7; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a1e; color: #e0e0e0; overflow: hidden; }
+        #map { width: 60vw; height: 100vh; position: absolute; left: 0; top: 0; }
+        #sidebar { position: absolute; right: 0; top: 0; width: 40vw; height: 100vh; background: #0d1117; border-left: 1px solid #21262d; overflow-y: auto; padding: 20px; }
+        h1 { font-size: 18px; color: #fff; margin: 0 0 4px; }
+        .sub { color: #8b949e; font-size: 11px; margin-bottom: 16px; }
+        .section { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+        .section h3 { font-size: 11px; color: #8b949e; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .fleet-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .fleet-item { background: #0d1117; padding: 10px; border-radius: 8px; text-align: center; }
+        .fleet-item .val { font-size: 22px; font-weight: 600; }
+        .fleet-item .lbl { font-size: 9px; color: #8b949e; margin-top: 3px; }
+        .val-green { color: #3fb950; }
+        .val-blue { color: #4fc3f7; }
+        .val-orange { color: #f0883e; }
+        .val-purple { color: #bc8cff; }
+        .demand-list { max-height: 140px; overflow-y: auto; font-size: 11px; }
+        .demand-item { display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 4px; margin: 3px 0; background: #0d1117; }
+        .demand-item.matched { background: rgba(63,185,80,0.1); border-left: 2px solid #3fb950; }
+        .demand-item.waiting { background: rgba(240,136,62,0.1); border-left: 2px solid #f0883e; }
+        .chat { background: #0d1117; border-radius: 8px; padding: 10px; max-height: 200px; overflow-y: auto; font-size: 11px; line-height: 1.6; }
+        .msg { margin: 6px 0; padding: 8px 10px; border-radius: 6px; }
+        .msg.ctx { background: #1c2128; color: #8b949e; border-left: 3px solid #30363d; }
         .msg.llm { background: #1a2332; color: #58a6ff; border-left: 3px solid #58a6ff; }
-        .msg.result { background: #122117; color: #3fb950; border-left: 3px solid #3fb950; }
-        .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-        .action-btn { background: rgba(79,195,247,0.1); border: 1px solid rgba(79,195,247,0.3); color: #4fc3f7; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; transition: all 0.2s; }
-        .action-btn:hover { background: rgba(79,195,247,0.25); transform: translateY(-1px); }
-        .action-btn:active { transform: translateY(0); }
-        .action-btn.active { background: rgba(79,195,247,0.4); box-shadow: 0 0 12px rgba(79,195,247,0.3); }
-        .metric-bar { height: 4px; background: #21262d; border-radius: 2px; margin-top: 4px; overflow: hidden; }
-        .metric-bar .fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
-        .code-block { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 10px; font-size: 10px; color: #c9d1d9; white-space: pre; overflow-x: auto; margin-top: 8px; }
-        .tag { display: inline-block; background: rgba(56,139,253,0.15); color: #58a6ff; padding: 2px 6px; border-radius: 4px; font-size: 9px; margin-right: 4px; }
-        #thinking { display: none; color: #f0883e; font-size: 11px; margin-top: 6px; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .msg.action { background: #122117; color: #3fb950; border-left: 3px solid #3fb950; }
+        .msg.rl { background: #1f1529; color: #bc8cff; border-left: 3px solid #bc8cff; }
+        .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+        .btn { background: rgba(79,195,247,0.1); border: 1px solid rgba(79,195,247,0.3); color: #4fc3f7; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 11px; font-family: inherit; transition: all 0.2s; }
+        .btn:hover { background: rgba(79,195,247,0.25); transform: translateY(-1px); }
+        .btn.rl-btn { border-color: rgba(188,140,255,0.3); color: #bc8cff; background: rgba(188,140,255,0.1); }
+        .btn.rl-btn:hover { background: rgba(188,140,255,0.25); }
+        #thinking { display: none; color: #f0883e; font-size: 11px; margin: 8px 0; animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         .nav { position: absolute; top: 10px; left: 10px; z-index: 10; }
-        .nav a { color: #4fc3f7; text-decoration: none; font-size: 12px; background: rgba(10,10,30,0.9); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(79,195,247,0.3); }
+        .nav a { color: #4fc3f7; text-decoration: none; font-size: 11px; background: rgba(10,10,30,0.9); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(79,195,247,0.2); margin-right: 6px; }
+        .mode-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+        .mode-tab { padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; border: 1px solid #21262d; background: #0d1117; color: #8b949e; }
+        .mode-tab.active { background: rgba(79,195,247,0.15); color: #4fc3f7; border-color: rgba(79,195,247,0.3); }
+        .code-hint { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 10px; font-family: 'SF Mono', monospace; font-size: 10px; color: #8b949e; margin-top: 8px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div class="nav"><a href="index.html">← Back to Simulation</a></div>
+    <div class="nav">
+        <a href="index.html">← Simulation</a>
+        <a href="rl-demo.html">🎮 RL Demo</a>
+    </div>
     <div id="sidebar">
-        <h1>🤖 LLM Fleet Dispatcher</h1>
-        <div class="subtitle">LLM observes traffic state → reasons about congestion → takes control actions</div>
+        <h1>🚕 Autonomous Fleet Dispatch</h1>
+        <div class="sub">LLM/RL controls AV fleet to pick up riders, optimizing wait time and fleet utilization across the Bay Area</div>
 
-        <div class="section">
-            <h3>📊 Network State (LLM Context)</h3>
-            <div class="state-grid">
-                <div class="state-item"><div class="val" id="s-vehicles">2,000</div><div class="lbl">Active Vehicles</div></div>
-                <div class="state-item"><div class="val" id="s-congestion">34%</div><div class="lbl">Congested Edges</div></div>
-                <div class="state-item"><div class="val" id="s-avgspeed">28</div><div class="lbl">Avg Speed (mph)</div></div>
-                <div class="state-item"><div class="val" id="s-throughput">847</div><div class="lbl">Completed Trips</div></div>
-            </div>
-            <div class="metric-bar"><div class="fill" id="congestion-bar" style="width:34%;background:#ff9800"></div></div>
+        <div class="mode-tabs">
+            <div class="mode-tab active" onclick="setMode('llm')">🤖 LLM Dispatch</div>
+            <div class="mode-tab" onclick="setMode('rl')">🎮 RL Policy</div>
         </div>
 
         <div class="section">
-            <h3>🧠 LLM Decision Loop</h3>
-            <div class="llm-chat" id="chat">
-                <div class="msg system">System: You are a fleet dispatcher controlling 540K road segments in the SF Bay Area. Observe congestion and take actions to minimize travel time.</div>
+            <h3>🚗 Fleet Status</h3>
+            <div class="fleet-grid">
+                <div class="fleet-item"><div class="val val-green" id="f-idle">48</div><div class="lbl">Idle AVs</div></div>
+                <div class="fleet-item"><div class="val val-blue" id="f-enroute">127</div><div class="lbl">En Route to Pickup</div></div>
+                <div class="fleet-item"><div class="val val-orange" id="f-serving">325</div><div class="lbl">Serving Trips</div></div>
             </div>
-            <div id="thinking">🔄 LLM reasoning...</div>
+            <div class="fleet-grid" style="margin-top:8px">
+                <div class="fleet-item"><div class="val val-purple" id="f-wait">3.2</div><div class="lbl">Avg Wait (min)</div></div>
+                <div class="fleet-item"><div class="val val-green" id="f-util">89%</div><div class="lbl">Fleet Utilization</div></div>
+                <div class="fleet-item"><div class="val val-blue" id="f-revenue">$4,720</div><div class="lbl">Revenue/hr</div></div>
+            </div>
         </div>
 
         <div class="section">
-            <h3>⚡ Available Actions</h3>
+            <h3>📍 Incoming Ride Requests (last 30s)</h3>
+            <div class="demand-list" id="demand-list">
+                <div class="demand-item matched"><span>🟢 Downtown SF → SFO Airport</span><span>AV-042 assigned</span></div>
+                <div class="demand-item matched"><span>🟢 Berkeley → Oakland</span><span>AV-118 assigned</span></div>
+                <div class="demand-item waiting"><span>🟠 Palo Alto → Mountain View</span><span>waiting 45s...</span></div>
+                <div class="demand-item waiting"><span>🟠 San Jose → Fremont</span><span>waiting 30s...</span></div>
+                <div class="demand-item matched"><span>🟢 Daly City → Mission Bay</span><span>AV-203 assigned</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3 id="decision-header">🧠 LLM Decision Engine</h3>
+            <div class="chat" id="chat">
+                <div class="msg ctx">Context: 500 AVs serving SF Bay Area. 12 ride requests pending. Zone imbalance detected: downtown oversupplied (+15 AVs), South Bay undersupplied (-8 AVs).</div>
+            </div>
+            <div id="thinking">🔄 LLM reasoning about fleet rebalancing...</div>
             <div class="actions">
-                <button class="action-btn" onclick="llmAction('toll_highway')">Set Highway Tolls ($2-5)</button>
-                <button class="action-btn" onclick="llmAction('reroute_downtown')">Reroute Downtown Traffic</button>
-                <button class="action-btn" onclick="llmAction('signal_optimize')">Optimize Signal Timing</button>
-                <button class="action-btn" onclick="llmAction('surge_pricing')">Surge Pricing (Peak)</button>
+                <button class="btn" onclick="dispatch('rebalance')">Rebalance Fleet</button>
+                <button class="btn" onclick="dispatch('surge')">Surge to South Bay</button>
+                <button class="btn" onclick="dispatch('pool')">Pool Nearby Requests</button>
+                <button class="btn" onclick="dispatch('preposition')">Pre-position for Peak</button>
             </div>
             <div class="actions" style="margin-top:6px">
-                <button class="action-btn" onclick="llmAction('uam_dispatch')">🚁 Dispatch UAM Vehicles</button>
-                <button class="action-btn" onclick="llmAction('balance_load')">Balance GPU Partitions</button>
+                <button class="btn rl-btn" onclick="dispatch('rl_step')">▶ RL Policy Step</button>
+                <button class="btn rl-btn" onclick="dispatch('rl_train')">🔄 Train 100 Episodes</button>
             </div>
         </div>
 
         <div class="section">
-            <h3>📋 Integration Code</h3>
-            <div><span class="tag">OpenAI</span><span class="tag">Anthropic</span><span class="tag">Llama</span></div>
-            <div class="code-block">from lpsim_env.llm_interface import LPSimPlayground
+            <h3>💻 Integration</h3>
+            <div class="code-hint" id="code-hint">
+# LLM dispatches AV fleet
+from lpsim_env.llm_interface import LPSimPlayground, LLMAction
 
-playground = LPSimPlayground(
-    network="sf_bay_area",
-    num_trips=5000
-)
-
-# Get state → feed to any LLM
+playground = LPSimPlayground(network="sf_bay_area", num_trips=5000)
 state = playground.get_state()
-prompt = state.to_prompt_context()
 
-# LLM returns action via tool_use
+# LLM sees: "48 idle AVs, 12 pending requests, South Bay undersupplied"
 action = LLMAction(
-    action_type="set_tolls",
-    targets=[1234, 5678],
-    values=[2.5, 1.0]
+    action_type="dispatch",
+    targets=[42, 118, 203, 77, 156],  # AV IDs
+    values=[4521, 8903, 12045, 6677, 3321],  # pickup node IDs
+    reasoning="Dispatching 5 nearest AVs to pending requests"
 )
-result = playground.apply_action(action)</div>
+result = playground.apply_action(action)
+# → avg_wait reduced from 3.2 min to 2.1 min</div>
         </div>
     </div>
 
     <script>
     const {DeckGL, GeoJsonLayer, TripsLayer, ScatterplotLayer} = deck;
 
-    let networkData, tripsData;
+    let networkData, tripsData, deckgl;
     let currentTime = 18000;
-    let congestionLevel = 34;
-    let avgSpeed = 28;
-    let throughput = 847;
-    let deckgl;
+    let mode = 'llm';
 
-    const llmResponses = {
-        toll_highway: {
-            reasoning: "I observe 34% congestion concentrated on I-80 and I-580 corridors. Setting dynamic tolls of $2-5 on these highway segments should divert 15-20% of traffic to parallel arterials, reducing peak density.",
-            effect: { congestion: -12, speed: +8, throughput: +120 }
+    // Fleet state
+    let fleet = { idle: 48, enroute: 127, serving: 325, wait: 3.2, util: 89, revenue: 4720 };
+
+    const llmActions = {
+        rebalance: {
+            msg: "Analyzing zone imbalance: downtown has 15 excess AVs while South Bay is 8 short. Dispatching 12 AVs from downtown toward Palo Alto/Mountain View corridor to cover anticipated demand in next 15 minutes.",
+            effect: { idle: -12, enroute: +12, wait: -0.8, util: +3, revenue: +280 }
         },
-        reroute_downtown: {
-            reasoning: "Downtown SF grid (Market St → Embarcadero) is at 89% capacity. Rerouting 200 vehicles through Van Ness corridor and 101-S bypass will reduce intersection queue lengths by an estimated 40%.",
-            effect: { congestion: -18, speed: +5, throughput: +85 }
+        surge: {
+            msg: "South Bay demand spike detected (Stanford event ending). Repositioning 8 idle AVs from San Mateo/Redwood City toward University Ave and El Camino Real. ETA to coverage: 6 minutes.",
+            effect: { idle: -8, enroute: +8, wait: -1.1, util: +5, revenue: +420 }
         },
-        signal_optimize: {
-            reasoning: "Analyzing cycle times at top 50 bottleneck intersections. Current fixed 60s cycles waste 23% green time. Adaptive signal control based on queue length sensors should improve throughput 15%.",
-            effect: { congestion: -8, speed: +12, throughput: +200 }
+        pool: {
+            msg: "3 requests within 400m of each other in SOMA district. Grouping into shared ride: pickup sequence optimized by shortest-path through all 3 origins. Reduces total VMT by 34% for this batch.",
+            effect: { idle: +2, enroute: -1, serving: -1, wait: +0.3, util: +2, revenue: -50 }
         },
-        surge_pricing: {
-            reasoning: "Peak hour demand exceeds network capacity by 22%. Implementing $1.50 surge on trips entering congested zones during 7-9 AM will shift 18% of flexible demand to off-peak, matching supply.",
-            effect: { congestion: -15, speed: +6, throughput: +50 }
+        preposition: {
+            msg: "Based on historical demand patterns: 7:30 AM surge expected in Financial District (+40% requests). Pre-positioning 20 AVs along Market St, Embarcadero, and Montgomery corridors NOW to achieve <2 min response when surge hits.",
+            effect: { idle: -20, enroute: +20, wait: -0.5, util: +1, revenue: +150 }
         },
-        uam_dispatch: {
-            reasoning: "5 vertiports have available pad capacity. Dispatching 12 UAM vehicles for high-value cross-bay trips (SFO→Oakland, Palo Alto→SF) removes 12 cars from congested bridge corridors with 4x speed advantage.",
-            effect: { congestion: -5, speed: +3, throughput: +45 }
+        rl_step: {
+            msg: "[RL Policy] PPO agent observes state vector (500 AV positions + 12 pending requests + zone demand forecast) → outputs dispatch matrix. Action: assign nearest-3 policy with zone rebalancing penalty λ=0.1.",
+            effect: { idle: -5, enroute: +5, wait: -0.6, util: +2, revenue: +180 },
+            isRL: true
         },
-        balance_load: {
-            reasoning: "GPU partition 2 (downtown) has 3.2x more active vehicles than partition 0 (suburbs). Triggering dynamic repartition: migrating boundary nodes to equalize load within 5% tolerance.",
-            effect: { congestion: -2, speed: +1, throughput: +30 }
+        rl_train: {
+            msg: "[RL Training] Running 100 episodes × 24 simulated hours each. GPU simulation: 12s per episode → total 20 minutes. Current policy reward: -3.2 min avg wait. Target: <2.5 min.",
+            effect: { wait: -0.4, util: +1, revenue: +90 },
+            isRL: true
         }
     };
 
-    function addMessage(type, text) {
+    function setMode(m) {
+        mode = m;
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.mode-tab:nth-child(${m === 'llm' ? 1 : 2})`).classList.add('active');
+        document.getElementById('decision-header').textContent = m === 'llm' ? '🧠 LLM Decision Engine' : '🎮 RL Policy Engine';
+        document.getElementById('code-hint').textContent = m === 'llm' ?
+`# LLM dispatches AV fleet
+from lpsim_env.llm_interface import LPSimPlayground, LLMAction
+
+playground = LPSimPlayground(network="sf_bay_area", num_trips=5000)
+state = playground.get_state()
+
+# LLM sees: "48 idle AVs, 12 pending requests, South Bay undersupplied"
+action = LLMAction(
+    action_type="dispatch",
+    targets=[42, 118, 203, 77, 156],  # AV IDs
+    values=[4521, 8903, 12045, 6677, 3321],  # pickup node IDs
+    reasoning="Dispatching 5 nearest AVs to pending requests"
+)
+result = playground.apply_action(action)
+# → avg_wait reduced from 3.2 min to 2.1 min` :
+`# RL trains dispatch policy on GPU simulator
+from lpsim_env import LPSimEnv
+from stable_baselines3 import PPO
+
+env = LPSimEnv(
+    network_path="data/networks/sf_bay_area",
+    reward_type="travel_time",
+    num_trips=5000
+)
+
+# State: [AV positions, pending requests, zone demand]
+# Action: dispatch matrix (which AV → which request)
+model = PPO("MlpPolicy", env, verbose=1)
+model.learn(total_timesteps=100_000)  # 100K sim steps on GPU
+
+# Deploy trained policy
+obs, _ = env.reset()
+action, _ = model.predict(obs)
+obs, reward, done, _, info = env.step(action)
+# → avg_wait: 2.1 min (vs 3.2 min baseline)`;
+    }
+
+    function addMsg(type, text) {
         const chat = document.getElementById('chat');
         const msg = document.createElement('div');
         msg.className = `msg ${type}`;
@@ -150,101 +219,61 @@ result = playground.apply_action(action)</div>
         chat.scrollTop = chat.scrollHeight;
     }
 
-    function updateMetrics() {
-        document.getElementById('s-congestion').textContent = Math.max(5, congestionLevel) + '%';
-        document.getElementById('s-avgspeed').textContent = Math.min(65, avgSpeed);
-        document.getElementById('s-throughput').textContent = throughput.toLocaleString();
-        document.getElementById('congestion-bar').style.width = congestionLevel + '%';
-        const barColor = congestionLevel > 50 ? '#e53935' : congestionLevel > 30 ? '#ff9800' : '#4caf50';
-        document.getElementById('congestion-bar').style.background = barColor;
+    function updateFleet() {
+        document.getElementById('f-idle').textContent = Math.max(0, fleet.idle);
+        document.getElementById('f-enroute').textContent = fleet.enroute;
+        document.getElementById('f-serving').textContent = fleet.serving;
+        document.getElementById('f-wait').textContent = Math.max(0.5, fleet.wait).toFixed(1);
+        document.getElementById('f-util').textContent = Math.min(99, fleet.util) + '%';
+        document.getElementById('f-revenue').textContent = '$' + fleet.revenue.toLocaleString();
     }
 
-    async function llmAction(actionType) {
-        const response = llmResponses[actionType];
-        const thinking = document.getElementById('thinking');
+    async function dispatch(actionType) {
+        const a = llmActions[actionType];
+        document.getElementById('thinking').style.display = 'block';
+        document.getElementById('thinking').textContent = a.isRL ?
+            '🔄 RL policy computing optimal dispatch...' :
+            '🔄 LLM reasoning about fleet optimization...';
 
-        // Show thinking
-        thinking.style.display = 'block';
-        addMessage('system', `→ Action requested: ${actionType.replace('_',' ')}`);
+        await new Promise(r => setTimeout(r, 1800));
+        document.getElementById('thinking').style.display = 'none';
 
-        // Simulate LLM latency
-        await new Promise(r => setTimeout(r, 1500));
-        thinking.style.display = 'none';
+        addMsg(a.isRL ? 'rl' : 'llm', a.msg);
+        await new Promise(r => setTimeout(r, 600));
 
-        // Show LLM reasoning
-        addMessage('llm', `Claude: ${response.reasoning}`);
+        fleet.idle += (a.effect.idle || 0);
+        fleet.enroute += (a.effect.enroute || 0);
+        fleet.serving += (a.effect.serving || 0);
+        fleet.wait += (a.effect.wait || 0);
+        fleet.util += (a.effect.util || 0);
+        fleet.revenue += (a.effect.revenue || 0);
+        updateFleet();
 
-        // Apply effects with animation
-        await new Promise(r => setTimeout(r, 800));
-        congestionLevel = Math.max(5, congestionLevel + response.effect.congestion);
-        avgSpeed = Math.min(65, avgSpeed + response.effect.speed);
-        throughput += response.effect.throughput;
-        updateMetrics();
-
-        // Show result
-        const delta_c = response.effect.congestion;
-        const delta_s = response.effect.speed;
-        addMessage('result', `✓ Applied. Congestion ${delta_c}%, Speed +${delta_s} mph, +${response.effect.throughput} trips completed`);
+        const waitDelta = a.effect.wait || 0;
+        addMsg('action', `✓ Applied. Wait time ${waitDelta > 0 ? '+' : ''}${waitDelta.toFixed(1)} min, utilization ${fleet.util}%`);
     }
 
     function animate() {
-        currentTime += 15;
+        currentTime += 12;
         if (currentTime > 43200) currentTime = 18000;
-
         if (deckgl && tripsData) {
-            deckgl.setProps({
-                layers: [
-                    new GeoJsonLayer({
-                        id: 'roads',
-                        data: networkData,
-                        lineWidthScale: 1.5,
-                        lineWidthMinPixels: 0.5,
-                        getLineColor: [66, 165, 245, 30],
-                        getLineWidth: 1,
-                    }),
-                    new TripsLayer({
-                        id: 'trips',
-                        data: tripsData,
-                        getPath: d => d.path.map(p => [p[0], p[1]]),
-                        getTimestamps: d => d.path.map(p => p[2]),
-                        getColor: [79, 195, 247],
-                        opacity: 0.9,
-                        widthMinPixels: 3,
-                        trailLength: 200,
-                        currentTime: currentTime,
-                    })
-                ]
-            });
+            deckgl.setProps({ layers: [
+                new GeoJsonLayer({ id: 'roads', data: networkData, lineWidthScale: 1.5, lineWidthMinPixels: 0.5, getLineColor: [66, 165, 245, 25], getLineWidth: 1 }),
+                new TripsLayer({ id: 'trips', data: tripsData, getPath: d => d.path.map(p => [p[0], p[1]]), getTimestamps: d => d.path.map(p => p[2]), getColor: [79, 195, 247], opacity: 0.8, widthMinPixels: 3, trailLength: 180, currentTime })
+            ]});
         }
         requestAnimationFrame(animate);
     }
 
     async function init() {
-        const [netResp, tripsResp] = await Promise.all([
-            fetch('network.json'),
-            fetch('trips.json')
-        ]);
+        const [netResp, tripsResp] = await Promise.all([fetch('network.json'), fetch('trips.json')]);
         networkData = await netResp.json();
         tripsData = await tripsResp.json();
-
-        let cx = 0, cy = 0, n = 0;
-        for (const f of networkData.features.slice(0, 500)) {
-            cx += f.geometry.coordinates[0][0];
-            cy += f.geometry.coordinates[0][1];
-            n++;
-        }
-
-        deckgl = new DeckGL({
-            container: 'map',
-            mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-            initialViewState: { longitude: cx/n, latitude: cy/n, zoom: 10, pitch: 45, bearing: -15 },
-            controller: true,
-            layers: []
-        });
-
+        let cx=0, cy=0, n=0;
+        for (const f of networkData.features.slice(0,500)) { cx+=f.geometry.coordinates[0][0]; cy+=f.geometry.coordinates[0][1]; n++; }
+        deckgl = new DeckGL({ container: 'map', mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json', initialViewState: { longitude: cx/n, latitude: cy/n, zoom: 10, pitch: 45, bearing: -15 }, controller: true, layers: [] });
         animate();
     }
-
     init();
     </script>
 </body>
