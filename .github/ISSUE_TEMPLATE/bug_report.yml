@@ -1,0 +1,24 @@
+name: Bug Report
+description: Report a simulation issue or build failure
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+    validations:
+      required: true
+  - type: input
+    id: cuda-version
+    attributes:
+      label: CUDA version
+      placeholder: "e.g., 12.4"
+    validations:
+      required: true
