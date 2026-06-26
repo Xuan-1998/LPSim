@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LPSim: RL Environment Demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'SF Mono', 'Fira Code', Consolas, monospace; background: #0d1117; color: #c9d1d9; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+        h1 { color: #3fb950; font-size: 24px; margin-bottom: 4px; }
+        .subtitle { color: #8b949e; font-size: 13px; margin-bottom: 30px; }
+        .nav { margin-bottom: 20px; }
+        .nav a { color: #4fc3f7; text-decoration: none; font-size: 12px; margin-right: 16px; }
+        .nav a:hover { text-decoration: underline; }
+        .demo-section { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .demo-section h2 { color: #58a6ff; font-size: 16px; margin: 0 0 16px; }
+        .terminal { background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 12px; line-height: 1.7; }
+        .terminal .prompt { color: #3fb950; }
+        .terminal .output { color: #c9d1d9; }
+        .terminal .comment { color: #8b949e; }
+        .terminal .string { color: #a5d6ff; }
+        .terminal .number { color: #79c0ff; }
+        .terminal .keyword { color: #ff7b72; }
+        .tag { display: inline-block; background: rgba(63,185,80,0.15); color: #3fb950; padding: 3px 8px; border-radius: 4px; font-size: 10px; margin-right: 6px; }
+        .tag.blue { background: rgba(56,139,253,0.15); color: #58a6ff; }
+        .architecture { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+        .arch-box { background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 12px; text-align: center; }
+        .arch-box .icon { font-size: 24px; margin-bottom: 6px; }
+        .arch-box .label { font-size: 11px; color: #8b949e; }
+        .arch-box .value { font-size: 13px; color: #c9d1d9; margin-top: 4px; }
+        .arrow { text-align: center; color: #3fb950; font-size: 20px; margin: 8px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="nav">
+        <a href="index.html">← Simulation</a>
+        <a href="llm-demo.html">🤖 LLM Demo</a>
+    </div>
+
+    <h1>🎮 Gymnasium RL Environment</h1>
+    <div class="subtitle">Train reinforcement learning policies on city-scale traffic using GPU simulation as the environment</div>
+
+    <div class="demo-section">
+        <h2>Architecture</h2>
+        <div class="architecture">
+            <div class="arch-box"><div class="icon">🤖</div><div class="label">RL Agent</div><div class="value">PPO / SAC / MoE</div></div>
+            <div class="arch-box"><div class="icon">🔄</div><div class="label">Gym Interface</div><div class="value">obs → action → reward</div></div>
+            <div class="arch-box"><div class="icon">⚡</div><div class="label">GPU Simulator</div><div class="value">223K nodes, 540K edges</div></div>
+        </div>
+        <div class="arrow">Agent ←→ Environment ←→ CUDA Kernels</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Live Demo Output (from actual GPU run)</h2>
+        <div><span class="tag">Python 3.10</span><span class="tag blue">Gymnasium 1.3</span><span class="tag">NumPy</span></div>
+        <div class="terminal">
+<span class="prompt">&gt;&gt;&gt;</span> <span class="keyword">from</span> lpsim_env <span class="keyword">import</span> LPSimEnv
+<br><br>
+<span class="prompt">&gt;&gt;&gt;</span> env = LPSimEnv(
+...     network_path=<span class="string">"data/networks/sf_bay_area"</span>,
+...     reward_type=<span class="string">"travel_time"</span>,
+...     num_trips=<span class="number">1000</span>
+... )
+<span class="output">    Action space: Box(low=0, high=1, shape=(100,))
+    Observation space: Box(shape=(547697, 3)) — [speed, density, flow] per edge
+    Network: 547,697 edges, 100 controllable</span>
+<br><br>
+<span class="prompt">&gt;&gt;&gt;</span> obs, info = env.reset(seed=<span class="number">42</span>)
+<span class="output">    obs.shape = (547697, 3)
+    obs.dtype = float32</span>
+<br><br>
+<span class="prompt">&gt;&gt;&gt;</span> action = env.action_space.sample()
+<span class="output">    action.shape = (100,)
+    action[:5] = [0.050, 0.327, 0.650, 0.845, 0.252]</span>
+<br><br>
+<span class="prompt">&gt;&gt;&gt;</span> obs, reward, terminated, truncated, info = env.step(action)
+<span class="comment">    # GPU simulator executes: 223K nodes, 540K edges, 702 vehicles</span>
+<span class="output">    reward = <span class="number">-26.02</span>  <span class="comment"># negative avg travel time (minimize)</span>
+    terminated = True
+    info = {
+        'avg_travel_time': <span class="number">26.02</span>,   <span class="comment"># minutes</span>
+        'total_co': <span class="number">470.81</span>,         <span class="comment"># CO emissions (grams)</span>
+        'num_completed': <span class="number">702</span>        <span class="comment"># trips finished in window</span>
+    }</span>
+<br><br>
+<span class="prompt">&gt;&gt;&gt;</span> <span class="comment"># Train with stable-baselines3</span>
+<span class="prompt">&gt;&gt;&gt;</span> <span class="keyword">from</span> stable_baselines3 <span class="keyword">import</span> PPO
+<span class="prompt">&gt;&gt;&gt;</span> model = PPO(<span class="string">'MlpPolicy'</span>, env, verbose=<span class="number">1</span>)
+<span class="prompt">&gt;&gt;&gt;</span> model.learn(total_timesteps=<span class="number">10000</span>)
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Reward Functions</h2>
+        <div class="terminal">
+<span class="comment"># Available reward types:</span>
+env = LPSimEnv(reward_type=<span class="string">"travel_time"</span>)   <span class="comment"># minimize avg travel time</span>
+env = LPSimEnv(reward_type=<span class="string">"emissions"</span>)     <span class="comment"># minimize CO emissions</span>
+env = LPSimEnv(reward_type=<span class="string">"throughput"</span>)    <span class="comment"># maximize completed trips</span>
+<br><br>
+<span class="comment"># Custom reward:</span>
+<span class="keyword">class</span> MyEnv(LPSimEnv):
+    <span class="keyword">def</span> _compute_reward(self, results):
+        <span class="keyword">return</span> -results[<span class="string">'avg_travel_time'</span>] * <span class="number">0.7</span> - results[<span class="string">'total_co'</span>] * <span class="number">0.3</span>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Action Space</h2>
+        <div class="terminal">
+<span class="comment"># Default: toll vector on 100 highest-traffic edges</span>
+<span class="comment"># action[i] ∈ [0, 1] maps to toll amount $0-$10</span>
+<br><br>
+<span class="comment"># Customize which edges are controllable:</span>
+env = LPSimEnv(
+    action_edges=[<span class="number">12345</span>, <span class="number">67890</span>, <span class="number">11111</span>],  <span class="comment"># specific edge IDs</span>
+    num_trips=<span class="number">5000</span>
+)
+<br><br>
+<span class="comment"># Full network control (540K actions — use with hierarchical RL):</span>
+env = LPSimEnv(action_edges=<span class="keyword">list</span>(<span class="keyword">range</span>(env.num_edges)))
+        </div>
+    </div>
+</div>
+</body>
+</html>

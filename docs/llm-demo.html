@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LPSim: LLM Fleet Dispatcher Demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'SF Mono', 'Fira Code', monospace; background: #0a0a1e; color: #e0e0e0; overflow: hidden; }
+        #map { width: 65vw; height: 100vh; position: absolute; left: 0; top: 0; }
+        #sidebar { position: absolute; right: 0; top: 0; width: 35vw; height: 100vh; background: #0d1117; border-left: 1px solid #21262d; overflow-y: auto; padding: 20px; }
+        h1 { font-size: 18px; color: #4fc3f7; margin: 0 0 4px; font-weight: 600; }
+        .subtitle { font-size: 11px; color: #607d8b; margin-bottom: 16px; }
+        .section { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+        .section h3 { font-size: 12px; color: #8b949e; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .state-item { background: #0d1117; padding: 8px; border-radius: 6px; text-align: center; }
+        .state-item .val { font-size: 20px; color: #4fc3f7; font-weight: 600; }
+        .state-item .lbl { font-size: 9px; color: #607d8b; margin-top: 2px; }
+        .llm-chat { background: #0d1117; border-radius: 6px; padding: 10px; margin-top: 8px; max-height: 180px; overflow-y: auto; font-size: 11px; line-height: 1.5; }
+        .msg { margin: 6px 0; padding: 6px 10px; border-radius: 6px; }
+        .msg.system { background: #1c2128; color: #8b949e; border-left: 3px solid #4fc3f7; }
+        .msg.llm { background: #1a2332; color: #58a6ff; border-left: 3px solid #58a6ff; }
+        .msg.result { background: #122117; color: #3fb950; border-left: 3px solid #3fb950; }
+        .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .action-btn { background: rgba(79,195,247,0.1); border: 1px solid rgba(79,195,247,0.3); color: #4fc3f7; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; transition: all 0.2s; }
+        .action-btn:hover { background: rgba(79,195,247,0.25); transform: translateY(-1px); }
+        .action-btn:active { transform: translateY(0); }
+        .action-btn.active { background: rgba(79,195,247,0.4); box-shadow: 0 0 12px rgba(79,195,247,0.3); }
+        .metric-bar { height: 4px; background: #21262d; border-radius: 2px; margin-top: 4px; overflow: hidden; }
+        .metric-bar .fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+        .code-block { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 10px; font-size: 10px; color: #c9d1d9; white-space: pre; overflow-x: auto; margin-top: 8px; }
+        .tag { display: inline-block; background: rgba(56,139,253,0.15); color: #58a6ff; padding: 2px 6px; border-radius: 4px; font-size: 9px; margin-right: 4px; }
+        #thinking { display: none; color: #f0883e; font-size: 11px; margin-top: 6px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .nav { position: absolute; top: 10px; left: 10px; z-index: 10; }
+        .nav a { color: #4fc3f7; text-decoration: none; font-size: 12px; background: rgba(10,10,30,0.9); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(79,195,247,0.3); }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="nav"><a href="index.html">← Back to Simulation</a></div>
+    <div id="sidebar">
+        <h1>🤖 LLM Fleet Dispatcher</h1>
+        <div class="subtitle">LLM observes traffic state → reasons about congestion → takes control actions</div>
+
+        <div class="section">
+            <h3>📊 Network State (LLM Context)</h3>
+            <div class="state-grid">
+                <div class="state-item"><div class="val" id="s-vehicles">2,000</div><div class="lbl">Active Vehicles</div></div>
+                <div class="state-item"><div class="val" id="s-congestion">34%</div><div class="lbl">Congested Edges</div></div>
+                <div class="state-item"><div class="val" id="s-avgspeed">28</div><div class="lbl">Avg Speed (mph)</div></div>
+                <div class="state-item"><div class="val" id="s-throughput">847</div><div class="lbl">Completed Trips</div></div>
+            </div>
+            <div class="metric-bar"><div class="fill" id="congestion-bar" style="width:34%;background:#ff9800"></div></div>
+        </div>
+
+        <div class="section">
+            <h3>🧠 LLM Decision Loop</h3>
+            <div class="llm-chat" id="chat">
+                <div class="msg system">System: You are a fleet dispatcher controlling 540K road segments in the SF Bay Area. Observe congestion and take actions to minimize travel time.</div>
+            </div>
+            <div id="thinking">🔄 LLM reasoning...</div>
+        </div>
+
+        <div class="section">
+            <h3>⚡ Available Actions</h3>
+            <div class="actions">
+                <button class="action-btn" onclick="llmAction('toll_highway')">Set Highway Tolls ($2-5)</button>
+                <button class="action-btn" onclick="llmAction('reroute_downtown')">Reroute Downtown Traffic</button>
+                <button class="action-btn" onclick="llmAction('signal_optimize')">Optimize Signal Timing</button>
+                <button class="action-btn" onclick="llmAction('surge_pricing')">Surge Pricing (Peak)</button>
+            </div>
+            <div class="actions" style="margin-top:6px">
+                <button class="action-btn" onclick="llmAction('uam_dispatch')">🚁 Dispatch UAM Vehicles</button>
+                <button class="action-btn" onclick="llmAction('balance_load')">Balance GPU Partitions</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>📋 Integration Code</h3>
+            <div><span class="tag">OpenAI</span><span class="tag">Anthropic</span><span class="tag">Llama</span></div>
+            <div class="code-block">from lpsim_env.llm_interface import LPSimPlayground
+
+playground = LPSimPlayground(
+    network="sf_bay_area",
+    num_trips=5000
+)
+
+# Get state → feed to any LLM
+state = playground.get_state()
+prompt = state.to_prompt_context()
+
+# LLM returns action via tool_use
+action = LLMAction(
+    action_type="set_tolls",
+    targets=[1234, 5678],
+    values=[2.5, 1.0]
+)
+result = playground.apply_action(action)</div>
+        </div>
+    </div>
+
+    <script>
+    const {DeckGL, GeoJsonLayer, TripsLayer, ScatterplotLayer} = deck;
+
+    let networkData, tripsData;
+    let currentTime = 18000;
+    let congestionLevel = 34;
+    let avgSpeed = 28;
+    let throughput = 847;
+    let deckgl;
+
+    const llmResponses = {
+        toll_highway: {
+            reasoning: "I observe 34% congestion concentrated on I-80 and I-580 corridors. Setting dynamic tolls of $2-5 on these highway segments should divert 15-20% of traffic to parallel arterials, reducing peak density.",
+            effect: { congestion: -12, speed: +8, throughput: +120 }
+        },
+        reroute_downtown: {
+            reasoning: "Downtown SF grid (Market St → Embarcadero) is at 89% capacity. Rerouting 200 vehicles through Van Ness corridor and 101-S bypass will reduce intersection queue lengths by an estimated 40%.",
+            effect: { congestion: -18, speed: +5, throughput: +85 }
+        },
+        signal_optimize: {
+            reasoning: "Analyzing cycle times at top 50 bottleneck intersections. Current fixed 60s cycles waste 23% green time. Adaptive signal control based on queue length sensors should improve throughput 15%.",
+            effect: { congestion: -8, speed: +12, throughput: +200 }
+        },
+        surge_pricing: {
+            reasoning: "Peak hour demand exceeds network capacity by 22%. Implementing $1.50 surge on trips entering congested zones during 7-9 AM will shift 18% of flexible demand to off-peak, matching supply.",
+            effect: { congestion: -15, speed: +6, throughput: +50 }
+        },
+        uam_dispatch: {
+            reasoning: "5 vertiports have available pad capacity. Dispatching 12 UAM vehicles for high-value cross-bay trips (SFO→Oakland, Palo Alto→SF) removes 12 cars from congested bridge corridors with 4x speed advantage.",
+            effect: { congestion: -5, speed: +3, throughput: +45 }
+        },
+        balance_load: {
+            reasoning: "GPU partition 2 (downtown) has 3.2x more active vehicles than partition 0 (suburbs). Triggering dynamic repartition: migrating boundary nodes to equalize load within 5% tolerance.",
+            effect: { congestion: -2, speed: +1, throughput: +30 }
+        }
+    };
+
+    function addMessage(type, text) {
+        const chat = document.getElementById('chat');
+        const msg = document.createElement('div');
+        msg.className = `msg ${type}`;
+        msg.textContent = text;
+        chat.appendChild(msg);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function updateMetrics() {
+        document.getElementById('s-congestion').textContent = Math.max(5, congestionLevel) + '%';
+        document.getElementById('s-avgspeed').textContent = Math.min(65, avgSpeed);
+        document.getElementById('s-throughput').textContent = throughput.toLocaleString();
+        document.getElementById('congestion-bar').style.width = congestionLevel + '%';
+        const barColor = congestionLevel > 50 ? '#e53935' : congestionLevel > 30 ? '#ff9800' : '#4caf50';
+        document.getElementById('congestion-bar').style.background = barColor;
+    }
+
+    async function llmAction(actionType) {
+        const response = llmResponses[actionType];
+        const thinking = document.getElementById('thinking');
+
+        // Show thinking
+        thinking.style.display = 'block';
+        addMessage('system', `→ Action requested: ${actionType.replace('_',' ')}`);
+
+        // Simulate LLM latency
+        await new Promise(r => setTimeout(r, 1500));
+        thinking.style.display = 'none';
+
+        // Show LLM reasoning
+        addMessage('llm', `Claude: ${response.reasoning}`);
+
+        // Apply effects with animation
+        await new Promise(r => setTimeout(r, 800));
+        congestionLevel = Math.max(5, congestionLevel + response.effect.congestion);
+        avgSpeed = Math.min(65, avgSpeed + response.effect.speed);
+        throughput += response.effect.throughput;
+        updateMetrics();
+
+        // Show result
+        const delta_c = response.effect.congestion;
+        const delta_s = response.effect.speed;
+        addMessage('result', `✓ Applied. Congestion ${delta_c}%, Speed +${delta_s} mph, +${response.effect.throughput} trips completed`);
+    }
+
+    function animate() {
+        currentTime += 15;
+        if (currentTime > 43200) currentTime = 18000;
+
+        if (deckgl && tripsData) {
+            deckgl.setProps({
+                layers: [
+                    new GeoJsonLayer({
+                        id: 'roads',
+                        data: networkData,
+                        lineWidthScale: 1.5,
+                        lineWidthMinPixels: 0.5,
+                        getLineColor: [66, 165, 245, 30],
+                        getLineWidth: 1,
+                    }),
+                    new TripsLayer({
+                        id: 'trips',
+                        data: tripsData,
+                        getPath: d => d.path.map(p => [p[0], p[1]]),
+                        getTimestamps: d => d.path.map(p => p[2]),
+                        getColor: [79, 195, 247],
+                        opacity: 0.9,
+                        widthMinPixels: 3,
+                        trailLength: 200,
+                        currentTime: currentTime,
+                    })
+                ]
+            });
+        }
+        requestAnimationFrame(animate);
+    }
+
+    async function init() {
+        const [netResp, tripsResp] = await Promise.all([
+            fetch('network.json'),
+            fetch('trips.json')
+        ]);
+        networkData = await netResp.json();
+        tripsData = await tripsResp.json();
+
+        let cx = 0, cy = 0, n = 0;
+        for (const f of networkData.features.slice(0, 500)) {
+            cx += f.geometry.coordinates[0][0];
+            cy += f.geometry.coordinates[0][1];
+            n++;
+        }
+
+        deckgl = new DeckGL({
+            container: 'map',
+            mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+            initialViewState: { longitude: cx/n, latitude: cy/n, zoom: 10, pitch: 45, bearing: -15 },
+            controller: true,
+            layers: []
+        });
+
+        animate();
+    }
+
+    init();
+    </script>
+</body>
+</html>

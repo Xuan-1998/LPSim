@@ -1,0 +1,208 @@
+============================================================
+  LPSim LLM Playground Interface Demo
+============================================================
+
+>>> from lpsim_env.llm_interface import LPSimPlayground, LLMAction, TOOL_DEFINITION
+
+>>> playground = LPSimPlayground(network="sf_bay_area", num_trips=5000)
+    Loaded: 223,328 nodes, 547,697 edges
+
+>>> state = playground.get_state()
+
+>>> print(state.to_prompt_context())
+## Traffic Network State (t=18000s)
+- Network: 223,328 intersections, 547,697 road segments
+- Active vehicles: 5,000
+
+### Top Bottlenecks (slowest edges):
+  1. Edge 384931: speed=11.2 m/s (limit=11.2), vehicles=0, length=26716m
+  2. Edge 101129: speed=11.2 m/s (limit=11.2), vehicles=0, length=26716m
+  3. Edge 92130: speed=8.9 m/s (limit=8.9), vehicles=0, length=25659m
+  4. Edge 88689: speed=8.9 m/s (limit=8.9), vehicles=0, length=25659m
+  5. Edge 65564: speed=8.9 m/s (limit=8.9), vehicles=0, length=22059m
+  6. Edge 68183: speed=8.9 m/s (limit=8.9), vehicles=0, length=22059m
+  7. Edge 101127: speed=8.9 m/s (limit=8.9), vehicles=0, length=20866m
+  8. Edge 101149: speed=8.9 m/s (limit=8.9), vehicles=0, length=20866m
+  9. Edge 381222: speed=8.9 m/s (limit=8.9), vehicles=0, length=20289m
+  10. Edge 136077: speed=8.9 m/s (limit=8.9), vehicles=0, length=20289m
+  11. Edge 95991: speed=8.9 m/s (limit=8.9), vehicles=0, length=19914m
+  12. Edge 381221: speed=8.9 m/s (limit=8.9), vehicles=0, length=19914m
+  13. Edge 132716: speed=8.9 m/s (limit=8.9), vehicles=0, length=18516m
+  14. Edge 60430: speed=8.9 m/s (limit=8.9), vehicles=0, length=18516m
+  15. Edge 115565: speed=8.9 m/s (limit=8.9), vehicles=0, length=17403m
+  16. Edge 133519: speed=8.9 m/s (limit=8.9), vehicles=0, length=17403m
+  17. Edge 384932: speed=11.2 m/s (limit=11.2), vehicles=0, length=17290m
+  18. Edge 115988: speed=11.2 m/s (limit=11.2), vehicles=0, length=17290m
+  19. Edge 89498: speed=8.9 m/s (limit=8.9), vehicles=0, length=16106m
+  20. Edge 94031: speed=8.9 m/s (limit=8.9), vehicles=0, length=16106m
+
+### Zone Summaries:
+
+>>> print(state.to_json()[:500])
+{
+  "network": {
+    "nodes": 223328,
+    "edges": 547697
+  },
+  "time_sec": 18000.0,
+  "active_vehicles": 5000,
+  "bottlenecks": [
+    {
+      "id": 384931,
+      "avg_speed": 11.176,
+      "speed_limit": 11.176,
+      "num_vehicles": 0,
+      "length": 26716.25899999999
+    },
+    {
+      "id": 101129,
+      "avg_speed": 11.176,
+      "speed_limit": 11.176,
+      "num_vehicles": 0,
+      "length": 26716.25899999997
+    },
+    {
+      "id": 92130,
+      "avg_speed": 8.9408,
+      "speed_limit":
+  ...
+
+>>> playground.get_available_actions()
+{
+  "name": "traffic_control",
+  "description": "Apply traffic control actions to the city-scale network",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action_type": {
+        "type": "string",
+        "enum": [
+          "set_tolls",
+          "adjust_signals",
+          "reroute",
+          "dispatch"
+        ],
+        "description": "Type of control action"
+      },
+      "targets": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "description": "Edge or node IDs to target"
+      },
+      "values": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "description": "Action values (toll amounts, signal durations, etc.)"
+      },
+      "reasoning": {
+        "type": "string",
+        "description": "Your reasoning for this action (for logging)"
+      }
+    },
+    "required": [
+      "action_type",
+      "targets",
+      "values"
+    ]
+  }
+}
+
+>>> # OpenAI function-calling tool definition
+>>> TOOL_DEFINITION
+{
+  "type": "function",
+  "function": {
+    "name": "lpsim_traffic_control",
+    "description": "Control a city-scale GPU traffic simulation (223K nodes, 540K edges). Apply tolls, reroute vehicles, or adjust signals to optimize travel time.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action_type": {
+          "type": "string",
+          "enum": [
+            "set_tolls",
+            "adjust_signals",
+            "reroute"
+          ]
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Edge IDs to modify (0-540826)"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Toll amount ($) or signal duration (s)"
+        }
+      },
+      "required": [
+        "action_type",
+        "targets",
+        "values"
+      ]
+    }
+  }
+}
+
+>>> action = LLMAction(
+...     action_type="set_tolls",
+...     targets=[1234, 5678, 9012],
+...     values=[2.5, 1.0, 3.0],
+...     reasoning="Highway corridors congested during AM peak"
+... )
+    Action: set_tolls on 3 edges
+    Reasoning: Highway corridors congested during AM peak
+
+
+============================================================
+  LPSim Gymnasium RL Environment Demo
+============================================================
+
+>>> from lpsim_env import LPSimEnv
+
+>>> env = LPSimEnv(
+...     network_path="data/networks/sf_bay_area",
+...     reward_type="travel_time",
+...     num_trips=1000
+... )
+    Action space: Box(low=0, high=1, shape=(100,))
+    Observation space: Box(shape=(547697, 3)) — [speed, density, flow] per edge
+    Network: 547,697 edges, 100 controllable
+
+>>> obs, info = env.reset(seed=42)
+    obs.shape = (547697, 3)
+    obs.dtype = float32
+
+>>> action = env.action_space.sample()
+    action.shape = (100,)
+    action[:5] = [0.04961247742176056, 0.32735535502433777, 0.6499262452125549, 0.8452519178390503, 0.2520238161087036]
+
+>>> # env.step(action) runs the full GPU simulation
+>>> obs, reward, terminated, truncated, info = env.step(action)
+    # [Runs LPSim GPU simulator with toll vector applied]
+    # Expected output:
+    reward = -26.02  (negative avg travel time → minimize)
+    terminated = True
+    info = {
+        'avg_travel_time': 26.02,  # minutes
+        'total_co': 470.81,         # CO emissions
+        'num_completed': 702        # trips finished
+    }
+
+>>> # Compatible with stable-baselines3:
+>>> from stable_baselines3 import PPO
+>>> model = PPO('MlpPolicy', env, verbose=1)
+>>> model.learn(total_timesteps=1000)
+
+============================================================
+  Demo Complete
+============================================================
