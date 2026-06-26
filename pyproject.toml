@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lpsim"
+version = "2.0.0"
+description = "GPU-accelerated multi-GPU traffic microsimulator: LLM + RL interfaces for city-scale fleet optimization"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [
+    {name = "Xuan Jiang", email = "xuanjiang@berkeley.edu"},
+]
+keywords = ["traffic-simulation", "gpu", "cuda", "reinforcement-learning", "llm", "multi-gpu", "ride-hailing"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.22",
+    "gymnasium>=0.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "ruff"]
+tools = ["matplotlib", "pandas", "seaborn"]
+
+[project.urls]
+Homepage = "https://github.com/Xuan-1998/LPSim"
+Documentation = "https://xuan-1998.github.io/LPSim/"
+Issues = "https://github.com/Xuan-1998/LPSim/issues"
+
+[project.scripts]
+lpsim-demand = "tools.generate_demand:main"
+lpsim-partition = "tools.partition_network:main"
+
+[tool.setuptools.packages.find]
+include = ["lpsim_env*", "tools*"]
