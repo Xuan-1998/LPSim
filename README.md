@@ -109,11 +109,21 @@ obs, reward, done, trunc, info = env.step(action)
 
 ## Citing LPSim
 
-**Multi-GPU traffic assignment (TR-C 2024)**
-> Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2024). *Large scale multi-GPU based parallel traffic simulation for accelerated traffic assignment and propagation.* Transportation Research Part C, 169, 104873.
+If LPSim contributes to your work, please cite the relevant paper(s):
 
-**Deep RL ride-hailing dispatch (ICML 2026)**
-> Tang, Y., Cui, K., Park, J. H., Zhao, Y., Jiang, X., et al. (2026). *RAST-MoE-RL: A Regime-Aware Spatio-Temporal MoE Framework for Deep Reinforcement Learning in Ride-Hailing.* ICML 2026.
+**Multi-GPU Traffic Simulation (Transportation Research Part C, 2024)**
+> Jiang, X., Sengupta, R., Demmel, J., & Williams, S. (2024). *Large scale multi-GPU based parallel traffic simulation for accelerated traffic assignment and propagation.* Transportation Research Part C: Emerging Technologies, 169, 104873. [link](https://www.sciencedirect.com/science/article/pii/S0968090X24003942)
+
+**Deep RL for Ride-Hailing Dispatch (ICML 2026)**
+> Tang, Y., Cui, K., Park, J. H., Zhao, Y., Jiang, X.†, He, H., Zhuang, D., Wang, S., Yu, J., Koutsopoulos, H., & Zhao, J. (2026). *RAST-MoE-RL: A Regime-Aware Spatio-Temporal MoE Framework for Deep Reinforcement Learning in Ride-Hailing.* International Conference on Machine Learning (ICML). [arXiv:2512.13727](https://arxiv.org/abs/2512.13727)
+>
+> † Corresponding author
+
+**Urban Air Mobility Integration (Journal of Air Transportation, 2023)**
+> Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., & Sengupta, R. (2023). *Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey.* Journal of Air Transportation, 32(3), 97-107. [link](https://arc.aiaa.org/doi/10.2514/1.D0431)
+
+**Time-Driven Simulation Framework (ACM SIGSIM, 2024)**
+> Jiang, X. (2024). *Designing a Time-Driven Simulation Framework for Large-Scale Traffic Networks.* Proceedings of the 38th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (PADS).
 
 ---
 
