@@ -1,111 +1,162 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LPSim: City-Scale Traffic Visualization</title>
+    <title>LPSim: City-Scale Traffic Simulation</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
-        #container { width: 100vw; height: 100vh; position: relative; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; background: #0a0a1e; }
+        #container { width: 100vw; height: 100vh; }
         #panel {
             position: absolute; top: 16px; left: 16px; z-index: 10;
             background: rgba(10, 10, 30, 0.92); color: #e0e0e0; padding: 20px;
-            border-radius: 12px; max-width: 320px; backdrop-filter: blur(10px);
+            border-radius: 12px; max-width: 300px; backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
         }
-        #panel h1 { margin: 0 0 4px 0; font-size: 20px; color: #fff; font-weight: 600; }
-        #panel .subtitle { color: #90a4ae; font-size: 12px; margin-bottom: 12px; }
-        .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .stat-label { color: #78909c; font-size: 12px; }
-        .stat-value { color: #4fc3f7; font-size: 13px; font-weight: 500; }
-        #legend { margin-top: 14px; }
-        .leg-row { display: flex; align-items: center; margin: 4px 0; font-size: 11px; }
-        .leg-bar { width: 28px; height: 4px; border-radius: 2px; margin-right: 8px; }
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-            color: #fff; font-size: 18px; z-index: 100; }
-        .github-link { position: absolute; bottom: 16px; right: 16px; z-index: 10;
-            background: rgba(10,10,30,0.9); color: #4fc3f7; padding: 8px 14px;
-            border-radius: 8px; text-decoration: none; font-size: 12px;
-            border: 1px solid rgba(79,195,247,0.3); }
-        .github-link:hover { background: rgba(79,195,247,0.15); }
+        #panel h1 { margin: 0 0 4px 0; font-size: 20px; color: #fff; }
+        #panel .sub { color: #78909c; font-size: 11px; margin-bottom: 12px; }
+        .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
+        .row .v { color: #4fc3f7; font-weight: 500; }
+        #time-display { margin-top: 12px; text-align: center; }
+        #time-display .clock { font-size: 28px; color: #fff; font-weight: 300; font-variant-numeric: tabular-nums; }
+        #time-display .label { font-size: 10px; color: #607d8b; margin-top: 2px; }
+        #controls { margin-top: 10px; display: flex; gap: 8px; }
+        #controls button { background: rgba(79,195,247,0.15); border: 1px solid rgba(79,195,247,0.3); color: #4fc3f7; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; }
+        #controls button:hover { background: rgba(79,195,247,0.3); }
+        #controls button.active { background: rgba(79,195,247,0.4); }
+        .legend { margin-top: 10px; font-size: 10px; color: #607d8b; }
+        .leg-item { display: flex; align-items: center; margin: 3px 0; }
+        .leg-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #fff; font-size: 16px; z-index: 100; }
+        .link { position: absolute; bottom: 16px; right: 16px; z-index: 10; background: rgba(10,10,30,0.9); color: #4fc3f7; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 12px; border: 1px solid rgba(79,195,247,0.3); }
     </style>
 </head>
 <body>
     <div id="container"></div>
-    <div id="loading">Loading SF Bay Area network (50K edges)...</div>
+    <div id="loading">Loading simulation data...</div>
     <div id="panel" style="display:none">
         <h1>LPSim</h1>
-        <div class="subtitle">GPU-Accelerated Multi-Modal Traffic Simulator</div>
-        <div class="stat-row"><span class="stat-label">Edges (sample)</span><span class="stat-value" id="n-edges">-</span></div>
-        <div class="stat-row"><span class="stat-label">Full network</span><span class="stat-value">540,827 edges</span></div>
-        <div class="stat-row"><span class="stat-label">Intersections</span><span class="stat-value">223,328</span></div>
-        <div class="stat-row"><span class="stat-label">Simulation</span><span class="stat-value">1h → 12s GPU</span></div>
-        <div id="legend">
-            <div class="leg-row"><div class="leg-bar" style="background:#e53935"></div>Local roads (&lt;25 mph)</div>
-            <div class="leg-row"><div class="leg-bar" style="background:#ff9800"></div>Arterials (25-40 mph)</div>
-            <div class="leg-row"><div class="leg-bar" style="background:#66bb6a"></div>Major roads (40-55 mph)</div>
-            <div class="leg-row"><div class="leg-bar" style="background:#42a5f5"></div>Highways (55+ mph)</div>
+        <div class="sub">GPU-Accelerated Multi-GPU Traffic Microsimulator</div>
+        <div class="row"><span>Network</span><span class="v">SF Bay Area</span></div>
+        <div class="row"><span>Edges</span><span class="v">540,827</span></div>
+        <div class="row"><span>Nodes</span><span class="v">223,328</span></div>
+        <div class="row"><span>Vehicles</span><span class="v" id="n-vehicles">2,000</span></div>
+        <div id="time-display">
+            <div class="clock" id="clock">05:00</div>
+            <div class="label">Simulated Time</div>
+        </div>
+        <div id="controls">
+            <button id="btn-1x" class="active">1x</button>
+            <button id="btn-5x">5x</button>
+            <button id="btn-20x">20x</button>
+            <button id="btn-60x">60x</button>
+        </div>
+        <div class="legend">
+            <div class="leg-item"><div class="leg-dot" style="background:#4fc3f7"></div>Active vehicles (animated)</div>
+            <div class="leg-item"><div class="leg-dot" style="background:rgba(66,165,245,0.3)"></div>Road network</div>
         </div>
     </div>
-    <a class="github-link" href="https://github.com/Xuan-1998/LPSim">★ GitHub</a>
+    <a class="link" href="https://github.com/Xuan-1998/LPSim">GitHub</a>
 
     <script>
-    const {DeckGL, GeoJsonLayer} = deck;
+    const {DeckGL, GeoJsonLayer, TripsLayer} = deck;
 
-    function speedColor(s) {
-        if (s < 25) return [229, 57, 53, 180];
-        if (s < 40) return [255, 152, 0, 160];
-        if (s < 55) return [102, 187, 106, 160];
-        return [66, 165, 245, 200];
+    let animationSpeed = 1;
+    let currentTime = 18000; // 5:00 AM in seconds
+    const endTime = 43200; // 12:00 PM
+    let deckgl;
+    let networkData, tripsData;
+    let animationId;
+
+    function formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    function setSpeed(speed) {
+        animationSpeed = speed;
+        document.querySelectorAll('#controls button').forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${speed}x`).classList.add('active');
+    }
+
+    function animate() {
+        currentTime += 10 * animationSpeed; // advance 10 seconds per frame
+        if (currentTime > endTime) currentTime = 18000; // loop
+
+        document.getElementById('clock').textContent = formatTime(currentTime);
+
+        deckgl.setProps({
+            layers: [
+                new GeoJsonLayer({
+                    id: 'roads',
+                    data: networkData,
+                    lineWidthScale: 1.5,
+                    lineWidthMinPixels: 0.5,
+                    getLineColor: [66, 165, 245, 40],
+                    getLineWidth: 1,
+                }),
+                new TripsLayer({
+                    id: 'trips',
+                    data: tripsData,
+                    getPath: d => d.path.map(p => [p[0], p[1]]),
+                    getTimestamps: d => d.path.map(p => p[2]),
+                    getColor: [79, 195, 247],
+                    opacity: 0.8,
+                    widthMinPixels: 3,
+                    trailLength: 300,
+                    currentTime: currentTime,
+                    shadowEnabled: false,
+                })
+            ]
+        });
+
+        animationId = requestAnimationFrame(animate);
     }
 
     async function init() {
-        const resp = await fetch('network.json');
-        const data = await resp.json();
+        const [netResp, tripsResp] = await Promise.all([
+            fetch('network.json'),
+            fetch('trips.json')
+        ]);
+        networkData = await netResp.json();
+        tripsData = await tripsResp.json();
+
         document.getElementById('loading').style.display = 'none';
         document.getElementById('panel').style.display = 'block';
-        document.getElementById('n-edges').textContent = data.features.length.toLocaleString();
+        document.getElementById('n-vehicles').textContent = tripsData.length.toLocaleString();
 
+        // Center on data
         let cx = 0, cy = 0, n = 0;
-        for (const f of data.features.slice(0, 500)) {
+        for (const f of networkData.features.slice(0, 500)) {
             cx += f.geometry.coordinates[0][0];
             cy += f.geometry.coordinates[0][1];
             n++;
         }
 
-        new DeckGL({
+        deckgl = new DeckGL({
             container: 'container',
             mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
             initialViewState: {
                 longitude: cx/n, latitude: cy/n,
-                zoom: 9.5, pitch: 45, bearing: -15
+                zoom: 10, pitch: 50, bearing: -20
             },
             controller: true,
-            layers: [
-                new GeoJsonLayer({
-                    id: 'roads',
-                    data: data,
-                    lineWidthScale: 2,
-                    lineWidthMinPixels: 1,
-                    getLineColor: f => speedColor(f.properties.s),
-                    getLineWidth: f => Math.max(1, f.properties.l * 0.6),
-                    pickable: true,
-                    autoHighlight: true,
-                    highlightColor: [255, 255, 100, 200],
-                })
-            ],
-            getTooltip: ({object}) => object && {
-                html: `<b>Edge ${object.properties.id}</b><br>
-                       Speed: ${object.properties.s} mph<br>
-                       Lanes: ${object.properties.l}<br>
-                       Length: ${object.properties.len}m`,
-                style: { background: '#1a1a2e', color: '#fff', fontSize: '12px', padding: '8px', borderRadius: '6px' }
-            }
+            layers: []
         });
+
+        // Speed controls
+        document.getElementById('btn-1x').onclick = () => setSpeed(1);
+        document.getElementById('btn-5x').onclick = () => setSpeed(5);
+        document.getElementById('btn-20x').onclick = () => setSpeed(20);
+        document.getElementById('btn-60x').onclick = () => setSpeed(60);
+
+        animate();
     }
+
     init();
     </script>
 </body>
