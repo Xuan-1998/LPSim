@@ -39,6 +39,8 @@ struct B18TrafficVehicle {
   unsigned short nextEdgeNextInters;
   float nextEdgeLength;
   float nextEdgemaxSpeedMperSec;
+  // WARNING: 2KB per vehicle. For 500K vehicles = 1GB just for this field.
+  // TODO(#94): replace with dynamically-sized buffer or compact encoding.
   float travel_time[500];
   ///////////////////////////
   unsigned int indexPathInit;
