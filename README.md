@@ -73,10 +73,13 @@ tests/          Unit tests
 | Metric | Value |
 |--------|-------|
 | Network | SF Bay Area: 223K nodes, 540K edges |
-| Routing | 5,000 paths via CH in 2.0s (192 threads) |
-| Simulation | 1 hour simulated → 12.1s GPU time |
-| Hardware | NVIDIA H200 (143 GB HBM3e) |
-| GPU Memory | 2.4 GB for full network |
+| Routing | 5,000 paths via CH in 2.0s |
+| Simulation | 1 hour simulated in seconds on modern GPUs |
+| GPU Memory | ~2.4 GB for full network |
+
+## Live Demo
+
+[**Open the interactive network visualizer →**](https://xuan-1998.github.io/LPSim/)
 
 ---
 
