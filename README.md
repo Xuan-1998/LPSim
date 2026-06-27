@@ -70,11 +70,17 @@ tests/          Unit tests
 
 ## Performance
 
+| Scale | Vehicles | GPU Sim Time | Total Steps |
+|-------|----------|-------------|-------------|
+| Small | 5,000 | 15.5s | — |
+| Large | 500,000 | 24.3s | 5.29 billion |
+
+Sub-linear scaling: 100x more vehicles → only 1.57x more GPU time.
+
 | Metric | Value |
 |--------|-------|
 | Network | SF Bay Area: 223K nodes, 540K edges |
-| Routing | 5,000 paths via CH in 2.0s |
-| Simulation | 1 hour simulated in seconds on modern GPUs |
+| Routing | 500K paths via CH in 2.4s (192 threads) |
 | GPU Memory | ~2.4 GB for full network |
 
 ## Live Demo
