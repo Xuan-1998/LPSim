@@ -1144,7 +1144,7 @@ __global__ void kernel_trafficSimulation(
       printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
     }
     assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
-    if (trafficVehicleVec[p].window_flag < 300) {
+    if (trafficVehicleVec[p].window_flag < 64) {
       if (trafficVehicleVec[p].window_flag == 0) {
           trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
           trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
@@ -1212,7 +1212,7 @@ __global__ void kernel_trafficSimulation(
         printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
       }
       assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
-      if (trafficVehicleVec[p].window_flag < 300) {
+      if (trafficVehicleVec[p].window_flag < 64) {
         if (trafficVehicleVec[p].window_flag == 0) {
             trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
             trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
@@ -1395,7 +1395,7 @@ __global__ void kernel_trafficSimulation(
       printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
     }
     assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
-    if (trafficVehicleVec[p].window_flag < 300) {
+    if (trafficVehicleVec[p].window_flag < 64) {
       if (trafficVehicleVec[p].window_flag == 0) {
           trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
           trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
@@ -1684,7 +1684,7 @@ __global__ void kernel_trafficSimulation(
         printf("prevEdge %d is bigger than edgesData size %d\n", trafficVehicleVec[p].prevEdge, edgesData_d_size);
       }
       assert(trafficVehicleVec[p].prevEdge < edgesData_d_size);
-      if (trafficVehicleVec[p].window_flag < 300) {
+      if (trafficVehicleVec[p].window_flag < 64) {
         if (trafficVehicleVec[p].window_flag == 0) {
             trafficVehicleVec[p].curEdge = trafficVehicleVec[p].prevEdge;
             trafficVehicleVec[p].travel_time[trafficVehicleVec[p].window_flag] = elapsed_s - trafficVehicleVec[p].time_departure;
