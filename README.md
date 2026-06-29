@@ -1,6 +1,6 @@
-# LPSim: Large-scale Parallel Traffic Simulator
+# LPSim: Large-scale Parallel Simulator
 
-GPU-accelerated, multi-GPU traffic microsimulator for HPC and AI research at city scale: powers ICML 2026 deep-RL ride-hailing dispatch, MoE routing policies, and closed-loop LLM-driven fleet optimization.
+GPU-accelerated, multi-GPU simulator for large-scale network flow and agent-based optimization: powers ICML 2026 deep-RL ride-hailing dispatch, MoE routing policies, and closed-loop LLM-driven fleet optimization.
 
 <img width="1200" alt="LPSim Bay Area" src="https://github.com/Xuan-1998/LPSim/assets/58761221/1c41f659-aee0-4887-99e0-39b0133154ce">
 
@@ -11,7 +11,7 @@ GPU-accelerated, multi-GPU traffic microsimulator for HPC and AI research at cit
 | Feature | Description |
 |---------|-------------|
 | **Multi-GPU** | Graph-partitioned simulation across 1-8 GPUs with ghost-zone vehicle migration |
-| **City-scale** | 223K+ nodes, 540K+ edges (SF Bay Area) in seconds on a single GPU |
+| **Large-scale** | 223K+ nodes, 540K+ edges in seconds on a single GPU |
 | **Multi-modal** | Cars + UAM (urban air mobility) with vertiport queueing |
 | **RL-ready** | Gymnasium environment wrapper for training dispatch/pricing policies |
 | **LLM-ready** | Structured state API compatible with OpenAI/Anthropic tool-use |
@@ -129,7 +129,7 @@ If LPSim contributes to your work, please cite the relevant paper(s):
 > Jiang, X., Tang, Y., Cao, J., Bulusu, V., Yang, H., Peng, X., Zheng, Y., Zhao, J., & Sengupta, R. (2023). *Simulating Integration of Urban Air Mobility into Existing Transportation Systems: Survey.* Journal of Air Transportation, 32(3), 97-107. [link](https://arc.aiaa.org/doi/10.2514/1.D0431)
 
 **Time-Driven Simulation Framework (ACM SIGSIM, 2024)**
-> Jiang, X. (2024). *Designing a Time-Driven Simulation Framework for Large-Scale Traffic Networks.* Proceedings of the 38th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (PADS).
+> Jiang, X. (2024). *Designing a Time-Driven Simulation Framework for Large-Scale Networks.* Proceedings of the 38th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (PADS).
 
 ---
 
