@@ -1,4 +1,4 @@
-"""LPSim Gymnasium Environment: city-scale GPU traffic simulation for RL."""
+"""LPSim Gymnasium Environment: GPU-accelerated large-scale network simulation for RL."""
 
 from lpsim_env.env import LPSimEnv
 

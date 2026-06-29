@@ -1,7 +1,7 @@
 """
 LPSim Gymnasium Environment
 
-Wraps the C++/CUDA traffic microsimulator as a Gymnasium-compatible
+Wraps the C++/CUDA simulator as a Gymnasium-compatible
 environment for reinforcement learning research on city-scale fleets.
 
 The environment exposes:
@@ -26,7 +26,7 @@ from gymnasium import spaces
 
 
 class LPSimEnv(gym.Env):
-    """City-scale traffic simulation environment for RL.
+    """Large-scale network simulation environment for RL.
 
     Supports dispatch, pricing, and routing policy optimization
     over networks with hundreds of thousands of edges.

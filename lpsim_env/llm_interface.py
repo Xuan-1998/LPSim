@@ -301,7 +301,7 @@ TOOL_DEFINITION = {
     "type": "function",
     "function": {
         "name": "lpsim_traffic_control",
-        "description": "Control a city-scale GPU traffic simulation (223K nodes, 540K edges). "
+        "description": "Control a large-scale GPU network simulation (223K nodes, 540K edges). "
                        "Apply tolls, reroute vehicles, or adjust signals to optimize travel time.",
         "parameters": {
             "type": "object",

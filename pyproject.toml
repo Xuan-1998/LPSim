@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lpsim"
 version = "2.0.0"
-description = "GPU-accelerated multi-GPU traffic microsimulator: LLM + RL interfaces for city-scale fleet optimization"
+description = "GPU-accelerated multi-GPU simulator for large-scale network flow: LLM + RL interfaces for fleet optimization"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
