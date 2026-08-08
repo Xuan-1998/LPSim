@@ -27,7 +27,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "ruff"]
+dev = ["pytest", "black", "ruff", "networkx>=3.1"]
+network = ["networkx>=3.1", "osmnx>=2.0,<3"]
 tools = ["matplotlib", "pandas", "seaborn"]
 
 [project.urls]
@@ -37,6 +38,7 @@ Issues = "https://github.com/Xuan-1998/LPSim/issues"
 
 [project.scripts]
 lpsim-demand = "tools.generate_demand:main"
+lpsim-network = "tools.generate_network:main"
 lpsim-partition = "tools.partition_network:main"
 
 [tool.setuptools.packages.find]

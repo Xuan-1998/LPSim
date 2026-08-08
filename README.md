@@ -52,6 +52,31 @@ python3 viz/server.py --network data/networks/sf_bay_area
 # Open http://localhost:8080
 ```
 
+## Generate a Custom OpenStreetMap Network
+
+With Python 3.9 or newer, install the optional network-generation dependencies,
+then export a place directly to LPSim's current CSV schema:
+
+```bash
+pip install -e ".[network]"
+python3 tools/generate_network.py \
+    --place "Berkeley, California, USA" \
+    --output data/networks/berkeley
+```
+
+For reproducible or offline conversion, pass an existing OSMnx GraphML file:
+
+```bash
+python3 tools/generate_network.py \
+    --graphml berkeley.graphml \
+    --output data/networks/berkeley
+```
+
+The exporter keeps the largest strongly connected component by default,
+normalizes missing lane/speed attributes, reduces parallel OSM edges to the
+fastest free-flow edge, and writes dense sequential node/edge identifiers.
+Generate demand and optional GPU partitions with the existing tools below.
+
 ## Generate Synthetic Demand
 
 ```bash

@@ -36,6 +36,7 @@ Makefile
 # Python
 __pycache__/
 *.pyc
+/cache/
 
 # Demand data (large, contact authors per README)
 /LivingCity/berkeley_2018
