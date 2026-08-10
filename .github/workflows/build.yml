@@ -29,6 +29,8 @@ jobs:
           make -j$(nproc) 2>&1 | tee build.log
           if [ -f lpsim ]; then
             echo "Full build successful"
+            python3 ../tools/check_cuda_artifacts.py lpsim \
+              --require-real 80 --require-virtual 80
           elif grep -q "Linking CXX" build.log; then
             echo "Compilation passed (link may fail without GPU driver stub)"
           else
@@ -39,6 +41,7 @@ jobs:
 
       - name: Python tools check
         run: |
+          python3 tests/test_cuda_artifacts.py
           python3 tools/generate_demand.py --network data/networks/sf_bay_area \
             --num-trips 100 --model uniform --seed 1 --output /dev/null
           python3 tools/partition_network.py --network data/networks/sf_bay_area \

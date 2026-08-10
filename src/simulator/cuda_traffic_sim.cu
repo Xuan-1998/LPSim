@@ -30,6 +30,14 @@
 #include <ctime>
 #include <atomic>
 
+#ifndef LPSIM_CUDA_ARCHITECTURES
+#define LPSIM_CUDA_ARCHITECTURES "unknown"
+#endif
+
+#ifndef LPSIM_CUDA_COMPILER_VERSION
+#define LPSIM_CUDA_COMPILER_VERSION "unknown"
+#endif
+
 #ifndef ushort
 #define ushort uint16_t
 #endif
@@ -68,6 +76,41 @@ inline void printMemoryUsage() {
   double total_db = (double) total_byte;
   double used_db = total_db - free_db;
   printf("GPU memory usage: used = %.0f, free = %.0f MB, total = %.0f MB\n", used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0, total_db / 1024.0 / 1024.0);
+}
+
+inline void printCudaEnvironment(int deviceCount, int selectedDeviceCount) {
+  int driverVersion = 0;
+  int runtimeVersion = 0;
+  gpuErrchk(cudaDriverGetVersion(&driverVersion));
+  gpuErrchk(cudaRuntimeGetVersion(&runtimeVersion));
+
+  printf("[LPSim CUDA] nvcc=%s architectures=%s\n",
+         LPSIM_CUDA_COMPILER_VERSION, LPSIM_CUDA_ARCHITECTURES);
+  printf("[LPSim CUDA] driver_api=%d.%d runtime=%d.%d visible_devices=%d selected_devices=%d\n",
+         driverVersion / 1000, (driverVersion % 1000) / 10,
+         runtimeVersion / 1000, (runtimeVersion % 1000) / 10,
+         deviceCount, selectedDeviceCount);
+
+  for (int device = 0; device < selectedDeviceCount; ++device) {
+    cudaDeviceProp properties{};
+    gpuErrchk(cudaGetDeviceProperties(&properties, device));
+    printf("[LPSim CUDA] device=%d name=\"%s\" cc=%d.%d memory_mib=%zu sms=%d\n",
+           device, properties.name, properties.major, properties.minor,
+           properties.totalGlobalMem / (1024 * 1024),
+           properties.multiProcessorCount);
+  }
+
+  for (int source = 0; source < selectedDeviceCount; ++source) {
+    for (int target = 0; target < selectedDeviceCount; ++target) {
+      if (source == target) {
+        continue;
+      }
+      int canAccessPeer = 0;
+      gpuErrchk(cudaDeviceCanAccessPeer(&canAccessPeer, source, target));
+      printf("[LPSim CUDA] p2p=%d->%d available=%s\n",
+             source, target, canAccessPeer ? "yes" : "no");
+    }
+  }
 }
 ////////////////////////////////
 // Multi-GPU device state
@@ -155,13 +198,26 @@ void b18InitCUDA_n(
   std::vector<float>& numVehPerLinePerTimeInterval,
   float deltaTime) {
   ngpus = num_gpus;
+  if (ngpus <= 0) {
+    fprintf(stderr, "NUM_GPUS must be positive, got %d\n", ngpus);
+    exit(1);
+  }
+
   int maxGpus = 0;
-  cudaGetDeviceCount(&maxGpus);
+  cudaError_t deviceCountStatus = cudaGetDeviceCount(&maxGpus);
+  if (deviceCountStatus != cudaSuccess) {
+    fprintf(stderr, "Unable to enumerate CUDA devices: %s\n",
+            cudaGetErrorString(deviceCountStatus));
+    exit(deviceCountStatus);
+  }
   if(maxGpus<ngpus){
-    printf("NUM_GPUS is %d but only %d gpus on device\n",ngpus,maxGpus);
+    fprintf(stderr, "NUM_GPUS is %d but only %d GPUs are visible\n",ngpus,maxGpus);
     exit(1);
   }
   assert(maxGpus>=ngpus);
+  if (firstInitialization) {
+    printCudaEnvironment(maxGpus, ngpus);
+  }
   trafficVehicleVec_d_gpus = new LC::B18TrafficVehicle*[ngpus];
   indexPathVec_d = new uint*[ngpus];
   edgesData_d = new LC::B18EdgeData*[ngpus];
@@ -396,14 +452,19 @@ void b18InitCUDA_n(
   }
   // peer to peer
   {
-    int canAccessPeer;
     for (int i = 0; i < ngpus; i++) {
-      cudaSetDevice(i);
+      gpuErrchk(cudaSetDevice(i));
         for (int j = 0; j < ngpus; j++) {
             if (i != j) {
-                cudaDeviceCanAccessPeer(&canAccessPeer, i, j);
+                int canAccessPeer = 0;
+                gpuErrchk(cudaDeviceCanAccessPeer(&canAccessPeer, i, j));
                 if (canAccessPeer) {
-                  cudaDeviceEnablePeerAccess(j, 0);
+                  cudaError_t peerStatus = cudaDeviceEnablePeerAccess(j, 0);
+                  if (peerStatus == cudaErrorPeerAccessAlreadyEnabled) {
+                    cudaGetLastError();
+                  } else {
+                    gpuErrchk(peerStatus);
+                  }
                     printf("Peer2Peer support: %d-%d\n",i,j);
                 }
             }
@@ -2394,5 +2455,3 @@ void b18SimulateTrafficCUDA(float currentTime,
 
   peopleBench.stopMeasuring();
 }
-
-

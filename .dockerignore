@@ -1,4 +1,9 @@
 LivingCity/*.csv
 LivingCity/berkeley_2018/*
 .git
+.pytest_cache
+.ruff_cache
+__pycache__
+build
+build-*
 Makefile

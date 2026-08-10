@@ -34,6 +34,17 @@ make -j
 cd .. && build/lpsim
 ```
 
+### GPU architecture compatibility
+
+Without an explicit architecture option, LPSim builds a portable CUDA binary.
+CUDA 12.8+ includes native code for A100, L40/L40S, H100/H200, and B100/B200,
+plus PTX fallbacks. Older toolkits retain PTX so Blackwell GPUs can use driver
+JIT compilation. A machine-specific build can still use, for example,
+`-DCMAKE_CUDA_ARCHITECTURES="90-real;90-virtual"`.
+
+See [Portable NVIDIA GPU builds](docs/gpu-builds.md) for architecture profiles,
+artifact inspection, and native/JIT validation commands.
+
 ## Web Visualizer
 
 ```bash
