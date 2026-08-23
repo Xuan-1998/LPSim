@@ -1,0 +1,4 @@
+trip_id,dep_time,origin_type,origin_id,destination_type,destination_id,passengers
+od-bus-001,21540,road_node,18115,road_node,13866,1
+od-metro-001,21540,road_node,192071,road_node,192078,1
+od-uam-001,21600,road_node,146572,road_node,191586,1

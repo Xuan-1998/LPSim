@@ -1,0 +1,377 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "k21_readme": {
+      "modes": ["car", "uam"],
+      "provider": "Project Google Drive",
+      "google_drive_id": "1M-e4ufssmPTNtRketZmCT7akbcxtrVtl",
+      "target": "k21/README.md",
+      "expected_size_bytes": 1811,
+      "large": false
+    },
+    "k21_nodes": {
+      "modes": ["car", "av", "bus", "rideshare", "uam"],
+      "provider": "Project Google Drive",
+      "google_drive_id": "1xaClMTCskyueuujLIpH-mT3k1jb4wsQq",
+      "target": "k21/nodes.csv",
+      "expected_size_bytes": 11067806,
+      "large": false
+    },
+    "k21_edges": {
+      "modes": ["car", "av", "bus", "rideshare", "uam"],
+      "provider": "Project Google Drive",
+      "google_drive_id": "1smwDj7cazkNVOex61EKA5eFs301Vn556",
+      "target": "k21/edges.csv",
+      "expected_size_bytes": 29682576,
+      "large": false
+    },
+    "k21_airports": {
+      "modes": ["uam"],
+      "provider": "Project Google Drive",
+      "google_drive_id": "12TOWe1TgxdqJfRLVpM5s4_-HjBJIJG2R",
+      "target": "k21/airports_k21.csv",
+      "expected_size_bytes": 3092,
+      "large": false
+    },
+    "k21_aircraft": {
+      "modes": ["uam"],
+      "provider": "Project Google Drive",
+      "google_drive_id": "1mMWR4truYcNyOvNSu4TkzcqrjvcSDGZ7",
+      "target": "k21/aircraft_k21.csv",
+      "expected_size_bytes": 402,
+      "large": false
+    },
+    "k21_demand_iter1": {
+      "modes": ["unassigned_traveler_demand"],
+      "provider": "Project Google Drive",
+      "google_drive_id": "1kcL8Hgq9OJHnWZYaV6w7VQCCzAW9RiHd",
+      "target": "k21/od_file_iter1.csv",
+      "expected_size_bytes": 525672029,
+      "large": true
+    },
+    "k21_demand_iter2": {
+      "modes": ["unassigned_traveler_demand"],
+      "provider": "Project Google Drive",
+      "google_drive_id": "1UeZ0YHUbxoVQk-kjvZvXwtHM_waoz6Pf",
+      "target": "k21/od_file_iter2.csv",
+      "expected_size_bytes": 524716026,
+      "large": true
+    },
+    "sfmta_gtfs": {
+      "modes": ["bus", "metro"],
+      "provider": "SFMTA",
+      "namespace": "sfmta",
+      "regions": ["San Francisco County"],
+      "data_format": "gtfs",
+      "url": "https://muni-gtfs.apps.sfmta.com/data/muni_gtfs-current.zip",
+      "target": "gtfs/sfmta_current.zip",
+      "license_url": "https://www.sfmta.com/reports/gtfs-transit-data",
+      "large": false
+    },
+    "actransit_gtfs": {
+      "modes": ["bus"],
+      "provider": "AC Transit",
+      "namespace": "actransit",
+      "regions": ["Alameda County", "Contra Costa County"],
+      "data_format": "gtfs",
+      "ckan_package": "general-transit-feed-specification-gtfs",
+      "ckan_api": "https://opendata.actransit.org/api/3/action/package_show",
+      "target": "gtfs/ac_transit",
+      "license_url": "https://opendata.actransit.org/dataset/general-transit-feed-specification-gtfs",
+      "large": false
+    },
+    "bart_gtfs": {
+      "modes": ["bus", "metro"],
+      "provider": "BART",
+      "namespace": "bart",
+      "regions": ["Alameda County", "Contra Costa County", "San Francisco County", "San Mateo County", "Santa Clara County"],
+      "data_format": "gtfs",
+      "url": "https://www.bart.gov/dev/schedules/google_transit.zip",
+      "target": "gtfs/bay_area_sources/bart.zip",
+      "license_url": "https://www.bart.gov/about/developers",
+      "group_only": true,
+      "large": false
+    },
+    "caltrain_gtfs": {
+      "modes": ["metro"],
+      "provider": "Caltrain",
+      "namespace": "caltrain",
+      "regions": ["San Francisco County", "San Mateo County", "Santa Clara County"],
+      "data_format": "gtfs",
+      "url": "https://data.trilliumtransit.com/gtfs/caltrain-ca-us/caltrain-ca-us.zip",
+      "target": "gtfs/bay_area_sources/caltrain.zip",
+      "license_url": "https://www.caltrain.com/developer-resources",
+      "group_only": true,
+      "large": false
+    },
+    "vta_gtfs": {
+      "modes": ["bus", "metro"],
+      "provider": "VTA",
+      "namespace": "vta",
+      "regions": ["Santa Clara County"],
+      "data_format": "gtfs",
+      "url": "https://gtfs.vta.org/gtfs_vta.zip",
+      "target": "gtfs/bay_area_sources/vta.zip",
+      "license_url": "https://gtfs.vta.org/",
+      "group_only": true,
+      "large": false
+    },
+    "samtrans_gtfs": {
+      "modes": ["bus"],
+      "provider": "SamTrans",
+      "namespace": "samtrans",
+      "regions": ["San Mateo County"],
+      "data_format": "gtfs",
+      "url": "https://www.samtrans.com/Assets/GTFS/samtrans/ST-GTFS.zip",
+      "target": "gtfs/bay_area_sources/samtrans.zip",
+      "license_url": "https://www.samtrans.com/developer",
+      "group_only": true,
+      "large": false
+    },
+    "county_connection_gtfs": {
+      "modes": ["bus"],
+      "provider": "County Connection",
+      "namespace": "county_connection",
+      "regions": ["Contra Costa County"],
+      "data_format": "gtfs",
+      "url": "https://countyconnection.com/GTFS/google_transit.zip",
+      "target": "gtfs/bay_area_sources/county_connection.zip",
+      "license_url": "https://countyconnection.com/",
+      "group_only": true,
+      "large": false
+    },
+    "golden_gate_gtfs": {
+      "modes": ["bus"],
+      "provider": "Golden Gate Transit",
+      "namespace": "golden_gate",
+      "regions": ["Marin County", "San Francisco County", "Sonoma County"],
+      "data_format": "gtfs",
+      "url": "https://realtime.goldengate.org/gtfsstatic/GTFSTransitData.zip",
+      "target": "gtfs/bay_area_sources/golden_gate.zip",
+      "license_url": "https://www.goldengate.org/",
+      "group_only": true,
+      "large": false
+    },
+    "lavta_gtfs": {
+      "modes": ["bus"],
+      "provider": "LAVTA Wheels",
+      "namespace": "lavta",
+      "regions": ["Alameda County"],
+      "data_format": "gtfs",
+      "url": "http://webwatch.lavta.org/TMGTFSRealTimeWebService/GTFS-Static/google_transit.zip",
+      "target": "gtfs/bay_area_sources/lavta_wheels.zip",
+      "license_url": "https://www.wheelsbus.com/",
+      "group_only": true,
+      "large": false
+    },
+    "marin_transit_gtfs": {
+      "modes": ["bus"],
+      "provider": "Marin Transit",
+      "namespace": "marin_transit",
+      "regions": ["Marin County"],
+      "data_format": "gtfs",
+      "url": "https://marintransit.gov/data/google_transit.zip",
+      "target": "gtfs/bay_area_sources/marin_transit.zip",
+      "license_url": "https://marintransit.gov/",
+      "group_only": true,
+      "large": false
+    },
+    "smart_gtfs": {
+      "modes": ["metro"],
+      "provider": "SMART",
+      "namespace": "smart",
+      "regions": ["Marin County", "Sonoma County"],
+      "data_format": "gtfs",
+      "url": "http://data.trilliumtransit.com/gtfs/smart-ca-us/smart-ca-us.zip",
+      "target": "gtfs/bay_area_sources/smart.zip",
+      "license_url": "https://www.sonomamarintrain.org/",
+      "group_only": true,
+      "large": false
+    },
+    "sonoma_county_gtfs": {
+      "modes": ["bus"],
+      "provider": "Sonoma County Transit",
+      "namespace": "sonoma_county",
+      "regions": ["Sonoma County"],
+      "data_format": "gtfs",
+      "url": "https://data.trilliumtransit.com/gtfs/sonomacounty-ca-us/sonomacounty-ca-us.zip",
+      "target": "gtfs/bay_area_sources/sonoma_county.zip",
+      "license_url": "https://sctransit.com/",
+      "group_only": true,
+      "large": false
+    },
+    "santa_rosa_gtfs": {
+      "modes": ["bus"],
+      "provider": "Santa Rosa CityBus",
+      "namespace": "santa_rosa",
+      "regions": ["Sonoma County"],
+      "data_format": "gtfs",
+      "url": "https://santarosa.syncromatics.com/gtfs",
+      "target": "gtfs/bay_area_sources/santa_rosa.zip",
+      "license_url": "https://www.srcity.org/1036/Transit-and-CityBus",
+      "group_only": true,
+      "large": false
+    },
+    "petaluma_gtfs": {
+      "modes": ["bus"],
+      "provider": "Petaluma Transit",
+      "namespace": "petaluma",
+      "regions": ["Sonoma County"],
+      "data_format": "gtfs",
+      "url": "https://petalumatransit.com/gtfs",
+      "target": "gtfs/bay_area_sources/petaluma.zip",
+      "license_url": "https://transit.cityofpetaluma.net/",
+      "group_only": true,
+      "large": false
+    },
+    "tri_delta_gtfs": {
+      "modes": ["bus"],
+      "provider": "Tri Delta Transit",
+      "namespace": "tri_delta",
+      "regions": ["Contra Costa County"],
+      "data_format": "gtfs",
+      "url": "https://rta.trideltatransit.com/rtt/public/resource/gtfs.zip",
+      "target": "gtfs/bay_area_sources/tri_delta.zip",
+      "license_url": "https://511.org/open-data/transit",
+      "group_only": true,
+      "large": false
+    },
+    "westcat_gtfs": {
+      "modes": ["bus"],
+      "provider": "WestCAT",
+      "namespace": "westcat",
+      "regions": ["Contra Costa County"],
+      "data_format": "gtfs",
+      "url": "http://data.trilliumtransit.com/gtfs/westcat-ca-us/westcat-ca-us.zip",
+      "target": "gtfs/bay_area_sources/westcat.zip",
+      "license_url": "https://www.westcat.org/",
+      "group_only": true,
+      "large": false
+    },
+    "union_city_gtfs": {
+      "modes": ["bus"],
+      "provider": "Union City Transit",
+      "namespace": "union_city",
+      "regions": ["Alameda County"],
+      "data_format": "gtfs",
+      "url": "https://unioncity.tripshot.com/v1/gtfs.zip?regionId=CA558DDC-D7F2-4B48-9CAC-DEEA1134F820",
+      "target": "gtfs/bay_area_sources/union_city.zip",
+      "license_url": "https://www.unioncity.org/170/Transit",
+      "group_only": true,
+      "large": false
+    },
+    "fast_gtfs": {
+      "modes": ["bus"],
+      "provider": "FAST",
+      "namespace": "fast",
+      "regions": ["Solano County"],
+      "data_format": "gtfs",
+      "url": "https://data.trilliumtransit.com/gtfs/fairfield-ca-us/fairfield-ca-us.zip",
+      "target": "gtfs/bay_area_sources/fast.zip",
+      "license_url": "https://fasttransit.org/",
+      "group_only": true,
+      "large": false
+    },
+    "soltrans_gtfs": {
+      "modes": ["bus"],
+      "provider": "SolTrans",
+      "namespace": "soltrans",
+      "regions": ["Solano County"],
+      "data_format": "gtfs",
+      "url": "https://soltrans.connexionz.net/rtt/public/resource/gtfs.zip",
+      "target": "gtfs/bay_area_sources/soltrans.zip",
+      "license_url": "https://soltrans.org/",
+      "group_only": true,
+      "large": false
+    },
+    "vacaville_gtfs": {
+      "modes": ["bus"],
+      "provider": "Vacaville City Coach",
+      "namespace": "vacaville",
+      "regions": ["Solano County"],
+      "data_format": "gtfs",
+      "url": "https://data.trilliumtransit.com/gtfs/vacavillecitycoach-ca-us/vacavillecitycoach-ca-us.zip",
+      "target": "gtfs/bay_area_sources/vacaville.zip",
+      "license_url": "https://citycoach.com/",
+      "group_only": true,
+      "large": false
+    },
+    "vine_gtfs": {
+      "modes": ["bus"],
+      "provider": "VINE Transit",
+      "namespace": "vine",
+      "regions": ["Napa County"],
+      "data_format": "gtfs",
+      "url": "https://data.trilliumtransit.com/gtfs/vinetransit-ca-us/vinetransit-ca-us.zip",
+      "target": "gtfs/bay_area_sources/vine.zip",
+      "license_url": "https://vinetransit.com/",
+      "group_only": true,
+      "large": false
+    },
+    "rio_vista_gtfs": {
+      "modes": ["bus"],
+      "provider": "Rio Vista Delta Breeze",
+      "namespace": "rio_vista",
+      "regions": ["Solano County"],
+      "data_format": "gtfs",
+      "url": "https://data.trilliumtransit.com/gtfs/riovista-ca-us/riovista-ca-us.zip",
+      "target": "gtfs/bay_area_sources/rio_vista.zip",
+      "license_url": "https://www.riovistacity.com/transportation",
+      "group_only": true,
+      "large": false
+    },
+    "emery_go_round_gtfs": {
+      "modes": ["bus"],
+      "provider": "Emery Go-Round",
+      "namespace": "emery_go_round",
+      "regions": ["Alameda County"],
+      "data_format": "gtfs",
+      "url": "https://emerygoround.com/data/emerygoround-ca-us.zip",
+      "target": "gtfs/bay_area_sources/emery_go_round.zip",
+      "license_url": "https://emerygoround.com/",
+      "group_only": true,
+      "large": false
+    },
+    "regional_511_gtfs": {
+      "modes": ["bus", "metro"],
+      "provider": "511 SF Bay",
+      "api": "https://api.511.org/transit/datafeeds",
+      "operator_id": "RG",
+      "token_env": "LPSIM_511_API_TOKEN",
+      "target": "gtfs/511_regional.zip",
+      "license_url": "https://511.org/open-data/transit",
+      "large": false
+    },
+    "sfmta_bike_network": {
+      "modes": ["bike"],
+      "provider": "SFMTA / DataSF",
+      "url": "https://data.sfgov.org/resource/ygmz-vaxd.csv?$limit=50000",
+      "target": "bike/sfmta_bike_network.csv",
+      "license_url": "https://data.sfgov.org/Transportation/MTA-Bike-Network-Linear-Features/ygmz-vaxd",
+      "large": false
+    },
+    "baywheels_gbfs": {
+      "modes": ["bike"],
+      "provider": "Bay Wheels",
+      "url": "https://gbfs.baywheels.com/gbfs/2.3/gbfs.json",
+      "target": "bike/baywheels_gbfs.json",
+      "license_url": "https://github.com/MobilityData/mobility-database-catalogs",
+      "large": false
+    },
+    "sfcta_tnc_taz": {
+      "modes": ["rideshare"],
+      "provider": "SFCTA",
+      "landing_page": "https://www.sfcta.org/projects/tncs-today-2017",
+      "manual": true,
+      "target": "rideshare/README-download.txt",
+      "large": false
+    }
+  },
+  "source_groups": {
+    "bay_area_fixed_route_gtfs": {
+      "description": "Fixed-route bus, subway, light-rail, and regional-rail supply covering all nine San Francisco Bay Area counties.",
+      "expected_regions": ["Alameda County", "Contra Costa County", "Marin County", "Napa County", "San Francisco County", "San Mateo County", "Santa Clara County", "Solano County", "Sonoma County"],
+      "sources": ["sfmta_gtfs", "actransit_gtfs", "bart_gtfs", "caltrain_gtfs", "vta_gtfs", "samtrans_gtfs", "county_connection_gtfs", "golden_gate_gtfs", "lavta_gtfs", "marin_transit_gtfs", "smart_gtfs", "sonoma_county_gtfs", "santa_rosa_gtfs", "petaluma_gtfs", "tri_delta_gtfs", "westcat_gtfs", "union_city_gtfs", "fast_gtfs", "soltrans_gtfs", "vacaville_gtfs", "vine_gtfs", "rio_vista_gtfs", "emery_go_round_gtfs"]
+    }
+  }
+}

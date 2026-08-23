@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "description": "Normalized tables for attaching multiple candidate multimode itineraries to each traveler OD request.",
+  "modes": [
+    "car",
+    "av",
+    "bus",
+    "metro",
+    "bike",
+    "walk",
+    "uam",
+    "rideshare"
+  ],
+  "endpoint_types": [
+    "road_node",
+    "gtfs_stop",
+    "airport",
+    "coordinate"
+  ],
+  "tables": {
+    "od_trips": {
+      "primary_key": ["trip_id"],
+      "columns": {
+        "trip_id": {"type": "string", "required": true},
+        "dep_time": {"type": "number", "required": true, "minimum": 0},
+        "origin_type": {"type": "enum", "required": true, "values_from": "endpoint_types"},
+        "origin_id": {"type": "string", "required": true},
+        "destination_type": {"type": "enum", "required": true, "values_from": "endpoint_types"},
+        "destination_id": {"type": "string", "required": true},
+        "passengers": {"type": "integer", "required": true, "minimum": 1}
+      }
+    },
+    "od_mode_options": {
+      "primary_key": ["trip_id", "option_id"],
+      "foreign_key": {"columns": ["trip_id"], "references": "od_trips"},
+      "columns": {
+        "trip_id": {"type": "string", "required": true},
+        "option_id": {"type": "string", "required": true},
+        "mode_sequence": {"type": "mode_sequence", "required": true, "separator": ">"},
+        "available": {"type": "boolean", "required": true},
+        "chosen": {"type": "boolean", "required": true},
+        "probability": {"type": "number", "required": false, "minimum": 0, "maximum": 1},
+        "estimated_time_s": {"type": "number", "required": false, "minimum": 0},
+        "estimated_cost_usd": {"type": "number", "required": false, "minimum": 0},
+        "transfer_count": {"type": "integer", "required": false, "minimum": 0},
+        "data_status": {"type": "enum", "required": true, "values": ["candidate", "routed", "simulated"]}
+      }
+    },
+    "od_mode_legs": {
+      "primary_key": ["trip_id", "option_id", "leg_index"],
+      "foreign_key": {"columns": ["trip_id", "option_id"], "references": "od_mode_options"},
+      "columns": {
+        "trip_id": {"type": "string", "required": true},
+        "option_id": {"type": "string", "required": true},
+        "leg_index": {"type": "integer", "required": true, "minimum": 0},
+        "mode": {"type": "enum", "required": true, "values_from": "modes"},
+        "from_type": {"type": "enum", "required": true, "values_from": "endpoint_types"},
+        "from_id": {"type": "string", "required": true},
+        "to_type": {"type": "enum", "required": true, "values_from": "endpoint_types"},
+        "to_id": {"type": "string", "required": true},
+        "provider_id": {"type": "string", "required": false},
+        "route_id": {"type": "string", "required": false},
+        "service_trip_id": {"type": "string", "required": false},
+        "aircraft_code": {"type": "string", "required": false},
+        "departure_time_s": {"type": "number", "required": false, "minimum": 0},
+        "arrival_time_s": {"type": "number", "required": false, "minimum": 0},
+        "distance_m": {"type": "number", "required": false, "minimum": 0},
+        "cost_usd": {"type": "number", "required": false, "minimum": 0}
+      }
+    }
+  },
+  "cross_table_constraints": [
+    "Every option has one or more legs with contiguous zero-based leg_index values.",
+    "The ordered leg modes equal the option mode_sequence.",
+    "The first and last leg endpoints equal the parent OD endpoints.",
+    "Adjacent legs share the same endpoint type and id.",
+    "At most one option is chosen for each trip.",
+    "When all available options have probabilities, they sum to one for the trip."
+  ]
+}

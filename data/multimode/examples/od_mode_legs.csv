@@ -1,0 +1,13 @@
+trip_id,option_id,leg_index,mode,from_type,from_id,to_type,to_id,provider_id,route_id,service_trip_id,aircraft_code,departure_time_s,arrival_time_s,distance_m,cost_usd
+od-bus-001,car-direct,0,car,road_node,18115,road_node,13866,,,,,,,,
+od-bus-001,ac-transit,0,walk,road_node,18115,gtfs_stop,actransit:3030,,,,,,,,
+od-bus-001,ac-transit,1,bus,gtfs_stop,actransit:3030,gtfs_stop,actransit:3036,actransit,,,,,,,
+od-bus-001,ac-transit,2,walk,gtfs_stop,actransit:3036,road_node,13866,,,,,,,,
+od-metro-001,car-direct,0,car,road_node,192071,road_node,192078,,,,,,,,
+od-metro-001,bart,0,walk,road_node,192071,gtfs_stop,bart:M30-2,,,,,,,,
+od-metro-001,bart,1,metro,gtfs_stop,bart:M30-2,gtfs_stop,bart:M20-2,bart,,,,,,,
+od-metro-001,bart,2,walk,gtfs_stop,bart:M20-2,road_node,192078,,,,,,,,
+od-uam-001,car-direct,0,car,road_node,146572,road_node,191586,,,,,,,,
+od-uam-001,wvi-ccr-air,0,rideshare,road_node,146572,airport,WVI,,,,,,,,
+od-uam-001,wvi-ccr-air,1,uam,airport,WVI,airport,CCR,,,,C172,,,,
+od-uam-001,wvi-ccr-air,2,rideshare,airport,CCR,road_node,191586,,,,,,,,

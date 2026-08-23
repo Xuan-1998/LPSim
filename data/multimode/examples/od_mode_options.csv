@@ -1,0 +1,7 @@
+trip_id,option_id,mode_sequence,available,chosen,probability,estimated_time_s,estimated_cost_usd,transfer_count,data_status
+od-bus-001,car-direct,car,1,0,,,,0,candidate
+od-bus-001,ac-transit,walk>bus>walk,1,0,,,,0,candidate
+od-metro-001,car-direct,car,1,0,,,,0,candidate
+od-metro-001,bart,walk>metro>walk,1,0,,,,0,candidate
+od-uam-001,car-direct,car,1,0,,,,0,candidate
+od-uam-001,wvi-ccr-air,rideshare>uam>rideshare,1,0,,,,0,candidate

@@ -1,0 +1,10 @@
+template_id,mode_sequence,required_supply,description
+car-direct,car,road_network,Private car on the road network
+av-direct,av,road_network|av_fleet,Automated vehicle with explicit fleet supply
+rideshare-direct,rideshare,road_network|rideshare_fleet,Single-mode TNC trip
+walk-only,walk,walk_network,Entire trip on the pedestrian network
+bike-only,bike,bike_network,Entire trip on the bicycle network
+bus-access,walk>bus>walk,walk_network|gtfs_bus,Walk access and egress around scheduled bus
+metro-access,walk>metro>walk,walk_network|gtfs_metro,Walk access and egress around scheduled rail
+bus-metro,walk>bus>walk>metro>walk,walk_network|gtfs_bus|gtfs_metro,Fixed-route bus to rail transfer
+uam-rideshare,rideshare>uam>rideshare,road_network|rideshare_fleet|airports|aircraft|air_operations,Road access and egress around an airport-to-airport flight
