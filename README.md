@@ -45,6 +45,17 @@ JIT compilation. A machine-specific build can still use, for example,
 See [Portable NVIDIA GPU builds](docs/gpu-builds.md) for architecture profiles,
 artifact inspection, and native/JIT validation commands.
 
+## Multimode Supply Data
+
+The data-preparation layer includes normalized K21 airport/aircraft tables, a
+reproducible 23-provider Bay Area GTFS catalog, and a three-table schema for
+attaching several candidate mode combinations to each traveler OD without
+duplicating demand. Downloaded schedules and large OD/network files remain
+outside Git.
+
+See [Multimode supply data and OD option schema](docs/multimode-data.md) for
+data provenance, service-date handling, commands, limitations, and examples.
+
 ## Web Visualizer
 
 ```bash

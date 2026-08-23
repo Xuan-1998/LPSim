@@ -38,8 +38,15 @@ Issues = "https://github.com/Xuan-1998/LPSim/issues"
 
 [project.scripts]
 lpsim-demand = "tools.generate_demand:main"
+lpsim-fetch-data = "tools.fetch_multimode_data:main"
+lpsim-build-gtfs-bundle = "tools.build_gtfs_bundle:main"
+lpsim-export-gtfs-supply = "tools.export_gtfs_supply:main"
 lpsim-network = "tools.generate_network:main"
 lpsim-partition = "tools.partition_network:main"
+lpsim-validate-mode-choice = "tools.validate_mode_choice_inputs:main"
 
 [tool.setuptools.packages.find]
-include = ["lpsim_env*", "tools*"]
+include = ["lpsim_env*", "lpsim_multimode*", "tools*"]
+
+[tool.setuptools.package-data]
+lpsim_multimode = ["sources.json"]

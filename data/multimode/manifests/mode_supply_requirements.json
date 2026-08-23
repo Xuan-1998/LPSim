@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "purpose": "Inputs required to route and score each OD mode option without treating traveler demand as vehicle supply.",
+  "common_choice_attributes": [
+    "in_vehicle_time_s",
+    "access_time_s",
+    "egress_time_s",
+    "wait_time_s",
+    "transfer_count",
+    "monetary_cost_usd",
+    "reliability_s",
+    "capacity_available"
+  ],
+  "modes": {
+    "car": {
+      "required_supply": ["road_network"],
+      "supply_status": "available_from_k21_catalog",
+      "missing_for_calibration": ["parking_cost", "parking_search_time", "vehicle_occupancy"]
+    },
+    "av": {
+      "required_supply": ["road_network", "av_fleet"],
+      "supply_status": "network_available_fleet_not_included",
+      "missing_for_calibration": ["fleet_locations", "fleet_capacity", "dispatch_policy", "fare"]
+    },
+    "bus": {
+      "required_supply": ["gtfs_bus", "walk_network"],
+      "supply_status": "23_provider_gtfs_catalog_and_audit_included",
+      "gtfs_fields": ["route_id", "trip_id", "service_id", "stop_id", "stop_sequence", "arrival_time", "departure_time"],
+      "missing_for_calibration": ["vehicle_capacity_by_trip", "dwell_time", "observed_delay", "fare"]
+    },
+    "metro": {
+      "required_supply": ["gtfs_metro", "walk_network"],
+      "supply_status": "regional_rail_gtfs_catalog_and_audit_included",
+      "gtfs_fields": ["route_id", "trip_id", "service_id", "stop_id", "stop_sequence", "arrival_time", "departure_time"],
+      "missing_for_calibration": ["train_capacity_by_trip", "station_transfer_links", "observed_delay", "fare"]
+    },
+    "walk": {
+      "required_supply": ["walk_network"],
+      "supply_status": "reproducible_from_osm_not_committed",
+      "missing_for_calibration": ["walk_speed_distribution", "accessibility_constraints"]
+    },
+    "bike": {
+      "required_supply": ["bike_network"],
+      "supply_status": "reproducible_from_osm_not_committed",
+      "missing_for_calibration": ["bike_speed_distribution", "slope", "bike_share_inventory"]
+    },
+    "uam": {
+      "required_supply": ["road_network", "airports", "aircraft", "air_operations"],
+      "supply_status": "21_airports_and_9_aircraft_types_included",
+      "missing_for_calibration": ["cruise_speed", "fleet_count", "fleet_location", "turnaround_time", "fare", "weather"]
+    },
+    "rideshare": {
+      "required_supply": ["road_network", "rideshare_fleet"],
+      "supply_status": "network_available_fleet_not_included",
+      "missing_for_calibration": ["fleet_locations", "matching_policy", "pooling_policy", "fare"]
+    }
+  }
+}

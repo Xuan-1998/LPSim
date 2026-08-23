@@ -1,0 +1,567 @@
+{
+  "active_routes_by_mode": {
+    "bus": 529,
+    "metro": 30
+  },
+  "components": [
+    {
+      "active_routes_by_mode": {
+        "bus": 58,
+        "metro": 10
+      },
+      "declared_modes": [
+        "bus",
+        "metro"
+      ],
+      "license_url": "https://www.sfmta.com/reports/gtfs-transit-data",
+      "namespace": "sfmta",
+      "provider": "SFMTA",
+      "regions": [
+        "San Francisco County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "sfmta_gtfs",
+      "source_url": "https://muni-gtfs.apps.sfmta.com/data/muni_gtfs-current.zip",
+      "stale_snapshot": false,
+      "stops": 3238,
+      "trips": 9476,
+      "catalog_target": "gtfs/sfmta_current.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 123
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://opendata.actransit.org/dataset/general-transit-feed-specification-gtfs",
+      "namespace": "actransit",
+      "provider": "AC Transit",
+      "regions": [
+        "Alameda County",
+        "Contra Costa County"
+      ],
+      "service_age_days": 266,
+      "service_date": "2025-12-01",
+      "source_name": "actransit_gtfs",
+      "source_url": null,
+      "stale_snapshot": false,
+      "stops": 4717,
+      "trips": 5129,
+      "catalog_target": "gtfs/ac_transit"
+    },
+    {
+      "active_routes_by_mode": {
+        "metro": 12
+      },
+      "declared_modes": [
+        "bus",
+        "metro"
+      ],
+      "license_url": "https://www.bart.gov/about/developers",
+      "namespace": "bart",
+      "provider": "BART",
+      "regions": [
+        "Alameda County",
+        "Contra Costa County",
+        "San Francisco County",
+        "San Mateo County",
+        "Santa Clara County"
+      ],
+      "service_age_days": 21,
+      "service_date": "2026-08-03",
+      "source_name": "bart_gtfs",
+      "source_url": "https://www.bart.gov/dev/schedules/google_transit.zip",
+      "stale_snapshot": false,
+      "stops": 287,
+      "trips": 1025,
+      "catalog_target": "gtfs/bay_area_sources/bart.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "metro": 4
+      },
+      "declared_modes": [
+        "metro"
+      ],
+      "license_url": "https://www.caltrain.com/developer-resources",
+      "namespace": "caltrain",
+      "provider": "Caltrain",
+      "regions": [
+        "San Francisco County",
+        "San Mateo County",
+        "Santa Clara County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "caltrain_gtfs",
+      "source_url": "https://data.trilliumtransit.com/gtfs/caltrain-ca-us/caltrain-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 106,
+      "trips": 112,
+      "catalog_target": "gtfs/bay_area_sources/caltrain.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 57,
+        "metro": 3
+      },
+      "declared_modes": [
+        "bus",
+        "metro"
+      ],
+      "license_url": "https://gtfs.vta.org/",
+      "namespace": "vta",
+      "provider": "VTA",
+      "regions": [
+        "Santa Clara County"
+      ],
+      "service_age_days": 21,
+      "service_date": "2026-08-03",
+      "source_name": "vta_gtfs",
+      "source_url": "https://gtfs.vta.org/gtfs_vta.zip",
+      "stale_snapshot": false,
+      "stops": 3345,
+      "trips": 3912,
+      "catalog_target": "gtfs/bay_area_sources/vta.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 75
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://www.samtrans.com/developer",
+      "namespace": "samtrans",
+      "provider": "SamTrans",
+      "regions": [
+        "San Mateo County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "samtrans_gtfs",
+      "source_url": "https://www.samtrans.com/Assets/GTFS/samtrans/ST-GTFS.zip",
+      "stale_snapshot": false,
+      "stops": 1852,
+      "trips": 1790,
+      "catalog_target": "gtfs/bay_area_sources/samtrans.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 42
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://countyconnection.com/",
+      "namespace": "county_connection",
+      "provider": "County Connection",
+      "regions": [
+        "Contra Costa County"
+      ],
+      "service_age_days": 84,
+      "service_date": "2026-06-01",
+      "source_name": "county_connection_gtfs",
+      "source_url": "https://countyconnection.com/GTFS/google_transit.zip",
+      "stale_snapshot": false,
+      "stops": 1225,
+      "trips": 930,
+      "catalog_target": "gtfs/bay_area_sources/county_connection.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 9
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://www.goldengate.org/",
+      "namespace": "golden_gate",
+      "provider": "Golden Gate Transit",
+      "regions": [
+        "Marin County",
+        "San Francisco County",
+        "Sonoma County"
+      ],
+      "service_age_days": 77,
+      "service_date": "2026-06-08",
+      "source_name": "golden_gate_gtfs",
+      "source_url": "https://realtime.goldengate.org/gtfsstatic/GTFSTransitData.zip",
+      "stale_snapshot": false,
+      "stops": 372,
+      "trips": 333,
+      "catalog_target": "gtfs/bay_area_sources/golden_gate.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 32
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://www.wheelsbus.com/",
+      "namespace": "lavta",
+      "provider": "LAVTA Wheels",
+      "regions": [
+        "Alameda County"
+      ],
+      "service_age_days": 119,
+      "service_date": "2026-04-27",
+      "source_name": "lavta_gtfs",
+      "source_url": "http://webwatch.lavta.org/TMGTFSRealTimeWebService/GTFS-Static/google_transit.zip",
+      "stale_snapshot": false,
+      "stops": 665,
+      "trips": 456,
+      "catalog_target": "gtfs/bay_area_sources/lavta_wheels.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 15
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://marintransit.gov/",
+      "namespace": "marin_transit",
+      "provider": "Marin Transit",
+      "regions": [
+        "Marin County"
+      ],
+      "service_age_days": 21,
+      "service_date": "2026-08-03",
+      "source_name": "marin_transit_gtfs",
+      "source_url": "https://marintransit.gov/data/google_transit.zip",
+      "stale_snapshot": false,
+      "stops": 545,
+      "trips": 612,
+      "catalog_target": "gtfs/bay_area_sources/marin_transit.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "metro": 1
+      },
+      "declared_modes": [
+        "metro"
+      ],
+      "license_url": "https://www.sonomamarintrain.org/",
+      "namespace": "smart",
+      "provider": "SMART",
+      "regions": [
+        "Marin County",
+        "Sonoma County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "smart_gtfs",
+      "source_url": "http://data.trilliumtransit.com/gtfs/smart-ca-us/smart-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 42,
+      "trips": 48,
+      "catalog_target": "gtfs/bay_area_sources/smart.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 26
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://sctransit.com/",
+      "namespace": "sonoma_county",
+      "provider": "Sonoma County Transit",
+      "regions": [
+        "Sonoma County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "sonoma_county_gtfs",
+      "source_url": "https://data.trilliumtransit.com/gtfs/sonomacounty-ca-us/sonomacounty-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 1110,
+      "trips": 255,
+      "catalog_target": "gtfs/bay_area_sources/sonoma_county.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 15
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://www.srcity.org/1036/Transit-and-CityBus",
+      "namespace": "santa_rosa",
+      "provider": "Santa Rosa CityBus",
+      "regions": [
+        "Sonoma County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "santa_rosa_gtfs",
+      "source_url": "https://santarosa.syncromatics.com/gtfs",
+      "stale_snapshot": false,
+      "stops": 403,
+      "trips": 394,
+      "catalog_target": "gtfs/bay_area_sources/santa_rosa.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 11
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://transit.cityofpetaluma.net/",
+      "namespace": "petaluma",
+      "provider": "Petaluma Transit",
+      "regions": [
+        "Sonoma County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "petaluma_gtfs",
+      "source_url": "https://petalumatransit.com/gtfs",
+      "stale_snapshot": false,
+      "stops": 152,
+      "trips": 239,
+      "catalog_target": "gtfs/bay_area_sources/petaluma.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 11
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://511.org/open-data/transit",
+      "namespace": "tri_delta",
+      "provider": "Tri Delta Transit",
+      "regions": [
+        "Contra Costa County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "tri_delta_gtfs",
+      "source_url": "https://rta.trideltatransit.com/rtt/public/resource/gtfs.zip",
+      "stale_snapshot": false,
+      "stops": 408,
+      "trips": 362,
+      "catalog_target": "gtfs/bay_area_sources/tri_delta.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 11
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://www.westcat.org/",
+      "namespace": "westcat",
+      "provider": "WestCAT",
+      "regions": [
+        "Contra Costa County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "westcat_gtfs",
+      "source_url": "http://data.trilliumtransit.com/gtfs/westcat-ca-us/westcat-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 221,
+      "trips": 376,
+      "catalog_target": "gtfs/bay_area_sources/westcat.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 6
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://www.unioncity.org/170/Transit",
+      "namespace": "union_city",
+      "provider": "Union City Transit",
+      "regions": [
+        "Alameda County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "union_city_gtfs",
+      "source_url": "https://unioncity.tripshot.com/v1/gtfs.zip?regionId=CA558DDC-D7F2-4B48-9CAC-DEEA1134F820",
+      "stale_snapshot": false,
+      "stops": 167,
+      "trips": 270,
+      "catalog_target": "gtfs/bay_area_sources/union_city.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 4
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://fasttransit.org/",
+      "namespace": "fast",
+      "provider": "FAST",
+      "regions": [
+        "Solano County"
+      ],
+      "service_age_days": 56,
+      "service_date": "2026-06-29",
+      "source_name": "fast_gtfs",
+      "source_url": "https://data.trilliumtransit.com/gtfs/fairfield-ca-us/fairfield-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 257,
+      "trips": 178,
+      "catalog_target": "gtfs/bay_area_sources/fast.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 14
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://soltrans.org/",
+      "namespace": "soltrans",
+      "provider": "SolTrans",
+      "regions": [
+        "Solano County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "soltrans_gtfs",
+      "source_url": "https://soltrans.connexionz.net/rtt/public/resource/gtfs.zip",
+      "stale_snapshot": false,
+      "stops": 363,
+      "trips": 402,
+      "catalog_target": "gtfs/bay_area_sources/soltrans.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 5
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://citycoach.com/",
+      "namespace": "vacaville",
+      "provider": "Vacaville City Coach",
+      "regions": [
+        "Solano County"
+      ],
+      "service_age_days": 56,
+      "service_date": "2026-06-29",
+      "source_name": "vacaville_gtfs",
+      "source_url": "https://data.trilliumtransit.com/gtfs/vacavillecitycoach-ca-us/vacavillecitycoach-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 190,
+      "trips": 161,
+      "catalog_target": "gtfs/bay_area_sources/vacaville.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 12
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://vinetransit.com/",
+      "namespace": "vine",
+      "provider": "VINE Transit",
+      "regions": [
+        "Napa County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "vine_gtfs",
+      "source_url": "https://data.trilliumtransit.com/gtfs/vinetransit-ca-us/vinetransit-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 361,
+      "trips": 278,
+      "catalog_target": "gtfs/bay_area_sources/vine.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 1
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://www.riovistacity.com/transportation",
+      "namespace": "rio_vista",
+      "provider": "Rio Vista Delta Breeze",
+      "regions": [
+        "Solano County"
+      ],
+      "service_age_days": 574,
+      "service_date": "2025-01-27",
+      "source_name": "rio_vista_gtfs",
+      "source_url": "https://data.trilliumtransit.com/gtfs/riovista-ca-us/riovista-ca-us.zip",
+      "stale_snapshot": true,
+      "stops": 70,
+      "trips": 8,
+      "catalog_target": "gtfs/bay_area_sources/rio_vista.zip"
+    },
+    {
+      "active_routes_by_mode": {
+        "bus": 2
+      },
+      "declared_modes": [
+        "bus"
+      ],
+      "license_url": "https://emerygoround.com/",
+      "namespace": "emery_go_round",
+      "provider": "Emery Go-Round",
+      "regions": [
+        "Alameda County"
+      ],
+      "service_age_days": 0,
+      "service_date": "2026-08-24",
+      "source_name": "emery_go_round_gtfs",
+      "source_url": "https://emerygoround.com/data/emerygoround-ca-us.zip",
+      "stale_snapshot": false,
+      "stops": 41,
+      "trips": 133,
+      "catalog_target": "gtfs/bay_area_sources/emery_go_round.zip"
+    }
+  ],
+  "covered_regions": [
+    "Alameda County",
+    "Contra Costa County",
+    "Marin County",
+    "Napa County",
+    "San Francisco County",
+    "San Mateo County",
+    "Santa Clara County",
+    "Solano County",
+    "Sonoma County"
+  ],
+  "date_policy": "Each provider uses its latest available service day with the same weekday at or before scenario_date; service_date and age are retained.",
+  "description": "Fixed-route bus, subway, light-rail, and regional-rail supply covering all nine San Francisco Bay Area counties.",
+  "expected_regions": [
+    "Alameda County",
+    "Contra Costa County",
+    "Marin County",
+    "Napa County",
+    "San Francisco County",
+    "San Mateo County",
+    "Santa Clara County",
+    "Solano County",
+    "Sonoma County"
+  ],
+  "name": "bay_area_fixed_route_gtfs",
+  "scenario_date": "2026-08-24",
+  "schema_version": 1,
+  "record_type": "audit_snapshot",
+  "generated_from": "bay_area_fixed_route_gtfs",
+  "verified_feed_totals": {
+    "providers": 23,
+    "stops": 20137,
+    "active_trips": 26879,
+    "connections_by_mode": {
+      "bus": 871601,
+      "metro": 70498
+    }
+  }
+}
